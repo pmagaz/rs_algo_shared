@@ -10,7 +10,7 @@ use ta::indicators::SlowStochastic;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instrument {
     pub symbol: String,
-    time_frame: String,
+    time_frame: TimeFrameType,
     current_price: f64,
     min_price: f64,
     max_price: f64,
