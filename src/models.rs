@@ -167,6 +167,7 @@ pub enum PatternSize {
 pub struct PatternActive {
     pub active: bool,
     pub index: usize,
+    pub price: f64,
     pub break_direction: PatternDirection,
 }
 
