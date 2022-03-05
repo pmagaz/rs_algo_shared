@@ -141,7 +141,7 @@ pub enum PatternDirection {
 type Point = (usize, f64);
 pub type DataPoints = Vec<Point>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PatternType {
     Triangle,
     TriangleSymmetrical,
