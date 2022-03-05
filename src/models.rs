@@ -167,6 +167,7 @@ pub enum PatternSize {
 pub struct PatternActive {
     pub active: bool,
     pub index: usize,
+    pub break_direction: PatternDirection,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
