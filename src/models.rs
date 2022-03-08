@@ -22,6 +22,25 @@ pub struct Instrument {
     //horizontal_levels: HorizontalLevels,
     patterns: Patterns,
     indicators: Indicators,
+    divergences: Divergences,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IndicatorStatus {
+    Bearish,
+    BearishBellowZero,
+    Bullish,
+    BullishOverZero,
+    Oversold,
+    Overbought,
+    Default,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IndicatorType {
+    Macd,
+    Stoch,
+    Rsi,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -222,4 +241,23 @@ impl TimeFrameType {
             TimeFrameType::W => 10080,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DivergenceType {
+    Bullish,
+    Bearish,
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Divergence {
+    data: DataPoints,
+    indicator: IndicatorType,
+    divergence_type: DivergenceType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Divergences {
+    divergences: Vec<Divergence>,
 }
