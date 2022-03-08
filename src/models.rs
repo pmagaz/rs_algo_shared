@@ -252,9 +252,9 @@ pub enum DivergenceType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Divergence {
-    data: DataPoints,
-    indicator: IndicatorType,
-    divergence_type: DivergenceType,
+    pub data: DataPoints,
+    pub indicator: IndicatorType,
+    pub divergence_type: DivergenceType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
