@@ -21,8 +21,6 @@ pub struct CompactInstrument {
     pub updated: String,
     #[serde(skip_deserializing)]
     data: Vec<Candle>,
-    #[serde(skip_deserializing)]
-    peaks: Peaks,
     //horizontal_levels: HorizontalLevels,
     patterns: Patterns,
     indicators: CompactIndicators,
