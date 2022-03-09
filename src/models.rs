@@ -7,7 +7,7 @@ use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Debug)]
 pub struct CompactInstrument {
     pub symbol: String,
     time_frame: TimeFrameType,
