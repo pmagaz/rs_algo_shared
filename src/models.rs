@@ -15,7 +15,7 @@ pub struct CompactInstrument {
     current_candle: CandleType,
     updated: String,
     patterns: Patterns,
-    indicators: Indicators,
+    indicators: CompactIndicators,
     divergences: Divergences,
 }
 
@@ -33,7 +33,7 @@ pub struct Instrument {
     peaks: Peaks,
     //horizontal_levels: HorizontalLevels,
     patterns: Patterns,
-    indicators: CompactIndicators,
+    indicators: Indicators,
     divergences: Divergences,
 }
 
