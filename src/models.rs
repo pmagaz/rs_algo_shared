@@ -7,13 +7,23 @@ use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Debug, Clone, Serialize, Deserialize)]
 pub struct CompactInstrument {
-    symbol: String,
+    pub symbol: String,
     time_frame: TimeFrameType,
     current_price: f64,
+    #[serde(skip_deserializing)]
+    min_price: f64,
+    #[serde(skip_deserializing)]
+    max_price: f64,
     current_candle: CandleType,
-    updated: String,
+    #[serde(skip_deserializing)]
+    pub updated: String,
+    #[serde(skip_deserializing)]
+    data: Vec<Candle>,
+    #[serde(skip_deserializing)]
+    peaks: Peaks,
+    //horizontal_levels: HorizontalLevels,
     patterns: Patterns,
     indicators: CompactIndicators,
     divergences: Divergences,
