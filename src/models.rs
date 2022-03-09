@@ -9,11 +9,9 @@ use ta::indicators::SlowStochastic;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactInstrument {
-    pub symbol: String,
+    symbol: String,
     time_frame: TimeFrameType,
     current_price: f64,
-    min_price: f64,
-    max_price: f64,
     current_candle: CandleType,
     updated: String,
     patterns: Patterns,
