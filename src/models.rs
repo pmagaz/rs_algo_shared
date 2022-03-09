@@ -12,17 +12,10 @@ pub struct CompactInstrument {
     pub symbol: String,
     time_frame: TimeFrameType,
     current_price: f64,
-    #[serde(skip_deserializing)]
-    min_price: f64,
-    #[serde(skip_deserializing)]
-    max_price: f64,
     current_candle: CandleType,
     #[serde(skip_deserializing)]
-    pub updated: String,
-    #[serde(skip_deserializing)]
-    data: Vec<Candle>,
-    //horizontal_levels: HorizontalLevels,
-    patterns: Patterns,
+    updated: String,
+    patterns: CompactPatterns,
     indicators: CompactIndicators,
     divergences: Divergences,
 }
@@ -260,9 +253,24 @@ pub struct Pattern {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactPattern {
+    pub pattern_type: PatternType,
+    pub pattern_size: PatternSize,
+    pub direction: PatternDirection,
+    pub active: PatternActive,
+    pub change: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Patterns {
     pub local_patterns: Vec<Pattern>,
     pub extrema_patterns: Vec<Pattern>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactPatterns {
+    pub local_patterns: Vec<CompactPattern>,
+    pub extrema_patterns: Vec<CompactPattern>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
