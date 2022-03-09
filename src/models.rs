@@ -8,6 +8,20 @@ use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactInstrument {
+    pub symbol: String,
+    time_frame: TimeFrameType,
+    current_price: f64,
+    min_price: f64,
+    max_price: f64,
+    current_candle: CandleType,
+    updated: String,
+    patterns: Patterns,
+    indicators: Indicators,
+    divergences: Divergences,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instrument {
     pub symbol: String,
     time_frame: TimeFrameType,
@@ -72,10 +86,22 @@ pub struct Ema {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactEma {
+    ema: ExponentialMovingAverage,
+    data_a: Vec<f64>,
+    data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rsi {
     rsi: RelativeStrengthIndex,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactRsi {
+    rsi: RelativeStrengthIndex,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,6 +111,13 @@ pub struct Macd {
     ema9: ExponentialMovingAverage,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactMacd {
+    ema26: ExponentialMovingAverage,
+    ema12: ExponentialMovingAverage,
+    ema9: ExponentialMovingAverage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
