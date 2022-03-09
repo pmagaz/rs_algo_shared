@@ -24,16 +24,11 @@ pub struct Instrument {
     pub symbol: String,
     time_frame: TimeFrameType,
     current_price: f64,
-    min_price: f64,
-    max_price: f64,
     current_candle: CandleType,
-    #[serde(skip_deserializing)]
-    pub updated: String,
-    data: Vec<Candle>,
-    peaks: Peaks,
+    updated: String,
     //horizontal_levels: HorizontalLevels,
     patterns: Patterns,
-    indicators: Indicators,
+    indicators: CompactIndicators,
     divergences: Divergences,
 }
 
@@ -68,12 +63,29 @@ pub struct Indicators {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactIndicators {
+    pub macd: CompactMacd,
+    pub stoch: CompactStoch,
+    pub rsi: CompactRsi,
+    pub ema_a: CompactEma,
+    pub ema_b: CompactEma,
+    pub ema_c: CompactEma,
+    pub ema_d: CompactEma,
+    pub ema_e: CompactEma,
+}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stoch {
     stoch: SlowStochastic,
     ema: ExponentialMovingAverage,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactStoch {
+    stoch: SlowStochastic,
+    ema: ExponentialMovingAverage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
