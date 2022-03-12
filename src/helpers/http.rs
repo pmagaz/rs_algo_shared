@@ -1,8 +1,14 @@
-use crate::models::HttpMethod;
-
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpMethod {
+    Post,
+    Put,
+    Get,
+    Patch,
+}
 
 pub async fn request<T>(url: &str, data: &T, method: HttpMethod) -> Result<Response, Error>
 where
