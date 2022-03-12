@@ -8,34 +8,50 @@ use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpMethod {
+    Post,
+    Put,
+    Get,
+    Patch,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactInstrument2 {
+    pub symbol: String,
+    pub time_frame: String,
+    pub current_price: f64,
+    pub current_candle: String,
+    pub updated: String,
+    pub patterns: Patterns,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactInstrument {
     pub symbol: String,
-    time_frame: TimeFrameType,
-    current_price: f64,
-    current_candle: CandleType,
-    #[serde(skip_deserializing)]
-    updated: String,
-    patterns: CompactPatterns,
-    indicators: CompactIndicators,
-    divergences: Divergences,
+    pub time_frame: TimeFrameType,
+    pub current_price: f64,
+    pub current_candle: CandleType,
+    pub updated: String,
+    pub patterns: Patterns,
+    pub indicators: CompactIndicators,
+    pub divergences: Divergences,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instrument {
     pub symbol: String,
-    time_frame: TimeFrameType,
-    current_price: f64,
+    pub time_frame: TimeFrameType,
+    pub current_price: f64,
     min_price: f64,
     max_price: f64,
-    current_candle: CandleType,
+    pub current_candle: CandleType,
     #[serde(skip_deserializing)]
     pub updated: String,
     data: Vec<Candle>,
     peaks: Peaks,
-    //horizontal_levels: HorizontalLevels,
-    patterns: Patterns,
-    indicators: Indicators,
-    divergences: Divergences,
+    pub patterns: Patterns,
+    pub indicators: Indicators,
+    pub divergences: Divergences,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,22 +86,22 @@ pub struct Indicators {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactIndicators {
-    pub macd: CompactMacd,
-    pub stoch: CompactStoch,
-    pub rsi: CompactRsi,
-    pub ema_a: CompactEma,
-    pub ema_b: CompactEma,
-    pub ema_c: CompactEma,
-    pub ema_d: CompactEma,
-    pub ema_e: CompactEma,
+    pub macd: CompactIndicator,
+    pub stoch: CompactIndicator,
+    pub rsi: CompactIndicator,
+    pub ema_a: CompactIndicator,
+    pub ema_b: CompactIndicator,
+    pub ema_c: CompactIndicator,
+    pub ema_d: CompactIndicator,
+    pub ema_e: CompactIndicator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stoch {
     stoch: SlowStochastic,
     ema: ExponentialMovingAverage,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,22 +113,36 @@ pub struct CompactStoch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ema {
     ema: ExponentialMovingAverage,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+    pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactEma {
     ema: ExponentialMovingAverage,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactIndicator2 {
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactIndicator {
+    pub current_a: f64,
+    pub current_b: f64,
+    pub prev_a: f64,
+    pub prev_b: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rsi {
     rsi: RelativeStrengthIndex,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+    pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,8 +155,8 @@ pub struct Macd {
     ema26: ExponentialMovingAverage,
     ema12: ExponentialMovingAverage,
     ema9: ExponentialMovingAverage,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,6 +197,29 @@ pub struct Peaks {
     pub smooth_close: Vec<(usize, f64)>,
     pub extrema_maxima: Vec<(usize, f64)>,
     pub extrema_minima: Vec<(usize, f64)>,
+}
+
+impl Peaks {
+    pub fn new() -> Self {
+        Peaks {
+            highs: vec![],
+            close: vec![],
+            lows: vec![],
+            local_maxima: vec![],
+            local_minima: vec![],
+            smooth_highs: vec![],
+            smooth_lows: vec![],
+            smooth_close: vec![],
+            extrema_maxima: vec![],
+            extrema_minima: vec![],
+        }
+    }
+}
+
+impl Default for Peaks {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -246,6 +299,7 @@ pub struct PatternActive {
 pub struct Pattern {
     pub pattern_type: PatternType,
     pub pattern_size: PatternSize,
+    #[serde(skip_deserializing)]
     pub data_points: DataPoints,
     pub direction: PatternDirection,
     pub active: PatternActive,
