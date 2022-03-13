@@ -379,7 +379,7 @@ pub struct Divergence {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Divergences {
-    divergences: Vec<Divergence>,
+    pub divergences: Vec<Divergence>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
