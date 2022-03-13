@@ -34,7 +34,7 @@ pub struct CompactInstrument {
     pub updated: String,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
-    pub divergences: Divergences,
+    pub divergences: CompactDivergences,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -289,6 +289,7 @@ pub struct PatternActive {
     pub active: bool,
     pub completed: bool,
     pub index: usize,
+    pub date: DateTime<Local>,
     pub price: f64,
     pub target: f64,
     pub change: f64,
@@ -378,4 +379,15 @@ pub struct Divergence {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Divergences {
     divergences: Vec<Divergence>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactDivergences {
+    divergences: Vec<CompactDivergence>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactDivergence {
+    pub indicator: IndicatorType,
+    pub divergence_type: DivergenceType,
 }
