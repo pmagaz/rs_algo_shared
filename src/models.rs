@@ -290,7 +290,7 @@ pub struct PatternActive {
     pub completed: bool,
     pub index: usize,
     pub date: DateTime<Local>,
-    pub timestamp: u64,
+    pub timestamp: i64,
     pub price: f64,
     pub target: f64,
     pub change: f64,
