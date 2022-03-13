@@ -384,7 +384,7 @@ pub struct Divergences {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactDivergences {
-    divergences: Vec<CompactDivergence>,
+    pub divergences: Vec<CompactDivergence>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
