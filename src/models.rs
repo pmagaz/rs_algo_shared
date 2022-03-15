@@ -42,13 +42,13 @@ pub struct Instrument {
     pub symbol: String,
     pub time_frame: TimeFrameType,
     pub current_price: f64,
-    min_price: f64,
-    max_price: f64,
+    pub min_price: f64,
+    pub max_price: f64,
     pub current_candle: CandleType,
     #[serde(skip_deserializing)]
     pub updated: String,
-    data: Vec<Candle>,
-    peaks: Peaks,
+    pub data: Vec<Candle>,
+    pub peaks: Peaks,
     pub patterns: Patterns,
     pub indicators: Indicators,
     pub divergences: Divergences,
@@ -98,8 +98,8 @@ pub struct CompactIndicators {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stoch {
-    stoch: SlowStochastic,
-    ema: ExponentialMovingAverage,
+    pub stoch: SlowStochastic,
+    pub ema: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
 }
@@ -112,7 +112,7 @@ pub struct CompactStoch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ema {
-    ema: ExponentialMovingAverage,
+    pub ema: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
@@ -139,7 +139,7 @@ pub struct CompactIndicator {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rsi {
-    rsi: RelativeStrengthIndex,
+    pub rsi: RelativeStrengthIndex,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
@@ -152,8 +152,8 @@ pub struct CompactRsi {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Macd {
-    ema26: ExponentialMovingAverage,
-    ema12: ExponentialMovingAverage,
+    pub ema26: ExponentialMovingAverage,
+    pub ema12: ExponentialMovingAverage,
     ema9: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
