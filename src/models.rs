@@ -301,7 +301,6 @@ pub struct PatternActive {
 pub struct Pattern {
     pub pattern_type: PatternType,
     pub pattern_size: PatternSize,
-    #[serde(skip_deserializing)]
     pub data_points: DataPoints,
     pub direction: PatternDirection,
     pub active: PatternActive,
