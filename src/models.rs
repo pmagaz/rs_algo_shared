@@ -25,7 +25,7 @@ pub struct CompactInstrument2 {
     pub patterns: Patterns,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactInstrument {
     pub symbol: String,
     pub time_frame: TimeFrameType,
@@ -65,7 +65,7 @@ pub enum IndicatorStatus {
     Default,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IndicatorType {
     Macd,
     Stoch,
@@ -84,7 +84,7 @@ pub struct Indicators {
     pub ema_e: Ema,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactIndicators {
     pub macd: CompactIndicator,
     pub stoch: CompactIndicator,
@@ -129,7 +129,7 @@ pub struct CompactIndicator2 {
     pub data_b: Vec<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactIndicator {
     pub current_a: f64,
     pub current_b: f64,
@@ -222,7 +222,7 @@ impl Default for Peaks {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CandleType {
     Default,
     Doji,
@@ -252,7 +252,7 @@ pub struct Candle {
     pub volume: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PatternDirection {
     Top,
     Bottom,
@@ -278,13 +278,13 @@ pub enum PatternType {
     None,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PatternSize {
     Local,
     Extrema,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PatternActive {
     pub active: bool,
     pub completed: bool,
@@ -297,7 +297,7 @@ pub struct PatternActive {
     pub break_direction: PatternDirection,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Pattern {
     pub pattern_type: PatternType,
     pub pattern_size: PatternSize,
@@ -316,7 +316,7 @@ pub struct CompactPattern {
     pub change: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Patterns {
     pub local_patterns: Vec<Pattern>,
     pub extrema_patterns: Vec<Pattern>,
@@ -328,7 +328,7 @@ pub struct CompactPatterns {
     pub extrema_patterns: Vec<CompactPattern>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TimeFrameType {
     H1,
     H4,
@@ -362,7 +362,7 @@ impl TimeFrameType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DivergenceType {
     Bullish,
     Bearish,
@@ -381,12 +381,12 @@ pub struct Divergences {
     pub divergences: Vec<Divergence>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactDivergences {
     pub divergences: Vec<CompactDivergence>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactDivergence {
     pub indicator: IndicatorType,
     pub divergence_type: DivergenceType,

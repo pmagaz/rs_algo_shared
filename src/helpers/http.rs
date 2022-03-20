@@ -10,6 +10,12 @@ pub enum HttpMethod {
     Patch,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Format {
+    Json,
+    String,
+}
+
 pub async fn request<T>(url: &str, data: &T, method: HttpMethod) -> Result<Response, Error>
 where
     for<'de> T: Serialize + Deserialize<'de> + Debug,
