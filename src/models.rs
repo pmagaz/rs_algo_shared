@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use chrono::DateTime;
 use chrono::Local;
@@ -276,6 +277,12 @@ pub enum PatternType {
     DoubleTop,
     DoubleBottom,
     None,
+}
+
+impl std::fmt::Display for PatternType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
