@@ -268,7 +268,6 @@ pub enum PatternType {
     Triangle,
     TriangleSymmetrical,
     TriangleDescendant,
-    TriangleSymmetricalTop,
     TriangleAscendant,
     Rectangle,
     ChannelUp,
@@ -276,6 +275,7 @@ pub enum PatternType {
     Broadening,
     DoubleTop,
     DoubleBottom,
+    HeadAndShoulders,
     None,
 }
 
