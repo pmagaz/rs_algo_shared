@@ -21,8 +21,7 @@ pub struct CompactInstrument {
     pub time_frame: TimeFrameType,
     pub current_price: f64,
     pub current_candle: CandleType,
-    pub updated: String,
-    pub updated2: DateUpdated,
+    pub updated: DateUpdated,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
@@ -36,10 +35,7 @@ pub struct Instrument {
     pub min_price: f64,
     pub max_price: f64,
     pub current_candle: CandleType,
-    #[serde(skip_deserializing)]
-    pub updated: String,
-    #[serde(skip_deserializing)]
-    pub updated2: DateUpdated,
+    pub updated: DateUpdated,
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
@@ -49,13 +45,13 @@ pub struct Instrument {
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq)]
 pub struct DateUpdated {
-    pub updated: BsonDateTime,
+    pub date: BsonDateTime,
 }
 
 impl Default for DateUpdated {
     fn default() -> DateUpdated {
         DateUpdated {
-            updated: bson::DateTime::from_chrono(Local::now()),
+            date: bson::DateTime::from_chrono(Local::now()),
         }
     }
 }
