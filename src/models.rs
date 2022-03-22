@@ -1,4 +1,4 @@
-use bson::{Bson, DateTime as BsonDateTime};
+pub use bson::{Bson, DateTime as BsonDateTime};
 use chrono::DateTime;
 use chrono::{Local, Utc};
 use serde::{Deserialize, Serialize};
