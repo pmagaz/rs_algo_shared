@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use std::fmt::Display;
-
+use bson::DateTime as BsonDateTime;
 use chrono::DateTime;
 use chrono::Local;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
@@ -16,16 +15,6 @@ pub enum HttpMethod {
     Patch,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompactInstrument2 {
-    pub symbol: String,
-    pub time_frame: String,
-    pub current_price: f64,
-    pub current_candle: String,
-    pub updated: String,
-    pub patterns: Patterns,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactInstrument {
     pub symbol: String,
@@ -33,6 +22,7 @@ pub struct CompactInstrument {
     pub current_price: f64,
     pub current_candle: CandleType,
     pub updated: String,
+    pub updated2: BsonDateTime,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
@@ -48,6 +38,7 @@ pub struct Instrument {
     pub current_candle: CandleType,
     #[serde(skip_deserializing)]
     pub updated: String,
+    pub updated2: BsonDateTime,
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
@@ -297,6 +288,7 @@ pub struct PatternActive {
     pub completed: bool,
     pub index: usize,
     pub date: DateTime<Local>,
+    pub date2: BsonDateTime,
     pub timestamp: i64,
     pub price: f64,
     pub target: f64,
