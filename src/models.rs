@@ -22,7 +22,7 @@ pub struct CompactInstrument {
     pub current_price: f64,
     pub current_candle: CandleType,
     pub updated: String,
-    pub updated2: BsonDateTime,
+    pub updated2: DateUpdated,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
