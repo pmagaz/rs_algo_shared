@@ -1,6 +1,6 @@
-use bson::DateTime as BsonDateTime;
+use bson::{Bson, DateTime as BsonDateTime};
 use chrono::DateTime;
-use chrono::Local;
+use chrono::{Local, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ta::indicators::ExponentialMovingAverage;
@@ -38,12 +38,26 @@ pub struct Instrument {
     pub current_candle: CandleType,
     #[serde(skip_deserializing)]
     pub updated: String,
-    pub updated2: BsonDateTime,
+    #[serde(skip_deserializing)]
+    pub updated2: DateUpdated,
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
     pub indicators: Indicators,
     pub divergences: Divergences,
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq)]
+pub struct DateUpdated {
+    pub updated: BsonDateTime,
+}
+
+impl Default for DateUpdated {
+    fn default() -> DateUpdated {
+        DateUpdated {
+            updated: bson::DateTime::from_chrono(Local::now()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -288,7 +302,7 @@ pub struct PatternActive {
     pub completed: bool,
     pub index: usize,
     pub date: DateTime<Local>,
-    pub date2: BsonDateTime,
+    //pub date2: DateUpdated,
     pub timestamp: i64,
     pub price: f64,
     pub target: f64,
