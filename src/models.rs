@@ -1,6 +1,6 @@
-pub use bson::{Bson, DateTime as BsonDateTime};
+pub use bson::{Bson, DateTime as DbDateTime};
 use chrono::DateTime;
-use chrono::{Local, Utc};
+use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ta::indicators::ExponentialMovingAverage;
@@ -21,7 +21,7 @@ pub struct CompactInstrument {
     pub time_frame: TimeFrameType,
     pub current_price: f64,
     pub current_candle: CandleType,
-    pub date: BsonDateTime,
+    pub date: DbDateTime,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
@@ -35,7 +35,7 @@ pub struct Instrument {
     pub min_price: f64,
     pub max_price: f64,
     pub current_candle: CandleType,
-    pub date: BsonDateTime,
+    pub date: DbDateTime,
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
@@ -45,7 +45,7 @@ pub struct Instrument {
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq)]
 pub struct DateUpdated {
-    pub date: BsonDateTime,
+    pub date: DbDateTime,
 }
 
 impl Default for DateUpdated {
@@ -297,9 +297,7 @@ pub struct PatternActive {
     pub active: bool,
     pub completed: bool,
     pub index: usize,
-    pub date: DateTime<Local>,
-    //pub date2: DateUpdated,
-    pub timestamp: i64,
+    pub date: DbDateTime,
     pub price: f64,
     pub target: f64,
     pub change: f64,
