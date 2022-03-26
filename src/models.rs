@@ -82,8 +82,6 @@ pub struct Indicators {
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
-    pub ema_d: Ema,
-    pub ema_e: Ema,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -94,8 +92,6 @@ pub struct CompactIndicators {
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
     pub ema_c: CompactIndicator,
-    pub ema_d: CompactIndicator,
-    pub ema_e: CompactIndicator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
