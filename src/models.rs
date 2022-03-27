@@ -56,17 +56,6 @@ impl Default for DateUpdated {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum IndicatorStatus {
-    Bearish,
-    BearishBellowZero,
-    Bullish,
-    BullishOverZero,
-    Oversold,
-    Overbought,
-    Default,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IndicatorType {
     Macd,
@@ -128,11 +117,32 @@ pub struct CompactIndicator2 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum IndicatorStatus {
+    Bullish,
+    Bearish,
+    Neutral,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactIndicator {
     pub current_a: f64,
     pub current_b: f64,
     pub prev_a: f64,
     pub prev_b: f64,
+    #[serde(skip_deserializing)]
+    pub status: IndicatorStatus,
+}
+
+impl IndicatorStatus {
+    pub fn new() -> Self {
+        IndicatorStatus::Neutral
+    }
+}
+
+impl Default for IndicatorStatus {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
