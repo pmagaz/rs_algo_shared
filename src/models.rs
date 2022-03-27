@@ -130,7 +130,6 @@ pub struct CompactIndicator {
     pub current_b: f64,
     pub prev_a: f64,
     pub prev_b: f64,
-    #[serde(skip_deserializing)]
     pub status: IndicatorStatus,
 }
 
