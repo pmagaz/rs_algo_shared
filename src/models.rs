@@ -117,7 +117,7 @@ pub struct CompactIndicator2 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum IndicatorStatus {
+pub enum Status {
     Bullish,
     Bearish,
     Neutral,
@@ -130,16 +130,16 @@ pub struct CompactIndicator {
     pub current_b: f64,
     pub prev_a: f64,
     pub prev_b: f64,
-    pub status: IndicatorStatus,
+    pub status: Status,
 }
 
-impl IndicatorStatus {
+impl Status {
     pub fn new() -> Self {
-        IndicatorStatus::Neutral
+        Status::Neutral
     }
 }
 
-impl Default for IndicatorStatus {
+impl Default for Status {
     fn default() -> Self {
         Self::new()
     }
@@ -307,6 +307,7 @@ pub struct PatternActive {
     pub price: f64,
     pub target: f64,
     pub change: f64,
+    pub status: Status,
     pub break_direction: PatternDirection,
 }
 
