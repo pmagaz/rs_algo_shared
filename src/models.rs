@@ -121,6 +121,7 @@ pub enum IndicatorStatus {
     Bullish,
     Bearish,
     Neutral,
+    Default,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
