@@ -25,7 +25,7 @@ pub fn increase_equally(a: (f64, f64), b: (f64, f64)) -> bool {
     let increase_b = (b.0 - b.1).abs();
     let percentage_increase_b = (increase_b / b.1) * 100.;
 
-    let threshold = env::var("INCREASE_THRESHOLD")
+    let threshold = env::var("EQUAL_PERCENTAGE_THRESHOLD")
         .unwrap()
         .parse::<f64>()
         .unwrap();

@@ -267,6 +267,12 @@ pub enum PatternDirection {
     None,
 }
 
+impl std::fmt::Display for PatternDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 type Point = (usize, f64);
 pub type DataPoints = Vec<Point>;
 
