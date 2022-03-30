@@ -242,7 +242,7 @@ pub enum CandleType {
     BearishHarami,
     BearishStar,
     Engulfing,
-    MorningStart,
+    MorningStar,
     BearishEngulfing,
     HangingMan,
     BullishCrows,
