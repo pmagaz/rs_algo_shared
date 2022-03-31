@@ -18,13 +18,32 @@ pub fn is_equal(x: f64, y: f64) -> bool {
     }
 }
 
-pub fn band_is_equal(x: f64, y: f64) -> bool {
+pub fn is_same_band(x: f64, y: f64) -> bool {
     let threshold = env::var("HORIZONTAL_LEVELS_THRESHOLD")
         .unwrap()
         .parse::<f64>()
         .unwrap();
     let percentage_change = percentage_change(x, y);
     if percentage_change > 0. && percentage_change < threshold {
+        true
+    } else {
+        false
+    }
+}
+
+pub fn is_equal_distance(a: (f64, f64), b: (f64, f64)) -> bool {
+    let move_a = (a.0 - a.1).abs();
+    let percentage_move_a = (move_a / b.1) * 100.;
+
+    let move_b = (b.0 - b.1).abs();
+    let percentage_move_b = (move_b / b.1) * 100.;
+
+    let threshold = env::var("EQUAL_DISTANCE_THRESHOLD")
+        .unwrap()
+        .parse::<f64>()
+        .unwrap();
+
+    if (percentage_move_a - percentage_move_b).abs() < threshold {
         true
     } else {
         false
