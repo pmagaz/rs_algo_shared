@@ -2,6 +2,7 @@ pub use bson::{Bson, DateTime as DbDateTime};
 use chrono::DateTime;
 use chrono::Local;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
@@ -22,7 +23,7 @@ pub struct CompactInstrument {
     pub current_candle: CandleType,
     pub date: DbDateTime,
     pub patterns: Patterns,
-    pub horizontal_levels: Vec<HorizontalLevel>,
+    pub horizontal_levels: HorizontalLevels,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
 }
@@ -39,7 +40,7 @@ pub struct Instrument {
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
-    pub horizontal_levels: Vec<HorizontalLevel>,
+    pub horizontal_levels: HorizontalLevels,
     pub indicators: Indicators,
     pub divergences: Divergences,
 }
@@ -188,10 +189,10 @@ pub struct HorizontalLevel {
     level_type: HorizontalLevelType,
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-// pub struct HorizontalLevels {
-//     bands: Vec<HorizontalLevel>,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HorizontalLevels {
+    bands: Vec<HorizontalLevel>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Peaks {
