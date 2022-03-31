@@ -191,7 +191,8 @@ pub struct HorizontalLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HorizontalLevels {
-    bands: Vec<HorizontalLevel>,
+    highs: Vec<HorizontalLevel>,
+    lows: Vec<HorizontalLevel>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
