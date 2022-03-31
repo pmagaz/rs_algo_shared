@@ -18,6 +18,19 @@ pub fn is_equal(x: f64, y: f64) -> bool {
     }
 }
 
+pub fn band_is_equal(x: f64, y: f64) -> bool {
+    let threshold = env::var("HORIZONTAL_LEVELS_THRESHOLD")
+        .unwrap()
+        .parse::<f64>()
+        .unwrap();
+    let percentage_change = percentage_change(x, y);
+    if percentage_change > 0. && percentage_change < threshold {
+        true
+    } else {
+        false
+    }
+}
+
 pub fn increase_equally(a: (f64, f64), b: (f64, f64)) -> bool {
     let increase_a = (a.0 - a.1).abs();
     let percentage_increase_a = (increase_a / b.1) * 100.;
