@@ -21,7 +21,7 @@ pub struct CompactInstrument {
     pub time_frame: TimeFrameType,
     pub current_price: f64,
     pub current_candle: CandleType,
-    pub date: DbDateTime,
+    pub date: DateTime<Local>,
     pub patterns: Patterns,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
