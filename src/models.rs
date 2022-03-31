@@ -35,7 +35,7 @@ pub struct Instrument {
     pub min_price: f64,
     pub max_price: f64,
     pub current_candle: CandleType,
-    pub date: DbDateTime,
+    pub date: DateTime<Local>,
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
