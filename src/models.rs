@@ -191,7 +191,7 @@ pub struct HorizontalLevel {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HorizontalLevels {
-    horizontal_levels: HashMap<String, HorizontalLevel>,
+    bands: HashMap<String, HorizontalLevel>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
