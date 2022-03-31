@@ -23,6 +23,7 @@ pub struct CompactInstrument {
     pub current_candle: CandleType,
     pub date: DbDateTime,
     pub patterns: Patterns,
+    pub horizontal_levels: HorizontalLevels,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
 }
@@ -39,6 +40,7 @@ pub struct Instrument {
     pub data: Vec<Candle>,
     pub peaks: Peaks,
     pub patterns: Patterns,
+    pub horizontal_levels: HorizontalLevels,
     pub indicators: Indicators,
     pub divergences: Divergences,
 }
@@ -174,23 +176,22 @@ pub struct CompactMacd {
     ema9: ExponentialMovingAverage,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HorizontalLevelType {
     Resistance,
     Support,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HorizontalLevel {
     price: f64,
-    min_value: f64,
-    max_value: f64,
+    occurrences: usize,
     level_type: HorizontalLevelType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HorizontalLevels {
-    horizontal_levels: HashMap<usize, HorizontalLevel>,
+    horizontal_levels: HashMap<String, HorizontalLevel>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
