@@ -184,9 +184,13 @@ pub enum HorizontalLevelType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HorizontalLevel {
-    price: f64,
-    occurrences: usize,
-    level_type: HorizontalLevelType,
+    pub price: f64,
+    pub occurrences: usize,
+    pub active: bool,
+    pub completed: bool,
+    pub index: usize,
+    pub date: DbDateTime,
+    pub level_type: HorizontalLevelType,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
