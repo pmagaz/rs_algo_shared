@@ -187,7 +187,6 @@ pub struct HorizontalLevel {
     pub price: f64,
     pub occurrences: usize,
     pub active: bool,
-    pub completed: bool,
     pub index: usize,
     pub date: DbDateTime,
     pub level_type: HorizontalLevelType,
