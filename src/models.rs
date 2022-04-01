@@ -186,8 +186,6 @@ pub enum HorizontalLevelType {
 pub struct HorizontalLevel {
     pub price: f64,
     pub occurrences: usize,
-    pub active: bool,
-    pub index: usize,
     pub date: DbDateTime,
     pub level_type: HorizontalLevelType,
 }
