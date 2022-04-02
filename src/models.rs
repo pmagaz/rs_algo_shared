@@ -324,6 +324,8 @@ pub struct PatternActive {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Pattern {
+    pub index: usize,
+    pub date: DbDateTime,
     pub pattern_type: PatternType,
     pub pattern_size: PatternSize,
     pub data_points: DataPoints,
@@ -334,6 +336,8 @@ pub struct Pattern {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactPattern {
+    pub index: usize,
+    pub date: DbDateTime,
     pub pattern_type: PatternType,
     pub pattern_size: PatternSize,
     pub direction: PatternDirection,
