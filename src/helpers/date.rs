@@ -1,3 +1,4 @@
+pub use bson::{Bson, DateTime as DbDateTime};
 pub use chrono::offset::{Local, TimeZone, Utc};
 pub use chrono::{Date, DateTime, Datelike, Duration, NaiveDateTime, NaiveTime};
 

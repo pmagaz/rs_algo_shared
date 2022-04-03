@@ -1,8 +1,6 @@
-pub use bson::{Bson, DateTime as DbDateTime};
-use chrono::DateTime;
-use chrono::Local;
+use crate::helpers::date::*;
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
