@@ -1,5 +1,3 @@
-use std::env;
-
 pub fn percentage_change(x: f64, y: f64) -> f64 {
     let max = x.max(y);
     let min = y.min(x);
@@ -9,7 +7,6 @@ pub fn percentage_change(x: f64, y: f64) -> f64 {
 }
 
 pub fn is_equal(x: f64, y: f64, threshold: f64) -> bool {
-    //let threshold = env::var("EQUAL_THRESHOLD").unwrap().parse::<f64>().unwrap();
     let percentage_change = percentage_change(x, y);
     if percentage_change <= 0. || percentage_change < threshold {
         true
@@ -19,10 +16,6 @@ pub fn is_equal(x: f64, y: f64, threshold: f64) -> bool {
 }
 
 pub fn is_same_band(x: f64, y: f64, threshold: f64) -> bool {
-    // let threshold = env::var("HORIZONTAL_LEVELS_THRESHOLD")
-    //     .unwrap()
-    //     .parse::<f64>()
-    //     .unwrap();
     let percentage_change = percentage_change(x, y);
     if percentage_change > 0. && percentage_change < threshold {
         true
@@ -38,11 +31,6 @@ pub fn is_equal_distance(a: (f64, f64), b: (f64, f64), threshold: f64) -> bool {
     let move_b = (b.0 - b.1).abs();
     let percentage_move_b = (move_b / b.1) * 100.;
 
-    // let threshold = env::var("EQUAL_DISTANCE_THRESHOLD")
-    //     .unwrap()
-    //     .parse::<f64>()
-    //     .unwrap();
-
     if (percentage_move_a - percentage_move_b).abs() < threshold {
         true
     } else {
@@ -56,11 +44,6 @@ pub fn increase_equally(a: (f64, f64), b: (f64, f64), threshold: f64) -> bool {
 
     let increase_b = (b.0 - b.1).abs();
     let percentage_increase_b = (increase_b / b.1) * 100.;
-
-    // let threshold = env::var("EQUAL_DISTANCE_THRESHOLD")
-    //     .unwrap()
-    //     .parse::<f64>()
-    //     .unwrap();
 
     if (percentage_increase_a - percentage_increase_b).abs() < threshold {
         true
