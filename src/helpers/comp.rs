@@ -11,7 +11,7 @@ pub fn percentage_change(x: f64, y: f64) -> f64 {
 pub fn is_equal(x: f64, y: f64) -> bool {
     let threshold = env::var("EQUAL_THRESHOLD").unwrap().parse::<f64>().unwrap();
     let percentage_change = percentage_change(x, y);
-    if percentage_change > 0. && percentage_change < threshold {
+    if percentage_change <= 0. || percentage_change < threshold {
         true
     } else {
         false
