@@ -282,16 +282,16 @@ pub type DataPoints = Vec<Point>;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PatternType {
     Triangle,
-    TriangleSymmetrical,
-    TriangleDescendant,
-    TriangleAscendant,
+    TriangleSym,
+    TriangleDown,
+    TriangleUp,
     Rectangle,
     ChannelUp,
     ChannelDown,
     Broadening,
     DoubleTop,
     DoubleBottom,
-    HeadAndShoulders,
+    HeadShoulders,
     None,
 }
 
