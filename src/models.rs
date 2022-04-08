@@ -23,7 +23,7 @@ pub struct CompactInstrument {
     pub patterns: Patterns,
     pub horizontal_levels: HorizontalLevels,
     pub indicators: CompactIndicators,
-    pub divergences: Vec<CompactDivergence>,
+    pub divergences: CompactDivergences,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ pub struct Instrument {
     pub patterns: Patterns,
     pub horizontal_levels: HorizontalLevels,
     pub indicators: Indicators,
-    pub divergences: Vec<Divergence>,
+    pub divergences: Divergences,
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq)]
@@ -403,15 +403,15 @@ pub struct Divergence {
     pub divergence_type: DivergenceType,
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct Divergences {
-//     pub divergences: Vec<Divergence>,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Divergences {
+    pub data: Vec<Divergence>,
+}
 
-// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-// pub struct CompactDivergences {
-//     pub divergences: Vec<CompactDivergence>,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CompactDivergences {
+    pub data: Vec<CompactDivergence>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactDivergence {
