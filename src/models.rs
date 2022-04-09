@@ -396,6 +396,12 @@ pub enum DivergenceType {
     None,
 }
 
+impl std::fmt::Display for DivergenceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Divergence {
     pub data: DataPoints,
