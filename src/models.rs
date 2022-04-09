@@ -399,6 +399,7 @@ pub enum DivergenceType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Divergence {
     pub data: DataPoints,
+    pub date: DbDateTime,
     pub indicator: IndicatorType,
     pub divergence_type: DivergenceType,
 }
@@ -416,5 +417,6 @@ pub struct CompactDivergences {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactDivergence {
     pub indicator: IndicatorType,
+    pub date: DbDateTime,
     pub divergence_type: DivergenceType,
 }
