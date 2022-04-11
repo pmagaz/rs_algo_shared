@@ -71,9 +71,9 @@ pub struct Indicators {
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
-    pub tema1: Tema,
-    pub tema2: Tema,
-    pub tema3: Tema,
+    pub tema_a: Tema,
+    pub tema_b: Tema,
+    pub tema_c: Tema,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -84,9 +84,9 @@ pub struct CompactIndicators {
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
     pub ema_c: CompactIndicator,
-    pub tema1: CompactIndicator,
-    pub tema2: CompactIndicator,
-    pub tema3: CompactIndicator,
+    pub tema_a: CompactIndicator,
+    pub tema_b: CompactIndicator,
+    pub tema_c: CompactIndicator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
