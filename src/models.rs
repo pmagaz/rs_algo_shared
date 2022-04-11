@@ -71,6 +71,9 @@ pub struct Indicators {
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
+    pub tema1: Tema,
+    pub tema2: Tema,
+    pub tema3: Tema,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,11 +84,16 @@ pub struct CompactIndicators {
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
     pub ema_c: CompactIndicator,
+    pub tema1: CompactIndicator,
+    pub tema2: CompactIndicator,
+    pub tema3: CompactIndicator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stoch {
+    #[serde(skip_deserializing)]
     pub stoch: SlowStochastic,
+    #[serde(skip_deserializing)]
     pub ema: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
@@ -99,6 +107,7 @@ pub struct CompactStoch {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ema {
+    #[serde(skip_deserializing)]
     pub ema: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
@@ -111,9 +120,21 @@ pub struct CompactEma {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompactIndicator2 {
+pub struct Tema {
+    #[serde(skip_deserializing)]
+    pub ema1: ExponentialMovingAverage,
+    #[serde(skip_deserializing)]
+    pub ema2: ExponentialMovingAverage,
+    #[serde(skip_deserializing)]
+    pub ema3: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompactTema {
+    tema: ExponentialMovingAverage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -147,6 +168,7 @@ impl Default for Status {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rsi {
+    #[serde(skip_deserializing)]
     pub rsi: RelativeStrengthIndex,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
