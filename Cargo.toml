@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["pmagaz <magazpablo@gmail.com>"]
 edition = "2021"
 
+[lib]
+name = "rs_algo_shared"
+path = "src/lib.rs"
+
 [features]
 default = []
 chart = ["plotters"]
