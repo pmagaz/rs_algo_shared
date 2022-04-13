@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::models::*;
+use dotenv::dotenv;
 
 use plotters::prelude::*;
 use std::env;
@@ -9,6 +10,7 @@ pub struct Chart;
 
 impl Chart {
     pub fn new() -> Self {
+        dotenv().ok();
         Self {}
     }
 
@@ -29,12 +31,12 @@ impl Chart {
             .unwrap();
 
         let output_file = [
-            &env::var("Chart_PLOTTER_OUTPUT_FOLDER").unwrap(),
+            &env::var("CHARTS_OUTPUT_FOLDER").unwrap(),
             &instrument.symbol,
             ".png",
         ]
         .concat();
-        println!("Chart PATH {}", output_file);
+        println!("CHART PATH {}", output_file);
         let min_price = instrument.min_price;
         let max_price = instrument.max_price;
 
