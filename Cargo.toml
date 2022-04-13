@@ -27,5 +27,5 @@ chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 [dependencies.plotters]
 optional = true
 git = "https://github.com/pmagaz/plotters"
-branch="main"
+branch = "master"
 features = ["all_series"]
