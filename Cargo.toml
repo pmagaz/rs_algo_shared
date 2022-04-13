@@ -20,4 +20,8 @@ reqwest = { version = "0.11.9", features = ["json"] }
 ta = {version = "0.5.0", features = ["serde"] }
 chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 
-plotters = {git = "https://github.com/pmagaz/plotters", branch="main", features = ["all_series"]}
+[dependencies.plotters]
+optional = true
+git = "https://github.com/pmagaz/plotters"
+branch="main"
+features = ["all_series"]
