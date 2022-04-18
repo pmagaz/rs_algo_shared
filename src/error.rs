@@ -22,8 +22,8 @@ pub enum RsAlgoError {
     NoUserFound,
     #[error("Can't connect to database")]
     NoDbConnection,
-    #[error("Invalid Token")]
-    InvalidToken,
+    #[error("Request Error")]
+    RequestError,
 }
 
 impl RsAlgoError {
@@ -34,7 +34,7 @@ impl RsAlgoError {
             Self::Unknown => "Unknown".to_string(),
             Self::NoUserFound => "NoUserFound".to_string(),
             Self::NoDbConnection => "NoDbConnection".to_string(),
-            Self::InvalidToken => "InvalidToken".to_string(),
+            Self::RequestError => "RequestError".to_string(),
         }
     }
 }
