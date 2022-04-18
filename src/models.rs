@@ -480,3 +480,8 @@ impl std::fmt::Display for Alarm {
         write!(f, "{:?}", self)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct ApiResponse {
+    result: String,
+}
