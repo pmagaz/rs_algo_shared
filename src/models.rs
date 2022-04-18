@@ -1,5 +1,5 @@
 use crate::helpers::date::*;
-
+//FIXME split into files
 use serde::{Deserialize, Serialize};
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::RelativeStrengthIndex;
@@ -467,4 +467,16 @@ pub enum AlarmCondition {
     CrossOver,
     CrossBellow,
     None,
+}
+
+impl std::fmt::Display for WatchInstrument {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::fmt::Display for Alarm {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
