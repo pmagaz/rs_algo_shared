@@ -483,5 +483,5 @@ impl std::fmt::Display for Alarm {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct ApiResponse {
-    result: String,
+    pub result: String,
 }
