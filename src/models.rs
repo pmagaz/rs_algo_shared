@@ -448,3 +448,23 @@ pub struct CompactDivergence {
     pub date: DbDateTime,
     pub divergence_type: DivergenceType,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct WatchInstrument {
+    pub symbol: String,
+    pub alarm: Alarm,
+}
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct Alarm {
+    pub active: bool,
+    pub completed: bool,
+    pub price: f64,
+    pub date: DbDateTime,
+    pub condition: AlarmCondition,
+}
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum AlarmCondition {
+    CrossOver,
+    CrossBellow,
+    None,
+}
