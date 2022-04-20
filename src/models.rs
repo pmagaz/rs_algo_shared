@@ -69,8 +69,8 @@ pub enum IndicatorType {
 pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
-    pub atr: AverageTrueRange,
-    pub kc: KeltnerChannel,
+    pub atr: Atr,
+    pub kc: KeltnerC,
     pub rsi: Rsi,
     pub ema_a: Ema,
     pub ema_b: Ema,
@@ -106,7 +106,7 @@ pub struct Stoch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KernelC {
+pub struct KeltnerC {
     #[serde(skip_deserializing)]
     pub kc: KeltnerChannel,
     pub data_a: Vec<f64>,
