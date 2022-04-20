@@ -2,6 +2,7 @@ use crate::helpers::date::*;
 //FIXME split into files
 use serde::{Deserialize, Serialize};
 use ta::indicators::ExponentialMovingAverage;
+use ta::indicators::KeltnerChannel;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
@@ -67,6 +68,7 @@ pub enum IndicatorType {
 pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
+    pub kc: KeltnerChannel,
     pub rsi: Rsi,
     pub ema_a: Ema,
     pub ema_b: Ema,
@@ -80,6 +82,7 @@ pub struct Indicators {
 pub struct CompactIndicators {
     pub macd: CompactIndicator,
     pub stoch: CompactIndicator,
+    pub kc: CompactIndicator,
     pub rsi: CompactIndicator,
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
