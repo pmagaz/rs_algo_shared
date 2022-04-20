@@ -1,6 +1,7 @@
 use crate::helpers::date::*;
 //FIXME split into files
 use serde::{Deserialize, Serialize};
+use ta::indicators::AverageTrueRange;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::KeltnerChannel;
 use ta::indicators::RelativeStrengthIndex;
@@ -68,6 +69,7 @@ pub enum IndicatorType {
 pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
+    pub atr: AverageTrueRange,
     pub kc: KeltnerChannel,
     pub rsi: Rsi,
     pub ema_a: Ema,
@@ -104,6 +106,14 @@ pub struct Stoch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KernelC {
+    #[serde(skip_deserializing)]
+    pub kc: KeltnerChannel,
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactStoch {
     stoch: SlowStochastic,
     ema: ExponentialMovingAverage,
@@ -113,6 +123,15 @@ pub struct CompactStoch {
 pub struct Ema {
     #[serde(skip_deserializing)]
     pub ema: ExponentialMovingAverage,
+    pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Atr {
+    #[serde(skip_deserializing)]
+    pub atr: AverageTrueRange,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
