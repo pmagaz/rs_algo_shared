@@ -82,6 +82,7 @@ pub struct Indicators {
 pub struct CompactIndicators {
     pub macd: CompactIndicator,
     pub stoch: CompactIndicator,
+    pub atr: CompactIndicator,
     pub kc: CompactIndicator,
     pub rsi: CompactIndicator,
     pub ema_a: CompactIndicator,
