@@ -20,14 +20,15 @@ pub struct CompactInstrument {
     pub symbol: String,
     pub time_frame: TimeFrameType,
     pub current_price: f64,
+    pub prev_price: f64,
     pub current_candle: CandleType,
+    pub prev_candle: CandleType,
     pub date: DbDateTime,
     pub patterns: Patterns,
     pub horizontal_levels: HorizontalLevels,
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instrument {
     pub symbol: String,
