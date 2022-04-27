@@ -7,7 +7,7 @@ pub fn percentage_change(x: f64, y: f64) -> f64 {
 }
 
 pub fn price_change(prev: f64, curr: f64) -> f64 {
-    curr - prev / prev * 100.
+    (curr - prev) / prev * 100.
 }
 
 pub fn is_equal(x: f64, y: f64, threshold: f64) -> bool {
