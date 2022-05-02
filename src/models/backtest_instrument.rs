@@ -2,13 +2,6 @@ use crate::helpers::date::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PortFolio {
-    order_size: i32,
-    commission: f64,
-    instruments: Vec<BackTestInstrument>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeDirection {
     Long,
@@ -30,7 +23,7 @@ pub struct BackTestInstrument {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeIn {
-    pub index_in: i32,
+    pub index_in: usize,
     pub price_in: f64,
     pub stop_loss: f64,
     pub date_in: DbDateTime,
@@ -40,10 +33,10 @@ pub struct TradeIn {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeOut {
-    pub index_in: i32,
+    pub index_in: usize,
     pub price_in: f64,
     pub date_in: DbDateTime,
-    pub index_out: i32,
+    pub index_out: usize,
     pub price_out: f64,
     pub date_out: DbDateTime,
     pub profit: f64,
