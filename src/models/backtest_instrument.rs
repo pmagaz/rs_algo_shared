@@ -20,7 +20,7 @@ pub struct BackTestResult {
     pub strategy: String,
     pub trades: usize,
     pub net_profit: f64,
-    pub profitability_per: f64,
+    pub profitable_per: f64,
     pub profit_factor: f64,
     pub max_runup: f64,
     pub max_drawdown: f64,
