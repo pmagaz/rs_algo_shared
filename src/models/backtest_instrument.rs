@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct PortFolio {
     order_size: i32,
     commission: f64,
+    instruments: Vec<BackTestInstrument>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
