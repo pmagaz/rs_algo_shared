@@ -17,9 +17,10 @@ pub enum TradeType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackTestResult {
     pub instrument: BackTestInstrument,
+    pub strategy: String,
     pub trades: usize,
     pub net_profit: f64,
-    pub per_profitable: f64,
+    pub profitability_per: f64,
     pub profit_factor: f64,
     pub max_runup: f64,
     pub max_drawdown: f64,
