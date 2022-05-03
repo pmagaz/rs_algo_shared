@@ -25,6 +25,8 @@ pub struct BackTestResult {
     pub profit_factor: f64,
     pub max_runup: f64,
     pub max_drawdown: f64,
+    pub buy_hold: f64,
+    pub anual_return: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,11 +62,9 @@ pub struct TradeOut {
     pub profit: f64,
     pub profit_per: f64,
     pub cum_profit: f64,
-    pub cum_profit_per: f64,
     pub run_up: f64,
-    pub run_up_per: f64,
     pub draw_down: f64,
-    pub draw_down_per: f64,
+    //pub draw_down_per: f64,
 }
 
 impl std::fmt::Display for BackTestInstrument {
