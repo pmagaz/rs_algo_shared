@@ -12,6 +12,7 @@ pub enum TradeDirection {
 pub enum TradeType {
     Entry(TradeDirection),
     Exit(TradeDirection),
+    StopLoss(TradeDirection),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,13 +34,18 @@ pub struct BackTestInstrument {
     pub trades_out: Vec<TradeOut>,
 }
 
+pub enum TradeResult {
+    TradeIn(TradeIn),
+    TradeOut(TradeOut),
+    None,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeIn {
     pub index_in: usize,
     pub price_in: f64,
     pub stop_loss: f64,
     pub date_in: DbDateTime,
-    pub direction: TradeDirection,
     pub trade_type: TradeType,
 }
 
