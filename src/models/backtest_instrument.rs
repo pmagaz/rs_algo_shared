@@ -26,7 +26,7 @@ pub struct BackTestResult {
     pub max_runup: f64,
     pub max_drawdown: f64,
     pub buy_hold: f64,
-    pub anual_return: f64,
+    pub annual_return: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
