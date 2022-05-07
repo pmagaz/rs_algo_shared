@@ -61,8 +61,6 @@ pub struct TradeOut {
     pub date_out: DbDateTime,
     pub profit: f64,
     pub profit_per: f64,
-    pub cum_profit: f64,
-    pub cum_profit_per: f64,
     pub run_up: f64,
     pub run_up_per: f64,
     pub draw_down: f64,
