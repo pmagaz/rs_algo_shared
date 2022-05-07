@@ -59,6 +59,7 @@ pub struct TradeIn {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeOut {
+    pub trade_type: TradeType,
     pub index_in: usize,
     pub price_in: f64,
     pub date_in: DbDateTime,
