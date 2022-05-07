@@ -8,5 +8,5 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 }
 
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
-    to_dbtime(date + Duration::hours(2))
+    DbDateTime::from_chrono(date + Duration::hours(2))
 }
