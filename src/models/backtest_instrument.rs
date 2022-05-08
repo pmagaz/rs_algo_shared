@@ -16,7 +16,7 @@ pub enum TradeType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackTestResult {
+pub struct BackTestInstrumentResult {
     pub instrument: BackTestInstrument,
     pub strategy: String,
     pub date_start: DbDateTime,
@@ -47,6 +47,11 @@ pub struct BackTestInstrument {
 pub enum TradeResult {
     TradeIn(TradeIn),
     TradeOut(TradeOut),
+    None,
+}
+
+pub enum BackTestResult {
+    BackTestInstrumentResult(BackTestInstrumentResult),
     None,
 }
 
