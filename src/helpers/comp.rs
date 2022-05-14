@@ -74,7 +74,7 @@ pub fn min_number(data: &Vec<f64>) -> f64 {
     *min
 }
 
-fn average_iter<T, I: Iterator<Item = T>>(iter: I) -> Option<f64>
+pub fn average_iter<T, I: Iterator<Item = T>>(iter: I) -> Option<f64>
 where
     T: Into<f64> + Sum<T>,
 {
