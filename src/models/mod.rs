@@ -1,5 +1,6 @@
 pub mod api;
 pub mod backtest_instrument;
+pub mod backtest_strategy;
 pub mod candle;
 pub mod divergence;
 pub mod horizontal_level;
