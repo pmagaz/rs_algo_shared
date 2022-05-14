@@ -1,3 +1,6 @@
+use num::{FromPrimitive, Zero};
+use std::ops::{Add, Div};
+
 pub fn percentage_change(x: f64, y: f64) -> f64 {
     let max = x.max(y);
     let min = y.min(x);
@@ -72,10 +75,6 @@ pub fn min_number(data: &Vec<f64>) -> f64 {
     *min
 }
 
-pub fn average(numbers: Vec<f64>) -> f64 {
-    numbers.iter().sum::<f64>() as f64 / numbers.len() as f64
+pub fn average<T: Copy + Zero + Add<T, Output = T> + Div<T, Output = T>>(numbers: Vec<T>) -> T {
+    numbers.iter().sum::<T>() / numbers.len()
 }
-//     numbers.sort();
-//     let mid = numbers.len() / 2;
-//     numbers[mid]
-// }
