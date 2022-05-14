@@ -72,11 +72,9 @@ pub fn min_number(data: &Vec<f64>) -> f64 {
     *min
 }
 
-pub fn average(numbers: &[f64]) -> f64 {
+pub fn average(numbers: Vec<f64>) -> f64 {
     numbers.iter().sum::<f64>() as f64 / numbers.len() as f64
 }
-
-// pub fn median(numbers: &mut [f64]) -> f64 {
 //     numbers.sort();
 //     let mid = numbers.len() / 2;
 //     numbers[mid]
