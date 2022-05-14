@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackTestStrategyResult {
-    pub avg_strategy: String,
-    pub avg_date_start: DbDateTime,
-    pub avg_date_end: DbDateTime,
-    pub avg_avg_sessions: usize,
+    pub strategy: String,
+    pub date_start: DbDateTime,
+    pub date_end: DbDateTime,
+    pub avg_sessions: usize,
     pub avg_trades: usize,
     pub avg_wining_trades: usize,
     pub avg_losing_trades: usize,
