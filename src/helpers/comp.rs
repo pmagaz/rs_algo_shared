@@ -56,7 +56,7 @@ pub fn increase_equally(a: (f64, f64), b: (f64, f64), threshold: f64) -> bool {
     }
 }
 
-pub fn max_number(data: Vec<f64>) -> f64 {
+pub fn max_number(data: &Vec<f64>) -> f64 {
     let min = data
         .iter()
         .max_by(|a, b| a.partial_cmp(&b).unwrap())
@@ -64,7 +64,7 @@ pub fn max_number(data: Vec<f64>) -> f64 {
     *min
 }
 
-pub fn min_number(data: Vec<f64>) -> f64 {
+pub fn min_number(data: &Vec<f64>) -> f64 {
     let min = data
         .iter()
         .min_by(|a, b| a.partial_cmp(&b).unwrap())
