@@ -56,6 +56,22 @@ pub fn increase_equally(a: (f64, f64), b: (f64, f64), threshold: f64) -> bool {
     }
 }
 
+pub fn max_number(data: Vec<f64>) -> f64 {
+    let min = data
+        .iter()
+        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+        .unwrap();
+    *min
+}
+
+pub fn min_number(data: Vec<f64>) -> f64 {
+    let min = data
+        .iter()
+        .min_by(|a, b| a.partial_cmp(&b).unwrap())
+        .unwrap();
+    *min
+}
+
 pub fn average(numbers: &[f64]) -> f64 {
     numbers.iter().sum::<f64>() as f64 / numbers.len() as f64
 }
