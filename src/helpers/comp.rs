@@ -1,5 +1,4 @@
-use num::{FromPrimitive, Zero};
-use std::ops::{Add, Div};
+use std::iter::Sum;
 
 pub fn percentage_change(x: f64, y: f64) -> f64 {
     let max = x.max(y);
@@ -75,6 +74,20 @@ pub fn min_number(data: &Vec<f64>) -> f64 {
     *min
 }
 
-pub fn average<T: Copy + Zero + Add<T, Output = T> + Div<T, Output = T>>(numbers: Vec<T>) -> T {
-    numbers.iter().sum::<T>() / numbers.len()
+fn average_iter<T, I: Iterator<Item = T>>(iter: I) -> Option<f64>
+where
+    T: Into<f64> + Sum<T>,
+{
+    let mut len = 0;
+    let sum = iter
+        .map(|t| {
+            len += 1;
+            t
+        })
+        .sum::<T>();
+
+    match len {
+        0 => None,
+        _ => Some(sum.into() / len as f64),
+    }
 }
