@@ -10,9 +10,12 @@ pub enum TradeDirection {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeType {
-    Entry(TradeDirection),
-    Exit(TradeDirection),
-    StopLoss(TradeDirection),
+    EntryLong,
+    ExitLong,
+    EntryShort,
+    ExitShort,
+    StopLoss,
+    TakeProfit,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +28,7 @@ pub struct BackTestInstrumentResult {
     pub trades: usize,
     pub wining_trades: usize,
     pub losing_trades: usize,
+    pub stop_losses: usize,
     pub gross_profit: f64,
     pub commissions: f64,
     pub net_profit: f64,
