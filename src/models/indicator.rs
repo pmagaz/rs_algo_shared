@@ -70,15 +70,15 @@ pub struct KeltnerC {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BollingerB {
-    bb: BollingerBands,
-    data_a: Vec<f64>,
-    data_b: Vec<f64>,
+    pub bb: BollingerBands,
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactStoch {
-    stoch: SlowStochastic,
-    ema: ExponentialMovingAverage,
+    pub stoch: SlowStochastic,
+    pub ema: ExponentialMovingAverage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
