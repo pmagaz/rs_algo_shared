@@ -2,10 +2,12 @@ use crate::models::status::Status;
 
 use serde::{Deserialize, Serialize};
 use ta::indicators::AverageTrueRange;
+use ta::indicators::BollingerBands;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::KeltnerChannel;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
+use ta::indicators::StandardDeviation;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IndicatorType {
@@ -19,8 +21,10 @@ pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
     pub atr: Atr,
-    pub kc: KeltnerC,
+    pub sd: StandardD,
     pub rsi: Rsi,
+    //pub kc: KeltnerC,
+    pub bb: BollingerB,
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
@@ -63,6 +67,13 @@ pub struct KeltnerC {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BollingerB {
+    bb: BollingerBands,
+    data_a: Vec<f64>,
+    data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactStoch {
     stoch: SlowStochastic,
     ema: ExponentialMovingAverage,
@@ -81,6 +92,15 @@ pub struct Ema {
 pub struct Atr {
     #[serde(skip_deserializing)]
     pub atr: AverageTrueRange,
+    pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StandardD {
+    #[serde(skip_deserializing)]
+    pub sd: StandardDeviation,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,

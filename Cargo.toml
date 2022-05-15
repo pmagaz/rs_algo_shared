@@ -24,7 +24,6 @@ bson = { version = "2.2.0", features = ["chrono-0_4"]}
 reqwest = { version = "0.11.10", features = ["json"] }
 ta = {version = "0.5.0", features = ["serde"] }
 chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
-num = "0.4.0"
 
 [dependencies.plotters]
 optional = true

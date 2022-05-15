@@ -1,4 +1,3 @@
-use num::{FromPrimitive, Zero};
 use std::ops::{Add, Div};
 
 pub fn percentage_change(x: f64, y: f64) -> f64 {
