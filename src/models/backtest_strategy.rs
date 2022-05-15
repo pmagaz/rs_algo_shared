@@ -2,7 +2,7 @@ use crate::helpers::date::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
     pub strategy: String,
     pub avg_sessions: usize,
