@@ -7,7 +7,6 @@ use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::KeltnerChannel;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
-use ta::indicators::StandardDeviation;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IndicatorType {
@@ -62,16 +61,12 @@ pub struct CompactIndicators {
     pub macd: CompactIndicator,
     pub stoch: CompactIndicator,
     pub atr: CompactIndicator,
-    pub sd: CompactIndicator,
     pub bb: CompactIndicator,
     //pub kc: CompactIndicator,
     pub rsi: CompactIndicator,
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
     pub ema_c: CompactIndicator,
-    pub tema_a: CompactIndicator,
-    pub tema_b: CompactIndicator,
-    pub tema_c: CompactIndicator,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +89,7 @@ pub struct KeltnerC {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BollingerB {
+    #[serde(skip_deserializing)]
     pub bb: BollingerBands,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
@@ -133,8 +129,10 @@ pub struct CompactEma {
 pub struct CompactIndicator {
     pub current_a: f64,
     pub current_b: f64,
+    pub current_c: f64,
     pub prev_a: f64,
     pub prev_b: f64,
+    pub prev_c: f64,
     pub status: Status,
 }
 
