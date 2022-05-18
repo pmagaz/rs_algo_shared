@@ -1,4 +1,4 @@
-use crate::error::Error::Result;
+use crate::error::Result;
 use crate::models::status::Status;
 use serde::{Deserialize, Serialize};
 use ta::indicators::AverageTrueRange;
