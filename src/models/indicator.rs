@@ -1,5 +1,5 @@
+use crate::error::Error::Result;
 use crate::models::status::Status;
-
 use serde::{Deserialize, Serialize};
 use ta::indicators::AverageTrueRange;
 use ta::indicators::BollingerBands;
@@ -16,21 +16,45 @@ pub enum IndicatorType {
     Rsi,
 }
 
+pub trait Indicator {
+    fn new() -> Result<Self>
+    where
+        Self: Sized;
+    fn name(&self) -> &str;
+    fn next(&mut self, value: f64) -> Result<()>;
+    fn get_data_a(&self) -> &Vec<f64>;
+    fn get_current_a(&self) -> &f64;
+    fn get_current_b(&self) -> &f64;
+    fn get_data_b(&self) -> &Vec<f64>;
+    fn get_current_c(&self) -> &f64;
+    fn get_data_c(&self) -> &Vec<f64>;
+}
+
+pub trait CompactIndicator2 {
+    fn new() -> Result<Self>
+    where
+        Self: Sized;
+    fn name(&self) -> &str;
+    fn get_current_a(&self) -> &f64;
+    fn get_current_b(&self) -> &f64;
+    fn get_prev_a(&self) -> &Vec<f64>;
+    fn get_prev_b(&self) -> &f64;
+    fn get_status(&self) -> Status;
+}
+
+pub type Indicators2 = Vec<Box<dyn Indicator>>;
+pub type CompactIndicators2 = Vec<Box<dyn CompactIndicator2>>;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
     pub atr: Atr,
-    pub sd: StandardD,
     pub rsi: Rsi,
-    //pub kc: KeltnerC,
     pub bb: BollingerB,
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
-    pub tema_a: Tema,
-    pub tema_b: Tema,
-    pub tema_c: Tema,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -73,6 +97,7 @@ pub struct BollingerB {
     pub bb: BollingerBands,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
+    pub data_c: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,35 +125,8 @@ pub struct Atr {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StandardD {
-    #[serde(skip_deserializing)]
-    pub sd: StandardDeviation,
-    pub data_a: Vec<f64>,
-    #[serde(skip_deserializing)]
-    pub data_b: Vec<f64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactEma {
     ema: ExponentialMovingAverage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tema {
-    #[serde(skip_deserializing)]
-    pub ema1: ExponentialMovingAverage,
-    #[serde(skip_deserializing)]
-    pub ema2: ExponentialMovingAverage,
-    #[serde(skip_deserializing)]
-    pub ema3: ExponentialMovingAverage,
-    pub data_a: Vec<f64>,
-    #[serde(skip_deserializing)]
-    pub data_b: Vec<f64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompactTema {
-    tema: ExponentialMovingAverage,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
