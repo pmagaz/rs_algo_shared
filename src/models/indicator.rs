@@ -19,7 +19,6 @@ pub trait Indicator {
     fn new() -> Result<Self>
     where
         Self: Sized;
-    fn name(&self) -> &str;
     fn next(&mut self, value: f64) -> Result<()>;
     fn get_data_a(&self) -> &Vec<f64>;
     fn get_current_a(&self) -> &f64;

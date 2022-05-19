@@ -18,7 +18,7 @@ pub enum TradeType {
     TakeProfit,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
     pub instrument: BackTestInstrument,
     pub strategy: String,
@@ -41,7 +41,7 @@ pub struct BackTestInstrumentResult {
     pub annual_return: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrument {
     pub symbol: String,
     pub trades_in: Vec<TradeIn>,
@@ -59,7 +59,7 @@ pub enum BackTestResult {
     None,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeIn {
     pub index_in: usize,
     pub price_in: f64,
@@ -68,7 +68,7 @@ pub struct TradeIn {
     pub trade_type: TradeType,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeOut {
     pub trade_type: TradeType,
     pub index_in: usize,

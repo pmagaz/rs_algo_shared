@@ -86,9 +86,9 @@ impl Chart {
         let ema_b = &instrument.indicators.ema_b.data_a;
         let ema_c = &instrument.indicators.ema_c.data_a;
 
-        let tema_a = &instrument.indicators.tema_a.data_a;
-        let tema_b = &instrument.indicators.tema_b.data_a;
-        let tema_c = &instrument.indicators.tema_c.data_a;
+        let bb_a = &instrument.indicators.bb_a.data_a;
+        let bb_b = &instrument.indicators.bb_b.data_a;
+        let bb_c = &instrument.indicators.bb_c.data_a;
 
         let root = BitMapBackend::new(&output_file, (1536, 1152)).into_drawing_area();
         //let root = BitMapChart::new(&output_file, (1361, 1021)).into_drawing_area();
@@ -368,7 +368,7 @@ impl Chart {
             .draw_series(LineSeries::new(
                 (0..)
                     .zip(data.iter())
-                    .map(|(id, candle)| (candle.date, tema_a[id])),
+                    .map(|(id, candle)| (candle.date, bb_a[id])),
                 GREEN_LINE,
             ))
             .unwrap();
@@ -388,7 +388,7 @@ impl Chart {
             .draw_series(LineSeries::new(
                 (0..)
                     .zip(data.iter())
-                    .map(|(id, candle)| (candle.date, tema_c[id])),
+                    .map(|(id, candle)| (candle.date, bb_c[id])),
                 RED_LINE.mix(0.8),
             ))
             .unwrap();
