@@ -76,9 +76,17 @@ pub fn min_number(data: &Vec<f64>) -> f64 {
 
 //FIXME GENERIC
 pub fn average_f64(numbers: Vec<f64>) -> f64 {
-    numbers.iter().sum::<f64>() / numbers.len() as f64
+    if numbers.len() < 1 {
+        0.
+    } else {
+        numbers.iter().sum::<f64>() / numbers.len() as f64
+    }
 }
 
 pub fn average_usize(numbers: Vec<usize>) -> usize {
-    numbers.iter().sum::<usize>() / numbers.len()
+    if numbers.len() < 1 {
+        0
+    } else {
+        numbers.iter().sum::<usize>() / numbers.len()
+    }
 }
