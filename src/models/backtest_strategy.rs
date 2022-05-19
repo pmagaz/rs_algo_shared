@@ -8,7 +8,7 @@ pub struct BackTestStrategyResult {
     pub avg_sessions: usize,
     pub avg_trades: usize,
     pub avg_wining_trades: usize,
-    pub avg_win_per_trade: usize,
+    pub avg_win_per_trade: f64,
     pub avg_losing_trades: usize,
     pub avg_stop_losses: usize,
     pub avg_gross_profit: f64,
