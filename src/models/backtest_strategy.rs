@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
     pub strategy: String,
+    pub date: DbDateTime,
     pub avg_sessions: usize,
     pub avg_trades: usize,
     pub avg_wining_trades: usize,
