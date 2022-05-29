@@ -32,6 +32,8 @@ pub enum PatternType {
     DoubleTop,
     DoubleBottom,
     HeadShoulders,
+    HigherHighsHigherLows,
+    LowerHighsLowerLows,
     None,
 }
 
