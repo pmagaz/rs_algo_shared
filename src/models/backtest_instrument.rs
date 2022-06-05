@@ -28,6 +28,7 @@ pub struct BackTestInstrumentResult {
     pub trades: usize,
     pub wining_trades: usize,
     pub losing_trades: usize,
+    pub won_per_trade_per: usize,
     pub stop_losses: usize,
     pub gross_profit: f64,
     pub commissions: f64,
