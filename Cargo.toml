@@ -24,9 +24,8 @@ serde_qs = "0.9.1"
 bson = { version = "2.2.0", features = ["chrono-0_4"]} 
 reqwest = { version = "0.11.10", features = ["json"] }
 chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
-openssl = { version = "0.10.38", features = ["vendored"] }
-tungstenite = {version = "0.17.2", features = ["native-tls"]}
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros"] }
+
 ta = {git = "https://github.com/pmagaz/ta-rs", features = ["serde"]}
 
 [dependencies.plotters]
@@ -34,3 +33,13 @@ optional = true
 git = "https://github.com/pmagaz/plotters"
 branch = "master"
 features = ["all_series"]
+
+[dependencies.tungstenite]
+optional = true
+version = "0.17.2"
+features = ["native-tls"]
+
+[dependencies.openssl]
+optional = true
+version = "0.10.38"
+features = ["vendored"]
