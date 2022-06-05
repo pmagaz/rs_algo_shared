@@ -44,6 +44,7 @@ version = "0.10.38"
 features = ["vendored"]
 
 [dependencies.tokio]
+optional = true
 version = "1.19.1"
 features = ["rt-multi-thread", "macros"] 
 
