@@ -75,15 +75,6 @@ pub fn get_macd_status(indicator: &CompactIndicator) -> Status {
     }
 }
 
-pub fn get_profit_factor_status(profit_factor: f64) -> Status {
-    match profit_factor {
-        _x if profit_factor < 1.4 => Status::Bearish,
-        _x if profit_factor >= 1.4 && profit_factor < 1.75 => Status::Neutral,
-        _x if profit_factor >= 1.75 => Status::Bullish,
-        _ => Status::Neutral,
-    }
-}
-
 pub fn get_pattern_status(
     pattern: Option<&Pattern>,
     second_last_pattern_type: &PatternType,
@@ -167,6 +158,15 @@ pub fn get_pattern_status(
     }
 }
 
+pub fn get_profit_factor_status(profit_factor: f64) -> Status {
+    match profit_factor {
+        _x if profit_factor < 1.4 => Status::Bearish,
+        _x if profit_factor >= 1.4 && profit_factor < 1.75 => Status::Neutral,
+        _x if profit_factor >= 1.75 => Status::Bullish,
+        _ => Status::Neutral,
+    }
+}
+
 pub fn get_profitable_trades_status(profitable_trades: f64) -> Status {
     match profitable_trades {
         _x if profitable_trades <= 40. => Status::Bearish,
@@ -194,7 +194,7 @@ pub fn get_max_drawdown_status(max_drawdown: f64) -> Status {
     }
 }
 
-pub fn get_avg_won_status(won_per_trade: f64) -> Status {
+pub fn get_won_per_trade_status(won_per_trade: f64) -> Status {
     match won_per_trade {
         _x if won_per_trade > 15. => Status::Bullish,
         _x if won_per_trade > 10. && won_per_trade < 15. => Status::Neutral,
@@ -203,7 +203,7 @@ pub fn get_avg_won_status(won_per_trade: f64) -> Status {
     }
 }
 
-pub fn get_avg_lost_per_trade(lost_per_trade: f64) -> Status {
+pub fn get_lost_per_trade_status(lost_per_trade: f64) -> Status {
     match lost_per_trade {
         _x if lost_per_trade > -5. => Status::Bullish,
         _x if lost_per_trade < -5. && lost_per_trade > -10. => Status::Neutral,
