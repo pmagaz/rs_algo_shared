@@ -1,5 +1,6 @@
 use crate::helpers::date::*;
 use crate::models::candle::*;
+use crate::models::divergence::*;
 use crate::models::indicator::*;
 use crate::models::instrument::*;
 use crate::models::pattern::*;
@@ -214,6 +215,14 @@ pub fn get_lost_per_trade_status(lost_per_trade: f64) -> Status {
     }
 }
 
+pub fn get_price_change_status(price_display: f64) -> Status {
+    match price_display {
+        _x if price_display >= 0.0 => Status::Bullish,
+        _x if price_display < 0.0 => Status::Bearish,
+        _ => Status::Neutral,
+    }
+}
+
 pub fn get_candle_status(candle: &CandleType) -> Status {
     match candle {
         CandleType::Karakasa => Status::Bullish,
@@ -223,5 +232,13 @@ pub fn get_candle_status(candle: &CandleType) -> Status {
         CandleType::BearishGap => Status::Bearish,
         CandleType::BearishStar => Status::Bearish,
         _ => Status::Default,
+    }
+}
+
+pub fn get_divergence_status(divergence_type: &DivergenceType) -> Status {
+    match divergence_type {
+        DivergenceType::Bullish => Status::Bullish,
+        DivergenceType::Bearish => Status::Bearish,
+        DivergenceType::None => Status::Default,
     }
 }
