@@ -5,7 +5,7 @@ use crate::models::pattern::*;
 use crate::models::status::*;
 use round::round;
 
-pub fn get_rsi_status(indicator: CompactIndicator) -> Status {
+pub fn get_rsi_status(indicator: &CompactIndicator) -> Status {
     match indicator {
         _x if indicator.current_a > 20. && indicator.current_a <= 40. => Status::Bullish,
         _x if indicator.current_a > 40. && indicator.current_a < 70. => Status::Neutral,
@@ -14,7 +14,7 @@ pub fn get_rsi_status(indicator: CompactIndicator) -> Status {
     }
 }
 
-pub fn get_bb_status(indicator: CompactIndicator, instrument: &CompactInstrument) -> Status {
+pub fn get_bb_status(indicator: &CompactIndicator, instrument: &CompactInstrument) -> Status {
     match indicator {
         _x if instrument.current_price <= indicator.current_b
             && instrument.prev_price >= indicator.prev_b =>
@@ -37,7 +37,7 @@ pub fn get_bb_status(indicator: CompactIndicator, instrument: &CompactInstrument
     }
 }
 
-pub fn get_stoch_status(indicator: CompactIndicator) -> Status {
+pub fn get_stoch_status(indicator: &CompactIndicator) -> Status {
     match indicator {
         _x if indicator.current_a > indicator.current_b
             && indicator.current_a > 20.
@@ -53,7 +53,7 @@ pub fn get_stoch_status(indicator: CompactIndicator) -> Status {
     }
 }
 
-pub fn get_macd_status(indicator: CompactIndicator) -> Status {
+pub fn get_macd_status(indicator: &CompactIndicator) -> Status {
     match indicator {
         _x if round(indicator.current_a, 2) > round(indicator.current_b, 2)
             && indicator.current_a > 0. =>
