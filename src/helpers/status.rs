@@ -14,7 +14,7 @@ pub fn get_rsi_status(indicator: CompactIndicator) -> Status {
     }
 }
 
-pub fn get_bb_status(indicator: CompactIndicator, instrument: CompactInstrument) -> Status {
+pub fn get_bb_status(indicator: CompactIndicator, instrument: &CompactInstrument) -> Status {
     match indicator {
         _x if instrument.current_price <= indicator.current_b
             && instrument.prev_price >= indicator.prev_b =>
