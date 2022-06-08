@@ -1,8 +1,10 @@
 use crate::helpers::date::*;
+use crate::models::candle::*;
 use crate::models::indicator::*;
 use crate::models::instrument::*;
 use crate::models::pattern::*;
 use crate::models::status::*;
+
 use round::round;
 
 pub fn get_rsi_status(indicator: &CompactIndicator) -> Status {
@@ -209,5 +211,17 @@ pub fn get_lost_per_trade_status(lost_per_trade: f64) -> Status {
         _x if lost_per_trade < -5. && lost_per_trade > -10. => Status::Neutral,
         _x if lost_per_trade <= -10. => Status::Bearish,
         _ => Status::Neutral,
+    }
+}
+
+pub fn get_candle_status(candle: &CandleType) -> Status {
+    match candle {
+        CandleType::Karakasa => Status::Bullish,
+        CandleType::MorningStar => Status::Bullish,
+        CandleType::BullishGap => Status::Bullish,
+        CandleType::BearishKarakasa => Status::Bearish,
+        CandleType::BearishGap => Status::Bearish,
+        CandleType::BearishStar => Status::Bearish,
+        _ => Status::Default,
     }
 }
