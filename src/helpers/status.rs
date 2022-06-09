@@ -179,11 +179,12 @@ pub fn get_profitable_trades_status(profitable_trades: f64) -> Status {
     }
 }
 
-pub fn get_profit_status(profit: f64, profitable_trades: f64) -> Status {
-    match profit {
-        _x if profit <= 10. => Status::Bearish,
-        _x if profit > 10. && profitable_trades < 12. => Status::Neutral,
-        _x if profit >= 15. => Status::Bullish,
+pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
+    let delta = buy_hold / profit;
+    match delta {
+        _x if delta >= 7. => Status::Bearish,
+        _x if delta > 6. && delta < 7. => Status::Neutral,
+        _x if delta <= 6. => Status::Bullish,
         _ => Status::Neutral,
     }
 }
