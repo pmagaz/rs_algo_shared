@@ -224,7 +224,7 @@ impl Xtb {
             let high = open + obj["high"].as_f64().unwrap() / pow;
             let low = open + obj["low"].as_f64().unwrap() / pow;
             let close = open + obj["close"].as_f64().unwrap() / pow;
-            let volume = obj["vol"].as_f64().unwrap();
+            let volume = obj["vol"].as_f64().unwrap() * 1000.;
             result.push((date, open, high, low, close, volume));
         }
 
