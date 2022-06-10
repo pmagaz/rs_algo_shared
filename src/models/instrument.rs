@@ -15,6 +15,7 @@ pub struct CompactInstrument {
     pub time_frame: TimeFrameType,
     pub current_price: f64,
     pub prev_price: f64,
+    pub avg_volume: f64,
     pub current_candle: CandleType,
     pub prev_candle: CandleType,
     pub date: DbDateTime,
@@ -23,6 +24,7 @@ pub struct CompactInstrument {
     pub indicators: CompactIndicators,
     pub divergences: CompactDivergences,
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Instrument {
     pub symbol: String,
@@ -30,6 +32,7 @@ pub struct Instrument {
     pub current_price: f64,
     pub min_price: f64,
     pub max_price: f64,
+    pub avg_volume: f64,
     pub current_candle: CandleType,
     pub date: DbDateTime,
     pub data: Vec<Candle>,
