@@ -28,21 +28,6 @@ pub trait Indicator {
     fn get_data_c(&self) -> &Vec<f64>;
 }
 
-pub trait CompactIndicator2 {
-    fn new() -> Result<Self>
-    where
-        Self: Sized;
-    fn name(&self) -> &str;
-    fn get_current_a(&self) -> &f64;
-    fn get_current_b(&self) -> &f64;
-    fn get_prev_a(&self) -> &Vec<f64>;
-    fn get_prev_b(&self) -> &f64;
-    fn get_status(&self) -> Status;
-}
-
-pub type Indicators2 = Vec<Box<dyn Indicator>>;
-pub type CompactIndicators2 = Vec<Box<dyn CompactIndicator2>>;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
     pub macd: Macd,
@@ -50,6 +35,7 @@ pub struct Indicators {
     pub atr: Atr,
     pub rsi: Rsi,
     pub bb: BollingerB,
+    pub bbw: BollingerBW,
     pub ema_a: Ema,
     pub ema_b: Ema,
     pub ema_c: Ema,
@@ -61,7 +47,7 @@ pub struct CompactIndicators {
     pub stoch: CompactIndicator,
     pub atr: CompactIndicator,
     pub bb: CompactIndicator,
-    //pub kc: CompactIndicator,
+    pub bbw: CompactIndicator,
     pub rsi: CompactIndicator,
     pub ema_a: CompactIndicator,
     pub ema_b: CompactIndicator,
@@ -88,6 +74,15 @@ pub struct KeltnerC {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BollingerB {
+    #[serde(skip_deserializing)]
+    pub bb: BollingerBands,
+    pub data_a: Vec<f64>,
+    pub data_b: Vec<f64>,
+    pub data_c: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BollingerBW {
     #[serde(skip_deserializing)]
     pub bb: BollingerBands,
     pub data_a: Vec<f64>,
