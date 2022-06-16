@@ -202,7 +202,7 @@ pub fn get_won_per_trade_status(won_per_trade: f64) -> Status {
     match won_per_trade {
         _x if won_per_trade > 15. => Status::Bullish,
         _x if won_per_trade > 10. && won_per_trade < 15. => Status::Neutral,
-        _x if won_per_trade <= 10. => Status::Bullish,
+        _x if won_per_trade <= 10. => Status::Bearish,
         _ => Status::Neutral,
     }
 }
