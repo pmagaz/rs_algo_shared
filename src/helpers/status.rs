@@ -118,6 +118,8 @@ pub fn get_pattern_status(
             };
 
             match pattern {
+                _x if pattern_date < max_pattern_date => Status::Default,
+                _x if pattern_type == PatternType::None => Status::Default,
                 _x if pattern_type == PatternType::ChannelUp
                     || pattern_type == PatternType::HigherHighsHigherLows
                     || pattern_type == PatternType::TriangleUp =>
@@ -150,8 +152,6 @@ pub fn get_pattern_status(
                 {
                     Status::Bearish
                 }
-
-                _x if pattern_date < max_pattern_date => Status::Neutral,
                 _x if pattern_date > super_date => Status::Neutral,
                 _x if pattern_type == PatternType::None => Status::Default,
                 _ => Status::Default,
