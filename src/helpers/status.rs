@@ -78,7 +78,7 @@ pub fn get_macd_status(indicator: &CompactIndicator) -> Status {
     }
 }
 
-pub fn get_pattern_status2(
+pub fn get_pattern_status(
     pattern: Option<&Pattern>,
     second_last_pattern_type: &PatternType,
     max_days: i64,
