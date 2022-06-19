@@ -5,7 +5,8 @@ pub enum Status {
     Bullish,
     Bearish,
     Neutral,
-    Change,
+    ChangeUp,
+    ChangeDown,
     Default,
 }
 

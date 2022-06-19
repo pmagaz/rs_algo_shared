@@ -78,7 +78,7 @@ pub fn get_macd_status(indicator: &CompactIndicator) -> Status {
     }
 }
 
-pub fn get_pattern_status(
+pub fn get_pattern_status2(
     pattern: Option<&Pattern>,
     second_last_pattern_type: &PatternType,
     max_days: i64,
@@ -119,6 +119,18 @@ pub fn get_pattern_status(
 
             match pattern {
                 _x if pattern_date < max_pattern_date => Status::Default,
+                _x if (second_last_pattern_type == &PatternType::ChannelDown
+                    || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
+                    && &pattern_type != second_last_pattern_type =>
+                {
+                    Status::ChangeUp
+                }
+                _x if (second_last_pattern_type == &PatternType::ChannelDown
+                    || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
+                    && &pattern_type == second_last_pattern_type =>
+                {
+                    Status::ChangeDown
+                }
                 _x if pattern_type == PatternType::None => Status::Default,
                 _x if pattern_type == PatternType::ChannelUp
                     || pattern_type == PatternType::HigherHighsHigherLows
@@ -138,20 +150,7 @@ pub fn get_pattern_status(
                 {
                     Status::Neutral
                 }
-
                 _x if pattern_active && pattern_active_date > max_activated_date => Status::Bullish,
-                _x if (second_last_pattern_type == &PatternType::ChannelDown
-                    || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
-                    && &pattern_type != second_last_pattern_type =>
-                {
-                    Status::Bullish
-                }
-                _x if (second_last_pattern_type == &PatternType::ChannelDown
-                    || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
-                    && &pattern_type == second_last_pattern_type =>
-                {
-                    Status::Bearish
-                }
                 _x if pattern_date > super_date => Status::Neutral,
                 _x if pattern_type == PatternType::None => Status::Default,
                 _ => Status::Default,
