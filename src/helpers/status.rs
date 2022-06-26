@@ -125,13 +125,25 @@ pub fn get_pattern_status(
                 {
                     Status::ChangeUp
                 }
-                _x if (second_last_pattern_type == &PatternType::ChannelDown
-                    || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
-                    && &pattern_type == second_last_pattern_type =>
+                _x if (second_last_pattern_type == &PatternType::ChannelUp
+                    || second_last_pattern_type == &PatternType::HigherHighsHigherLows)
+                    && &pattern_type != second_last_pattern_type =>
                 {
                     Status::ChangeDown
                 }
-                _x if (pattern_type == PatternType::ChannelUp
+                  _x if pattern_active && (pattern_type == PatternType::ChannelDown
+                    || pattern_type == PatternType::LowerHighsLowerLows
+                    || pattern_type == PatternType::TriangleDown) =>
+                {
+                    Status::CancelUp
+                }
+                _x if pattern_active &&(pattern_type == PatternType::ChannelUp
+                    || pattern_type == PatternType::HigherHighsHigherLows
+                    || pattern_type == PatternType::TriangleUp) =>
+                {
+                    Status::CancelDown
+                }
+                _x if !pattern_active &&(pattern_type == PatternType::ChannelUp
                     || pattern_type == PatternType::HigherHighsHigherLows
                     || pattern_type == PatternType::TriangleUp)
                     && (second_last_pattern_type == &PatternType::ChannelUp
@@ -140,7 +152,7 @@ pub fn get_pattern_status(
                 {
                     Status::Bullish
                 }
-                _x if (pattern_type == PatternType::ChannelDown
+                _x if !pattern_active && (pattern_type == PatternType::ChannelDown
                     || pattern_type == PatternType::LowerHighsLowerLows
                     || pattern_type == PatternType::TriangleDown)
                     && (second_last_pattern_type == &PatternType::ChannelDown
@@ -149,6 +161,7 @@ pub fn get_pattern_status(
                 {
                     Status::Bearish
                 }
+                
                 _x if pattern_type == PatternType::Broadening
                     || pattern_type == PatternType::Rectangle
                     || pattern_type == PatternType::TriangleSym =>
@@ -156,7 +169,7 @@ pub fn get_pattern_status(
                     Status::Neutral
                 }
                 _x if pattern_type == PatternType::None => Status::Default,
-                _x if pattern_active && pattern_active_date > max_activated_date => Status::Bullish,
+                //_x if pattern_active && pattern_active_date > max_activated_date => Status::Bullish,
                 _x if pattern_date > super_date => Status::Neutral,
                 _x if pattern_type == PatternType::None => Status::Default,
                 _ => Status::Default,
