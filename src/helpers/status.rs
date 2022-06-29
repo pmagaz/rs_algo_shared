@@ -119,13 +119,15 @@ pub fn get_pattern_status(
 
             match pattern {
                 _x if pattern_date < max_pattern_date => Status::Default,
-                _x if (second_last_pattern_type == &PatternType::ChannelDown
+                _x if !pattern_active &&(second_last_pattern_type == &PatternType::ChannelDown
+                    || second_last_pattern_type == &PatternType::TriangleDown
                     || second_last_pattern_type == &PatternType::LowerHighsLowerLows)
                     && &pattern_type != second_last_pattern_type =>
                 {
                     Status::ChangeUp
                 }
-                _x if (second_last_pattern_type == &PatternType::ChannelUp
+                _x if !pattern_active && (second_last_pattern_type == &PatternType::ChannelUp
+                    || second_last_pattern_type == &PatternType::TriangleUp
                     || second_last_pattern_type == &PatternType::HigherHighsHigherLows)
                     && &pattern_type != second_last_pattern_type =>
                 {
