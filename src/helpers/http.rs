@@ -8,6 +8,7 @@ pub enum HttpMethod {
     Put,
     Get,
     Patch,
+    Delete,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +26,7 @@ where
         HttpMethod::Put => Client::builder().build()?.put(url),
         HttpMethod::Get => Client::builder().build()?.get(url),
         HttpMethod::Patch => Client::builder().build()?.patch(url),
+        HttpMethod::Delete => Client::builder().build()?.delete(url),
     };
 
     result.json(&data).send().await
