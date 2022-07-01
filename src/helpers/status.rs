@@ -135,13 +135,19 @@ pub fn get_pattern_status(
                 }
                   _x if pattern_active && (pattern_type == PatternType::ChannelDown
                     || pattern_type == PatternType::LowerHighsLowerLows
-                    || pattern_type == PatternType::TriangleDown) =>
+                    || pattern_type == PatternType::TriangleDown
+                    || pattern_type == PatternType::TriangleSym
+                    || pattern_type == PatternType::Broadening
+                    || pattern_type == PatternType::Rectangle) =>
                 {
                     Status::CancelUp
                 }
                 _x if pattern_active &&(pattern_type == PatternType::ChannelUp
                     || pattern_type == PatternType::HigherHighsHigherLows
-                    || pattern_type == PatternType::TriangleUp) =>
+                    || pattern_type == PatternType::TriangleUp
+                    || pattern_type == PatternType::TriangleSym
+                    || pattern_type == PatternType::Broadening
+                    || pattern_type == PatternType::Rectangle) =>
                 {
                     Status::CancelDown
                 }
