@@ -77,7 +77,6 @@ pub fn get_macd_status(indicator: &CompactIndicator) -> Status {
         _ => Status::Default,
     }
 }
-
 pub fn get_pattern_status(
     pattern: Option<&Pattern>,
     second_last_pattern_type: &PatternType,
@@ -133,21 +132,25 @@ pub fn get_pattern_status(
                 {
                     Status::ChangeDown
                 }
-                  _x if pattern_active && (pattern_type == PatternType::ChannelDown
-                    || pattern_type == PatternType::LowerHighsLowerLows
-                    || pattern_type == PatternType::TriangleDown
-                    || pattern_type == PatternType::TriangleSym
-                    || pattern_type == PatternType::Broadening
-                    || pattern_type == PatternType::Rectangle) =>
+                _x if pattern_active && _pat.active.break_direction == PatternDirection::Top 
+            //   _x if pattern_active && (pattern_type == PatternType::ChannelDown
+                //     || pattern_type == PatternType::LowerHighsLowerLows
+                //     || pattern_type == PatternType::TriangleDown
+                //     || pattern_type == PatternType::TriangleSym
+                //     || pattern_type == PatternType::Broadening
+                //     || pattern_type == PatternType::Rectangle)
+                =>
                 {
                     Status::CancelUp
                 }
-                _x if pattern_active &&(pattern_type == PatternType::ChannelUp
-                    || pattern_type == PatternType::HigherHighsHigherLows
-                    || pattern_type == PatternType::TriangleUp
-                    || pattern_type == PatternType::TriangleSym
-                    || pattern_type == PatternType::Broadening
-                    || pattern_type == PatternType::Rectangle) =>
+                _x if pattern_active && _pat.active.break_direction == PatternDirection::Bottom 
+                    // && (pattern_type == PatternType::ChannelUp
+                    // || pattern_type == PatternType::HigherHighsHigherLows
+                    // || pattern_type == PatternType::TriangleUp
+                    // || pattern_type == PatternType::TriangleSym
+                    // || pattern_type == PatternType::Broadening
+                    // || pattern_type == PatternType::Rectangle)
+                     =>
                 {
                     Status::CancelDown
                 }
@@ -185,8 +188,7 @@ pub fn get_pattern_status(
         }
         None => Status::Default,
     }
-}
-
+    }
 pub fn get_profit_factor_status(profit_factor: f64) -> Status {
     match profit_factor {
         _x if profit_factor < 1.4 => Status::Bearish,
