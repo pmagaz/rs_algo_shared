@@ -3,8 +3,16 @@ use crate::helpers::date::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StrategyType {
+    LongShort,
+    OnlyLong,
+    OnlyShort,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
     pub strategy: String,
+    pub strategy_type: StrategyType,
     pub date: DbDateTime,
     pub avg_sessions: usize,
     pub avg_trades: usize,
