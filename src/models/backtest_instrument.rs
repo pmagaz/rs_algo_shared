@@ -16,6 +16,7 @@ pub enum TradeType {
     ExitShort,
     StopLoss,
     TakeProfit,
+    None,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
