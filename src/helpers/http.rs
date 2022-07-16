@@ -21,6 +21,8 @@ pub async fn request<T>(url: &str, data: &T, method: HttpMethod) -> Result<Respo
 where
     for<'de> T: Serialize + Deserialize<'de> + Debug,
 {
+    println!("[HTTP] {:?} request to {}", method, url);
+
     let result = match method {
         HttpMethod::Post => Client::builder().build()?.post(url),
         HttpMethod::Put => Client::builder().build()?.put(url),
