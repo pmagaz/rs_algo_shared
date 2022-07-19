@@ -3,6 +3,13 @@ use crate::helpers::date::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Market {
+    Stock,
+    Forex,
+    Crypto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeDirection {
     Long,
     Short,
@@ -23,6 +30,7 @@ pub enum TradeType {
 pub struct BackTestInstrumentResult {
     pub instrument: BackTestInstrument,
     pub strategy: String,
+    pub market: Market,
     pub date_start: DbDateTime,
     pub date_end: DbDateTime,
     pub sessions: usize,

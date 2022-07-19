@@ -1,5 +1,5 @@
 use crate::helpers::date::*;
-
+use crate::models::backtest_instrument::Market;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -13,6 +13,7 @@ pub enum StrategyType {
 pub struct BackTestStrategyResult {
     pub strategy: String,
     pub strategy_type: StrategyType,
+    pub market: Market,
     pub date: DbDateTime,
     pub avg_sessions: usize,
     pub avg_trades: usize,
