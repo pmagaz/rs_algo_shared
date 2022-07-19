@@ -96,7 +96,7 @@ pub fn get_symbols() -> Vec<String> {
         serde_json::from_str(&content).expect("JSON was not well-formatted");
     let mut arr = vec![];
     for symbol in json.symbols {
-        arr.push(&symbol.symbol);
+        arr.push(symbol.symbol);
     }
 
     arr
