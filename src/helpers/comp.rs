@@ -90,3 +90,22 @@ pub fn average_usize(numbers: &Vec<usize>) -> usize {
         numbers.iter().sum::<usize>() / numbers.len()
     }
 }
+
+pub fn symbol_in_list(symbol: &str, sp_symbols: &Vec<String>) -> bool {
+    let mut result = false;
+    for sp_symbol in sp_symbols {
+        let mut compare: &str;
+        if symbol.contains("_") {
+            let arr: Vec<&str> = symbol.split("_").collect();
+            compare = arr[0];
+        } else {
+            compare = symbol;
+        }
+
+        if compare == sp_symbol {
+            result = true;
+            break;
+        }
+    }
+    result
+}

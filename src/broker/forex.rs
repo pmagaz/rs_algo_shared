@@ -88,8 +88,7 @@ pub fn get_symbols() -> Vec<String> {
         "symbol": "CHFJPY",
         "name": "CHFJPY",
         "sector": "Currency"
-    },
-    
+    }
 ]}"#;
 
     let json: ForexInstruments =
@@ -100,23 +99,4 @@ pub fn get_symbols() -> Vec<String> {
     }
 
     arr
-}
-
-pub fn is_in_forex(symbol: &str, sp_symbols: &Vec<String>) -> bool {
-    let mut result = false;
-    for sp_symbol in sp_symbols {
-        let mut compare: &str;
-        if symbol.contains("_") {
-            let arr: Vec<&str> = symbol.split("_").collect();
-            compare = arr[0];
-        } else {
-            compare = symbol;
-        }
-
-        if compare == sp_symbol {
-            result = true;
-            break;
-        }
-    }
-    result
 }
