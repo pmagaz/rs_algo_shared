@@ -31,7 +31,6 @@ where
         HttpMethod::Delete => Client::builder().build()?.delete(url),
     };
     let response = result.json(&data).send().await;
-    println!("[HTTP] response {:?}", &response);
 
     response
 }
