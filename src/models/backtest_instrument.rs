@@ -1,13 +1,7 @@
 use crate::helpers::date::*;
+use crate::models::market::*;
 
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum Market {
-    Stock,
-    Forex,
-    Crypto,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeDirection {

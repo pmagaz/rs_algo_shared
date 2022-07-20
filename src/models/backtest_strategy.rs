@@ -1,5 +1,5 @@
 use crate::helpers::date::*;
-use crate::models::backtest_instrument::Market;
+use crate::models::market::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

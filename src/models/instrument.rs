@@ -3,6 +3,7 @@ use crate::models::candle::{Candle, CandleType};
 use crate::models::divergence::{CompactDivergences, Divergences};
 use crate::models::horizontal_level::HorizontalLevels;
 use crate::models::indicator::{CompactIndicators, Indicators};
+use crate::models::market::*;
 use crate::models::pattern::Patterns;
 use crate::models::peak::Peaks;
 use crate::models::time_frame::TimeFrameType;
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 pub struct CompactInstrument {
     pub symbol: String,
     pub time_frame: TimeFrameType,
+    pub market: Market,
     pub current_price: f64,
     pub prev_price: f64,
     pub avg_volume: f64,
@@ -29,6 +31,7 @@ pub struct CompactInstrument {
 pub struct Instrument {
     pub symbol: String,
     pub time_frame: TimeFrameType,
+    pub market: Market,
     pub current_price: f64,
     pub min_price: f64,
     pub max_price: f64,
