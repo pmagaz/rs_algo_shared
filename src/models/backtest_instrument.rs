@@ -96,6 +96,12 @@ pub struct TradeOut {
     pub draw_down_per: f64,
 }
 
+impl std::fmt::Display for Market {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl std::fmt::Display for BackTestInstrument {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
