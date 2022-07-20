@@ -1,3 +1,4 @@
+pub mod crypto;
 pub mod forex;
 pub mod sp500;
 pub mod xtb;
