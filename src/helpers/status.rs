@@ -190,16 +190,7 @@ pub fn get_pattern_status(
     }
     }
 
-    pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
-    let delta = buy_hold / profit;
-    match delta {
-        _x if delta >= 7. => Status::Bearish,
-        _x if delta > 6. && delta < 7. => Status::Neutral,
-        _x if delta <= 6. => Status::Bullish,
-        _x if profit <= 0. => Status::Bearish,
-        _ => Status::Neutral,
-    }
-}
+
 
 pub fn get_profitable_trades_status(profitable_trades: f64) -> Status {
     match profitable_trades {
@@ -213,9 +204,10 @@ pub fn get_profitable_trades_status(profitable_trades: f64) -> Status {
 pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
     let delta = buy_hold / profit;
     match delta {
-        _x if delta >= 7. => Status::Bearish,
-        _x if delta > 6. && delta < 7. => Status::Neutral,
-        _x if delta <= 6. => Status::Bullish,
+        _x if delta >= 6. => Status::Bearish,
+        _x if delta > 5. && delta < 6. => Status::Neutral,
+        _x if delta <= 5. => Status::Bullish,
+        _x if profit <= 0. => Status::Bearish,
         _ => Status::Neutral,
     }
 }
