@@ -189,11 +189,14 @@ pub fn get_pattern_status(
         None => Status::Default,
     }
     }
-pub fn get_profit_factor_status(profit_factor: f64) -> Status {
-    match profit_factor {
-        _x if profit_factor < 1.4 => Status::Bearish,
-        _x if profit_factor >= 1.4 && profit_factor < 1.75 => Status::Neutral,
-        _x if profit_factor >= 1.75 => Status::Bullish,
+
+    pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
+    let delta = buy_hold / profit;
+    match delta {
+        _x if delta >= 7. => Status::Bearish,
+        _x if delta > 6. && delta < 7. => Status::Neutral,
+        _x if delta <= 6. => Status::Bullish,
+        _x if profit <= 0. => Status::Bearish,
         _ => Status::Neutral,
     }
 }
