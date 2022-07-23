@@ -85,11 +85,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "TRON",
-        "name": "TRON",
-        "sector": "Crypto"
-    },
-    {
         "symbol": "SOLANA",
         "name": "SOLANA",
         "sector": "Crypto"
