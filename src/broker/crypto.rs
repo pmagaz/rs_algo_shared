@@ -70,16 +70,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "IOTA",
-        "name": "IOTA",
-        "sector": "Crypto"
-    },
-    {
-        "symbol": "NEO",
-        "name": "NEO",
-        "sector": "Crypto"
-    },
-    {
         "symbol": "POLKADOT",
         "name": "POLKADOT",
         "sector": "Crypto"
@@ -92,6 +82,16 @@ pub fn get_symbols() -> Vec<String> {
     {
         "symbol": "STELLAR",
         "name": "STELLAR",
+        "sector": "Crypto"
+    },
+    {
+        "symbol": "TRON",
+        "name": "TRON",
+        "sector": "Crypto"
+    },
+    {
+        "symbol": "SOLANA",
+        "name": "SOLANA",
         "sector": "Crypto"
     }
 ]}"#;
