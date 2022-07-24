@@ -9,6 +9,12 @@ pub enum StrategyType {
     OnlyShort,
 }
 
+impl std::fmt::Display for StrategyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
     pub strategy: String,
