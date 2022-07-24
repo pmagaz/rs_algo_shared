@@ -192,7 +192,7 @@ pub fn get_pattern_status(
 pub fn get_profit_factor_status(profit_factor: f64) -> Status {
     match profit_factor {
         _x if profit_factor < 1.4 => Status::Bearish,
-        _x if profit_factor >= 1.4 && profit_factor < 1.75 => Status::Neutral,
+        _x if profit_factor >= 1.4 && profit_factor < 1.74 => Status::Neutral,
         _x if profit_factor >= 1.75 => Status::Bullish,
         _ => Status::Neutral,
     }
