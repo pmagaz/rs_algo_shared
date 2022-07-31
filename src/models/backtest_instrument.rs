@@ -22,7 +22,7 @@ pub enum TradeType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
-    #[serde(rename = "_id", skip_serializing)]
+    #[serde(rename = "_id", skip_deserializing)]
     pub id: bson::oid::ObjectId,
     pub instrument: BackTestInstrument,
     pub strategy: String,
