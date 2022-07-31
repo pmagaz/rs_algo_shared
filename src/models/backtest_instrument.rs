@@ -1,7 +1,6 @@
 use crate::helpers::date::*;
 use crate::models::backtest_strategy::*;
 use crate::models::market::*;
-use bson::serde_helpers::serialize_hex_string_as_object_id;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -23,7 +22,7 @@ pub enum TradeType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
-    #[serde(serialize_with = "serialize_hex_string_as_object_id")]
+    #[serde(rename = "_id")]
     pub id: String,
     pub instrument: BackTestInstrument,
     pub strategy: String,
