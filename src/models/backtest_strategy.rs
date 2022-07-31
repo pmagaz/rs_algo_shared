@@ -17,6 +17,8 @@ impl std::fmt::Display for StrategyType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
+    #[serde(rename = "_id")]
+    pub id: bson::oid::ObjectId,
     pub strategy: String,
     pub strategy_type: StrategyType,
     pub market: Market,
