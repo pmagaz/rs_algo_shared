@@ -22,8 +22,6 @@ pub enum TradeType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
-    #[serde(rename = "_id")]
-    pub id: bson::oid::ObjectId,
     pub instrument: BackTestInstrument,
     pub strategy: String,
     pub market: Market,
