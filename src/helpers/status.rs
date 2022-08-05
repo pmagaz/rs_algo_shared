@@ -193,7 +193,7 @@ pub fn get_pattern_status(
 pub fn get_target_status(target: f64) -> Status {
     match target {
         _x if target >= 15. => Status::Bullish,
-        _ => Status::Neutral,
+        _ => Status::Default,
     }
 }
 
