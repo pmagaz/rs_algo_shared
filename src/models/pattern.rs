@@ -56,8 +56,6 @@ pub struct PatternActive {
     pub index: usize,
     pub date: DbDateTime,
     pub price: f64,
-    pub target: f64,
-    pub change: f64,
     pub status: Status,
     pub break_direction: PatternDirection,
 }
@@ -71,7 +69,7 @@ pub struct Pattern {
     pub data_points: DataPoints,
     pub direction: PatternDirection,
     pub active: PatternActive,
-    pub change: f64,
+    pub target: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
