@@ -189,6 +189,15 @@ pub fn get_pattern_status(
         None => Status::Default,
     }
     }
+
+pub fn get_target_status(target: f64) -> Status {
+    match target {
+        _x if target >= 15. => Status::Bullish,
+        _ => Status::Neutral,
+    }
+}
+
+
 pub fn get_profit_factor_status(profit_factor: f64) -> Status {
     match profit_factor {
         _x if profit_factor < 1.4 => Status::Bearish,
@@ -256,11 +265,13 @@ pub fn get_price_change_status(price_display: f64) -> Status {
 pub fn get_candle_status(candle: &CandleType) -> Status {
     match candle {
         CandleType::Karakasa => Status::Bullish,
+        CandleType::Engulfing => Status::Bullish,
         CandleType::MorningStar => Status::Bullish,
         CandleType::BullishGap => Status::Bullish,
         CandleType::BearishKarakasa => Status::Bearish,
         CandleType::BearishGap => Status::Bearish,
         CandleType::BearishStar => Status::Bearish,
+        CandleType::BearishEngulfing => Status::Bearish,
         _ => Status::Default,
     }
 }
