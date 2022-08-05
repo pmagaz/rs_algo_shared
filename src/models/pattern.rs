@@ -70,6 +70,7 @@ pub struct Pattern {
     pub data_points: DataPoints,
     pub direction: PatternDirection,
     pub active: PatternActive,
+    pub target: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
