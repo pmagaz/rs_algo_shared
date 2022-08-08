@@ -42,3 +42,9 @@ impl TimeFrameType {
         }
     }
 }
+
+impl std::fmt::Display for TimeFrame {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
