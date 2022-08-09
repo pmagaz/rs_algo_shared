@@ -9,7 +9,7 @@ pub enum StrategyType {
     OnlyShort,
     LongShortMultiTF,
     OnlyLongMultiTF,
-    OnlyShortMulti,
+    OnlyShortMultiTF,
 }
 
 impl std::fmt::Display for StrategyType {
