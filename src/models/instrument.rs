@@ -45,3 +45,9 @@ pub struct Instrument {
     pub indicators: Indicators,
     pub divergences: Divergences,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HigherTMInstrument {
+    HigherTMInstrument(Instrument),
+    None,
+}
