@@ -8,6 +8,8 @@ use ta::indicators::KeltnerChannel;
 use ta::indicators::RelativeStrengthIndex;
 use ta::indicators::SlowStochastic;
 
+//Test
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum IndicatorType {
     Macd,
