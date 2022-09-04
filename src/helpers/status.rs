@@ -220,18 +220,18 @@ pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
     let delta = buy_hold / profit;
     match delta {
         _x if profit <= 0. => Status::Bearish,
-        _x if delta >= 5. => Status::Bearish,
-        _x if delta > 3. && delta < 5. => Status::Neutral,
-        _x if delta <= 3. => Status::Bullish,
+        _x if delta >= 3. => Status::Bearish,
+        _x if delta > 2. && delta < 3. => Status::Neutral,
+        _x if delta <= 2. => Status::Bullish,
         _ => Status::Neutral,
     }
 }
 
 pub fn get_max_drawdown_status(max_drawdown: f64) -> Status {
     match max_drawdown {
-        _x if max_drawdown >= 20. => Status::Bearish,
-        _x if max_drawdown > 15. && max_drawdown < 20. => Status::Neutral,
-        _x if max_drawdown <= 15. => Status::Bullish,
+        _x if max_drawdown >= 25. => Status::Bearish,
+        _x if max_drawdown > 20. && max_drawdown < 25. => Status::Neutral,
+        _x if max_drawdown <= 20. => Status::Bullish,
         _ => Status::Neutral,
     }
 }
