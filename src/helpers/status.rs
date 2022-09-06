@@ -220,9 +220,9 @@ pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
     let delta = buy_hold / profit;
     match delta {
         _x if profit <= 0. => Status::Bearish,
-        _x if delta >= 3. => Status::Bearish,
-        _x if delta > 2. && delta < 3. => Status::Neutral,
-        _x if delta <= 2. => Status::Bullish,
+        _x if delta >= 4. => Status::Bearish,
+        _x if delta > 3. && delta < 4. => Status::Neutral,
+        _x if delta <= 3. => Status::Bullish,
         _ => Status::Neutral,
     }
 }
