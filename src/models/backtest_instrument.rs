@@ -68,7 +68,7 @@ pub enum BackTestResult {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeIn {
     pub index_in: usize,
-    pub quantity: usize,
+    pub quantity: f64,
     pub price_in: f64,
     pub stop_loss: f64,
     pub date_in: DbDateTime,
