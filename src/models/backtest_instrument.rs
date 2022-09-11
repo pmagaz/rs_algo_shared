@@ -25,7 +25,8 @@ pub struct BackTestInstrumentResult {
     pub instrument: BackTestInstrument,
     pub strategy: String,
     pub market: Market,
-    pub strategy_type: StrategyType,
+    pub  strategy_type: StrategyType,
+ stop_loss: f64
     pub date_start: DbDateTime,
     pub date_end: DbDateTime,
     pub sessions: usize,

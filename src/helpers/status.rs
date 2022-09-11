@@ -230,8 +230,8 @@ pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
 pub fn get_max_drawdown_status(max_drawdown: f64) -> Status {
     match max_drawdown {
         _x if max_drawdown > 20. => Status::Bearish,
-        _x if max_drawdown >= 18. && max_drawdown <= 20. => Status::Neutral,
-        _x if max_drawdown <= 20. => Status::Bullish,
+        _x if max_drawdown >= 15. && max_drawdown <= 20. => Status::Neutral,
+        _x if max_drawdown <= 15. => Status::Bullish,
         _ => Status::Neutral,
     }
 }

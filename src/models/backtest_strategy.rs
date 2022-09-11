@@ -21,7 +21,8 @@ impl std::fmt::Display for StrategyType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
     pub strategy: String,
-    pub strategy_type: StrategyType,
+    pub  strategy_type: StrategyType,
+ stop_loss: f64
     pub market: Market,
     pub date: DbDateTime,
     pub avg_sessions: usize,
