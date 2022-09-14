@@ -71,6 +71,7 @@ pub enum StopLossType {
     Price,
     Percentage,
     Trailing,
+    None,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
