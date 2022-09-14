@@ -66,11 +66,28 @@ pub enum BackTestResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StopLossType {
+    Atr,
+    Price,
+    Percentage,
+    Trailing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StopLoss {
+    pub stop_type: StopLossType,
+    pub price: f64,
+    pub created_at: DbDateTime,
+    pub updated_at: DbDateTime,
+    pub valid_until: DbDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeIn {
     pub index_in: usize,
     pub quantity: f64,
     pub price_in: f64,
-    pub stop_loss: f64,
+    pub stop_loss: StopLoss,
     pub date_in: DbDateTime,
     pub trade_type: TradeType,
 }
