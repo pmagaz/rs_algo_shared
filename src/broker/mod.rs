@@ -29,11 +29,18 @@ pub struct Response<R> {
 #[async_trait::async_trait]
 pub trait Broker {
     async fn new() -> Self;
+    async fn new_stream() -> Self;
     async fn listen<F, T>(&mut self, mut callback: F)
     where
         F: Send + FnMut(Response<VEC_DOHLC>) -> T,
         T: Future<Output = Result<()>> + Send + 'static;
     async fn get_instrument_data(
+        &mut self,
+        symbol: &str,
+        period: usize,
+        start: i64,
+    ) -> Result<Response<VEC_DOHLC>>;
+    async fn get_instrument_streaming(
         &mut self,
         symbol: &str,
         period: usize,

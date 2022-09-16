@@ -13,7 +13,7 @@ use std::future::Future;
 pub struct Xtb {
     pub websocket: WebSocket,
     symbol: String,
-    sessionId: String,
+    streamSessionId: String,
     time_frame: usize,
     from_date: i64,
 }
@@ -24,8 +24,15 @@ pub struct Command<T> {
     pub arguments: T,
 }
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Command2 {
+pub struct CommandAllSymbols {
     pub command: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CommandStreaming {
+    pub command: String,
+    pub streamSessionId: String,
+    pub symbol: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,9 +72,21 @@ impl Broker for Xtb {
     async fn new() -> Self {
         let url = &env::var("BROKER_URL").unwrap();
 
+       Self {
+            websocket: WebSocket::connect(url).await,
+            streamSessionId: "".to_owned(),
+            symbol: "".to_owned(),
+            time_frame: 0,
+            from_date: 0,
+        }
+    }
+
+    async fn new_stream() -> Self {
+        let url = &env::var("BROKER_STREAM_URL").unwrap();
+
         Self {
             websocket: WebSocket::connect(url).await,
-            sessionId: "".to_owned(),
+            streamSessionId: "".to_owned(),
             symbol: "".to_owned(),
             time_frame: 0,
             from_date: 0,
@@ -89,9 +108,9 @@ impl Broker for Xtb {
 
         Ok(())
     }
-
+    
     async fn get_symbols(&mut self) -> Result<Response<VEC_DOHLC>> {
-        self.send(&Command2 {
+        self.send(&CommandAllSymbols {
             command: "getAllSymbols".to_owned(),
         })
         .await?;
@@ -116,6 +135,25 @@ impl Broker for Xtb {
                     start: from_date * 1000,
                 },
             },
+        })
+        .await?;
+
+        let res = self.get_response().await?;
+
+        Ok(res)
+    }
+
+    async fn get_instrument_streaming(
+        &mut self,
+        symbol: &str,
+        time_frame: usize,
+        from_date: i64,
+    ) -> Result<Response<VEC_DOHLC>> {
+        self.symbol = symbol.to_owned();
+        self.send(&CommandStreaming {
+            command: "getCandles".to_owned(),
+            streamSessionId: self.streamSessionId.to_owned(),
+            symbol: symbol.to_owned(),
         })
         .await?;
 
@@ -173,8 +211,9 @@ impl Xtb {
         let data = self.parse_message(&msg).await.unwrap();
         let response: Response<VEC_DOHLC> = match &data {
             // Login
+           
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
-                self.sessionId = data["streamSessionId"].to_string();
+                self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
                 Response {
                     msg_type: MessageType::Login,
                     symbol: "".to_owned(),

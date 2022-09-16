@@ -146,16 +146,16 @@ pub struct CompactRsi {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Macd {
-    pub ema26: ExponentialMovingAverage,
-    pub ema12: ExponentialMovingAverage,
-    ema9: ExponentialMovingAverage,
+    pub ema_a: ExponentialMovingAverage,
+    pub ema_b: ExponentialMovingAverage,
+    ema_c: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     pub data_b: Vec<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactMacd {
-    ema26: ExponentialMovingAverage,
-    ema12: ExponentialMovingAverage,
-    ema9: ExponentialMovingAverage,
+    ema_a: ExponentialMovingAverage,
+    ema_b: ExponentialMovingAverage,
+    ema_c: ExponentialMovingAverage,
 }
