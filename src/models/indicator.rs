@@ -33,6 +33,7 @@ pub struct Indicators {
     pub macd: Macd,
     pub stoch: Stoch,
     pub atr: Atr,
+    pub adx: Adx,
     pub rsi: Rsi,
     pub bb: BollingerB,
     pub bbw: BollingerBW,
