@@ -118,6 +118,15 @@ pub struct Atr {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Adx {
+    #[serde(skip_deserializing)]
+    pub atr: AverageDirectionalIndex,
+    pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
+    pub data_b: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactEma {
     ema: ExponentialMovingAverage,
 }
