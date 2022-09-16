@@ -120,7 +120,7 @@ pub struct Atr {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Adx {
     #[serde(skip_deserializing)]
-    pub atr: AverageDirectionalIndex,
+    pub adx: AverageDirectionalIndex,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
