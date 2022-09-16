@@ -26,7 +26,7 @@ reqwest = { version = "0.11.11", features = ["json"] }
 chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 round = "0.1.2"
 
-ta = {git = "https://github.com/pmagaz/ta-rs", features = ["serde"]}
+ta = {git = "https://github.com/pmagaz/ta-rs", features = ["serde"], rev="3b2d78c"}
 
 [dependencies.plotters]
 optional = true

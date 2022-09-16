@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::models::status::Status;
 use serde::{Deserialize, Serialize};
 use ta::indicators::AverageTrueRange;
+use ta::indicators::AverageDirectionalIndex;
 use ta::indicators::BollingerBands;
 use ta::indicators::ExponentialMovingAverage;
 use ta::indicators::KeltnerChannel;
