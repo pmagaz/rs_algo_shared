@@ -78,6 +78,7 @@ pub enum StopLossType {
 pub struct StopLoss {
     pub stop_type: StopLossType,
     pub price: f64,
+    pub value: f64,
     pub created_at: DbDateTime,
     pub updated_at: DbDateTime,
     pub valid_until: DbDateTime,
