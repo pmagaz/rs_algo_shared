@@ -1,0 +1,543 @@
+use super::*;
+use crate::error::Result;
+use crate::helpers::date::parse_time;
+use crate::ws::message::Message;
+use crate::ws::ws_client::WebSocket;
+use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
+
+use futures_util::{stream::SplitStream, Future, SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::env;
+use std::fmt::Debug;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
+use tokio_tungstenite::MaybeTlsStream;
+use tokio_tungstenite::WebSocketStream;
+
+#[derive(Debug)]
+pub struct Xtb {
+    socket: WebSocket,
+    stream: WebSocketClientStream,
+    symbol: String,
+    streamSessionId: String,
+    time_frame: usize,
+    from_date: i64,
+}
+
+#[async_trait::async_trait]
+impl BrokerStream for Xtb {
+    async fn new() -> Self {
+        let socket;
+        let stream;
+        let socket_url = &env::var("BROKER_URL").unwrap();
+        let stream_url = &env::var("BROKER_STREAM_URL").unwrap();
+        let stream_subscribe = env::var("STREAM_SUBSCRIBE")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap();
+
+        if stream_subscribe {
+            socket = WebSocket::connect(socket_url).await;
+            stream = WebSocketClientStream::connect(stream_url).await;
+        } else {
+            socket = WebSocket::connect(socket_url).await;
+            stream = WebSocketClientStream::connect(socket_url).await;
+        }
+
+        Self {
+            socket: socket,
+            stream: stream,
+            streamSessionId: "".to_owned(),
+            symbol: "".to_owned(),
+            time_frame: 0,
+            from_date: 0,
+        }
+    }
+
+    fn get_session_id(&mut self) -> &String {
+        &self.streamSessionId
+    }
+
+    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self> {
+        self.send(&Command {
+            command: String::from("login"),
+            arguments: LoginParams {
+                userId: String::from(username),
+                password: String::from(password),
+                appName: String::from("rs-algo-scanner"),
+            },
+        })
+        .await?;
+
+        let res = self.get_response().await?;
+
+        Ok(self)
+    }
+
+    async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+        &mut self.stream.read
+    }
+
+    async fn read(&mut self) -> Result<Response<VEC_DOHLC>> {
+        let msg = self.socket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+        let response = self.handle_response::<VEC_DOHLC>(&txt_msg).await.unwrap();
+        Ok(response)
+    }
+
+    async fn get_symbols(&mut self) -> Result<Response<VEC_DOHLC>> {
+        self.send(&CommandAllSymbols {
+            command: "getAllSymbols".to_owned(),
+        })
+        .await?;
+        let res = self.get_response().await?;
+
+        Ok(res)
+    }
+
+    async fn get_instrument_data(
+        &mut self,
+        symbol: &str,
+        time_frame: usize,
+        from_date: i64,
+    ) -> Result<Response<VEC_DOHLC>> {
+        self.send(&Command {
+            command: "getChartLastRequest".to_owned(),
+            arguments: Instrument {
+                info: InstrumentCandles {
+                    symbol: symbol.to_owned(),
+                    period: time_frame,
+                    start: from_date * 1000,
+                },
+            },
+        })
+        .await?;
+
+        let res = self.get_response().await?;
+        Ok(res)
+    }
+
+    async fn get_tick_prices(
+        &mut self,
+        symbol: &str,
+        level: usize,
+        timestamp: i64,
+    ) -> Result<String> {
+        let tick_command = &Command {
+            command: "getTickPrices".to_owned(),
+            arguments: TickParams {
+                timestamp,
+                symbols: vec![symbol.to_string()],
+                level,
+            },
+        };
+
+        self.socket
+            .send(&serde_json::to_string(&tick_command).unwrap())
+            .await
+            .unwrap();
+        let msg = self.socket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
+    }
+
+    async fn get_instrument_streaming(
+        &mut self,
+        symbol: &str,
+        minArrivalTime: usize,
+        maxLevel: usize,
+    ) -> Result<()> {
+        let command = &CommandGetTickPrices {
+            command: "getTickPrices".to_owned(),
+            streamSessionId: self.streamSessionId.clone(),
+            symbol: symbol.to_owned(),
+            minArrivalTime,
+            maxLevel,
+        };
+
+        let command_alive = &CommandStreaming {
+            command: "getKeepAlive".to_owned(),
+            streamSessionId: self.streamSessionId.clone(),
+        };
+
+        // self.stream
+        //     .send(&serde_json::to_string(&command_alive).unwrap())
+        //     .await
+        //     .unwrap();
+
+        // let command = &CommandGetCandles {
+        //     command: "getCandles".to_owned(),
+        //     streamSessionId: self.streamSessionId.clone(),
+        //     symbol: symbol.to_owned(),
+        // };
+
+        self.stream
+            .send(&serde_json::to_string(&command).unwrap())
+            .await
+            .unwrap();
+        // let url = &env::var("BROKER_STREAM_URL").unwrap();
+        // let mut wss = WebSocketStream::connect(url).await;
+        // let msg = self.stream.read().await.unwrap();
+        // let txt_msg = match msg {
+        //     Message::Text(txt) => txt,
+        //     _ => panic!(),
+        // };
+
+        // println!("22222222{}", txt_msg);
+
+        Ok(())
+    }
+
+    async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
+    where
+        F: Send + FnMut(Message) -> T,
+        T: Future<Output = Result<()>> + Send + 'static,
+    {
+        // let login_command = &Command {
+        //     command: String::from("login"),
+        //     arguments: LoginParams {
+        //         userId: String::from(username),
+        //         password: String::from(password),
+        //         appName: String::from("rs-algo-bot"),
+        //     },
+        // };
+
+        // let candles_command = &CommandGetTickPrices{
+        //     command: "getCandles".to_owned(),
+        //     streamSessionId: self.streamSessionId,
+        //     symbol: "BITCOINT".to_owned()
+        // };
+
+        let tick_command = &CommandGetTickPrices {
+            command: "getTickPrices".to_owned(),
+            streamSessionId: session_id,
+            symbol: symbol.to_owned(),
+            minArrivalTime: 5000,
+            maxLevel: 2,
+        };
+
+        // let url = &env::var("BROKER_STREAM_URL").unwrap();
+        // let mut wss = WebSocketStream::connect(url).await;
+        self.stream
+            .send(&serde_json::to_string(&tick_command).unwrap())
+            .await
+            .unwrap();
+
+        loop {
+            //let msg = self.stream.read().await.unwrap();
+
+            // println!("5555555555 {:?}", msg);
+
+            // tokio::spawn(callback(msg));
+        }
+        //wss.send(&serde_json::to_string(&candles_command).unwrap()).await.unwrap();
+        //wss.send(&serde_json::to_string(&candles_command).unwrap()).await.unwrap();
+        // while let Some(msg) = self.stream.next().await {
+        // let msg = msg.unwrap();
+        // //if msg.is_text() || msg.is_binary() {
+
+        //     println!("aaaaaa {:?}", msg);
+        //     tokio::spawn(callback(msg));
+        // }
+        // if msg.is_text() || msg.is_binary() {
+        //     ws_stream.send(msg).await.unwrap();
+        // }
+        // let mut ws = WebSocket::connect(url).await;
+
+        // let candles_command = &CommandGetCandles{
+        //     command: "getCandles".to_owned(),
+        //     streamSessionId: "getCandles".to_owned(),
+        //     symbol: "BITCOINT".to_owned()
+        // };
+
+        // //  ws
+        // //     .send(&serde_json::to_string(&command).unwrap())
+        // //     .await.unwrap();
+        // // ws.send(&serde_json::to_string(candles_command).unwrap())
+        // // .await
+        // // .unwrap();
+
+        // // println!("22222");
+
+        // // ws.ping("".as_bytes())
+        // // .await;
+
+        // ws.send(&serde_json::to_string(login_command).unwrap())
+        // .await
+        // .unwrap();
+
+        // loop {
+
+        //     let msg = ws.read().await.unwrap();
+
+        //     println!("333333333333 {:?}", msg);
+        //     let txt_msg = match msg {
+        //         Message::Text(txt) => txt,
+        //         _ => panic!(),
+        //     };
+        //     let data: Value = serde_json::from_str(&txt_msg).expect("Can't parse to JSON");
+        //     let mut result: VEC_DOHLC = vec![];
+        //     let digits = data["returnData"]["digits"].as_f64().unwrap();
+        //     let x = 10.0_f64;
+        //     let pow = x.powf(digits);
+        //     for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
+        //         //FIXME!!
+        //         let date = parse_time(obj["ctm"].as_i64().unwrap() / 1000);
+        //         let open = obj["open"].as_f64().unwrap() / pow;
+        //         let high = open + obj["high"].as_f64().unwrap() / pow;
+        //         let low = open + obj["low"].as_f64().unwrap() / pow;
+        //         let close = open + obj["close"].as_f64().unwrap() / pow;
+        //         let volume = obj["vol"].as_f64().unwrap() * 1000.;
+        //         result.push((date, open, high, low, close, volume));
+        //     }
+
+        //     let response = Response {
+        //         msg_type: MessageType::GetInstrumentPrice,
+        //         symbol: "".to_owned(),
+        //         data: vec![],
+        //         symbols: vec![],
+        //     };
+        //     tokio::spawn(callback(response));
+        // }
+    }
+}
+
+impl Xtb {
+    async fn send<T>(&mut self, command: &T) -> Result<()>
+    where
+        for<'de> T: Serialize + Deserialize<'de> + Debug,
+    {
+        self.socket
+            .send(&serde_json::to_string(&command).unwrap())
+            .await?;
+
+        Ok(())
+    }
+
+    async fn send_stream<T>(&mut self, command: &T) -> Result<()>
+    where
+        for<'de> T: Serialize + Deserialize<'de> + Debug,
+    {
+        self.stream
+            .send(&serde_json::to_string(&command).unwrap())
+            .await
+            .unwrap();
+
+        Ok(())
+    }
+
+    async fn get_response(&mut self) -> Result<Response<VEC_DOHLC>> {
+        let msg = self.socket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+        let res = self.handle_response::<VEC_DOHLC>(&txt_msg).await.unwrap();
+
+        Ok(res)
+    }
+
+    pub async fn parse_message(&mut self, msg: &str) -> Result<Value> {
+        let parsed: Value = serde_json::from_str(&msg).expect("Can't parse to JSON");
+        Ok(parsed)
+    }
+
+    pub fn parse_message2(&mut self, msg: &str) -> Result<Value> {
+        let parsed: Value = serde_json::from_str(&msg).expect("Can't parse to JSON");
+        Ok(parsed)
+    }
+
+    pub async fn handle_response<'a, T>(&mut self, msg: &str) -> Result<Response<VEC_DOHLC>> {
+        let data = self.parse_message(&msg).await.unwrap();
+        let response: Response<VEC_DOHLC> = match &data {
+            // Login
+            _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
+                self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
+                Response {
+                    msg_type: MessageType::Login,
+                    symbol: "".to_owned(),
+                    data: vec![],
+                    symbols: vec![],
+                }
+            }
+            // GetSymbols
+            _x if matches!(&data["returnData"], Value::Array(_x)) => Response::<VEC_DOHLC> {
+                msg_type: MessageType::GetInstrumentPrice,
+                symbol: self.symbol.to_owned(),
+                data: vec![],
+                symbols: self.parse_symbols_data(&data).await.unwrap(),
+            },
+            // GetInstrumentPrice
+            _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => {
+                Response::<VEC_DOHLC> {
+                    msg_type: MessageType::GetInstrumentPrice,
+                    symbol: self.symbol.to_owned(),
+                    symbols: vec![],
+                    data: self.parse_price_data(&data).await.unwrap(),
+                }
+            }
+            _ => {
+                println!("[Error] {:?}", msg);
+                Response {
+                    msg_type: MessageType::Other,
+                    symbol: "".to_owned(),
+                    data: vec![],
+                    symbols: vec![],
+                }
+            }
+        };
+        Ok(response)
+    }
+
+    pub fn handle_response2<'a, T>(&mut self, msg: &str) -> Result<Response<VEC_DOHLC>> {
+        let data = self.parse_message2(&msg).unwrap();
+        let response: Response<VEC_DOHLC> = match &data {
+            // Login
+            _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
+                self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
+                Response {
+                    msg_type: MessageType::Login,
+                    symbol: "".to_owned(),
+                    data: vec![],
+                    symbols: vec![],
+                }
+            }
+            // GetSymbols
+            _x if matches!(&data["returnData"], Value::Array(_x)) => Response::<VEC_DOHLC> {
+                msg_type: MessageType::GetInstrumentPrice,
+                symbol: self.symbol.to_owned(),
+                data: vec![],
+                symbols: self.parse_symbols_data2(&data).unwrap(),
+            },
+            // GetInstrumentPrice
+            _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => {
+                Response::<VEC_DOHLC> {
+                    msg_type: MessageType::GetInstrumentPrice,
+                    symbol: self.symbol.to_owned(),
+                    symbols: vec![],
+                    data: self.parse_price_data2(&data).unwrap(),
+                }
+            }
+            _ => {
+                println!("[Error] {:?}", msg);
+                Response {
+                    msg_type: MessageType::Other,
+                    symbol: "".to_owned(),
+                    data: vec![],
+                    symbols: vec![],
+                }
+            }
+        };
+        Ok(response)
+    }
+
+    fn parse_price_data2(&mut self, data: &Value) -> Result<VEC_DOHLC> {
+        let mut result: VEC_DOHLC = vec![];
+        let digits = data["returnData"]["digits"].as_f64().unwrap();
+        let x = 10.0_f64;
+        let pow = x.powf(digits);
+        for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
+            //FIXME!!
+            let date = parse_time(obj["ctm"].as_i64().unwrap() / 1000);
+            let open = obj["open"].as_f64().unwrap() / pow;
+            let high = open + obj["high"].as_f64().unwrap() / pow;
+            let low = open + obj["low"].as_f64().unwrap() / pow;
+            let close = open + obj["close"].as_f64().unwrap() / pow;
+            let volume = obj["vol"].as_f64().unwrap() * 1000.;
+            result.push((date, open, high, low, close, volume));
+        }
+
+        Ok(result)
+    }
+
+    async fn parse_price_data(&mut self, data: &Value) -> Result<VEC_DOHLC> {
+        let mut result: VEC_DOHLC = vec![];
+        let digits = data["returnData"]["digits"].as_f64().unwrap();
+        let x = 10.0_f64;
+        let pow = x.powf(digits);
+        for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
+            //FIXME!!
+            let date = parse_time(obj["ctm"].as_i64().unwrap() / 1000);
+            let open = obj["open"].as_f64().unwrap() / pow;
+            let high = open + obj["high"].as_f64().unwrap() / pow;
+            let low = open + obj["low"].as_f64().unwrap() / pow;
+            let close = open + obj["close"].as_f64().unwrap() / pow;
+            let volume = obj["vol"].as_f64().unwrap() * 1000.;
+            result.push((date, open, high, low, close, volume));
+        }
+
+        Ok(result)
+    }
+
+    fn parse_symbols_data2(&mut self, data: &Value) -> Result<Vec<Symbol>> {
+        let mut result: Vec<Symbol> = vec![];
+        let symbols = data["returnData"].as_array().unwrap();
+        for s in symbols {
+            let symbol = match &s["symbol"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Symbol parse error"),
+            };
+            let currency = match &s["currency"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Currency parse error"),
+            };
+            let category = match &s["symbol"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Category parse error"),
+            };
+
+            let description = match &s["description"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Description parse error"),
+            };
+
+            result.push(Symbol {
+                symbol,
+                currency,
+                category,
+                description,
+            });
+        }
+        Ok(result)
+    }
+
+    async fn parse_symbols_data(&mut self, data: &Value) -> Result<Vec<Symbol>> {
+        let mut result: Vec<Symbol> = vec![];
+        let symbols = data["returnData"].as_array().unwrap();
+        for s in symbols {
+            let symbol = match &s["symbol"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Symbol parse error"),
+            };
+            let currency = match &s["currency"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Currency parse error"),
+            };
+            let category = match &s["symbol"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Category parse error"),
+            };
+
+            let description = match &s["description"] {
+                Value::String(s) => s.to_string(),
+                _ => panic!("Description parse error"),
+            };
+
+            result.push(Symbol {
+                symbol,
+                currency,
+                category,
+                description,
+            });
+        }
+        Ok(result)
+    }
+}
