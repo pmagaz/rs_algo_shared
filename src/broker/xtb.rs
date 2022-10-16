@@ -1,88 +1,32 @@
-use super::{Broker, Response, Symbol, VEC_DOHLC};
+use super::*;
 use crate::error::Result;
-use crate::helpers::websocket::{Message, MessageType, WebSocket};
+use crate::ws::message::Message;
+use crate::ws::ws_client::WebSocket;
 
 use crate::helpers::date::parse_time;
+use futures_util::{
+    stream::{SplitSink, SplitStream},
+    Future, SinkExt, StreamExt,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
-use std::future::Future;
 
 #[derive(Debug)]
 pub struct Xtb {
-    pub websocket: WebSocket,
+    websocket: WebSocket,
     symbol: String,
     streamSessionId: String,
     time_frame: usize,
     from_date: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Command<T> {
-    pub command: String,
-    pub arguments: T,
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CommandAllSymbols {
-    pub command: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CommandStreaming {
-    pub command: String,
-    pub streamSessionId: String,
-    pub symbol: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LoginParams {
-    pub userId: String,
-    pub password: String,
-    pub appName: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LoginResponse {
-    pub status: bool,
-    pub streamSessionId: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TickerPriceParams {
-    pub command: String,
-    pub streamSessionId: String,
-    pub symbol: String,
-    pub minArrivalTime: usize,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Instrument {
-    info: InstrumentCandles,
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub struct InstrumentCandles {
-    period: usize,
-    start: i64,
-    symbol: String,
+    //leches: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
 }
 
 #[async_trait::async_trait]
 impl Broker for Xtb {
     async fn new() -> Self {
         let url = &env::var("BROKER_URL").unwrap();
-
-       Self {
-            websocket: WebSocket::connect(url).await,
-            streamSessionId: "".to_owned(),
-            symbol: "".to_owned(),
-            time_frame: 0,
-            from_date: 0,
-        }
-    }
-
-    async fn new_stream() -> Self {
-        let url = &env::var("BROKER_STREAM_URL").unwrap();
 
         Self {
             websocket: WebSocket::connect(url).await,
@@ -93,7 +37,7 @@ impl Broker for Xtb {
         }
     }
 
-    async fn login(&mut self, username: &str, password: &str) -> Result<()> {
+    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self> {
         self.send(&Command {
             command: String::from("login"),
             arguments: LoginParams {
@@ -106,9 +50,23 @@ impl Broker for Xtb {
 
         let res = self.get_response().await?;
 
-        Ok(())
+        Ok(self)
     }
-    
+
+    fn get_session_id(&mut self) -> &String {
+        &self.streamSessionId
+    }
+
+    async fn read(&mut self) -> Result<Response<VEC_DOHLC>> {
+        let msg = self.websocket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+        let response = self.handle_response::<VEC_DOHLC>(&txt_msg).await.unwrap();
+        Ok(response)
+    }
+
     async fn get_symbols(&mut self) -> Result<Response<VEC_DOHLC>> {
         self.send(&CommandAllSymbols {
             command: "getAllSymbols".to_owned(),
@@ -143,30 +101,45 @@ impl Broker for Xtb {
         Ok(res)
     }
 
-    async fn get_instrument_streaming(
+    async fn get_tick_prices(
         &mut self,
         symbol: &str,
-        time_frame: usize,
-        from_date: i64,
-    ) -> Result<Response<VEC_DOHLC>> {
-        self.symbol = symbol.to_owned();
-        self.send(&CommandStreaming {
-            command: "getCandles".to_owned(),
-            streamSessionId: self.streamSessionId.to_owned(),
-            symbol: symbol.to_owned(),
-        })
-        .await?;
+        level: usize,
+        timestamp: i64,
+    ) -> Result<String> {
+        let tick_command = &Command {
+            command: "getTickPrices".to_owned(),
+            arguments: TickParams {
+                timestamp,
+                symbols: vec![symbol.to_string()],
+                level,
+            },
+        };
 
-        let res = self.get_response().await?;
+        self.websocket
+            .send(&serde_json::to_string(&tick_command).unwrap())
+            .await
+            .unwrap();
+        let msg = self.websocket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
 
-        Ok(res)
+        Ok(txt_msg)
     }
 
-    async fn listen<F, T>(&mut self, mut callback: F)
+    async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
     where
-        F: Send + FnMut(Response<VEC_DOHLC>) -> T,
+        F: Send + FnMut(Message) -> T,
         T: Future<Output = Result<()>> + Send + 'static,
     {
+        self.send(&CommandAllSymbols {
+            command: "getAllSymbols".to_owned(),
+        })
+        .await
+        .unwrap();
+
         loop {
             let msg = self.websocket.read().await.unwrap();
             let txt_msg = match msg {
@@ -174,7 +147,8 @@ impl Broker for Xtb {
                 _ => panic!(),
             };
             let response = self.handle_response::<VEC_DOHLC>(&txt_msg).await.unwrap();
-            tokio::spawn(callback(response));
+            println!("{:?}", response);
+            //tokio::spawn(callback(response));
         }
     }
 }
@@ -211,7 +185,6 @@ impl Xtb {
         let data = self.parse_message(&msg).await.unwrap();
         let response: Response<VEC_DOHLC> = match &data {
             // Login
-           
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
                 self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
                 Response {
@@ -247,7 +220,7 @@ impl Xtb {
                 }
             }
         };
-
+        println!("43333333 {:?}", response);
         Ok(response)
     }
 

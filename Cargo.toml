@@ -11,10 +11,12 @@ path = "src/lib.rs"
 [features]
 default = []
 chart = ["plotters"]
-broker = ["tungstenite","openssl","tokio"]
+broker = ["tungstenite","tokio-tungstenite","futures-util","openssl","tokio"]
+websocket = ["tungstenite","tokio"]
 
 [dependencies]
 async-trait = "0.1.52"
+dyn-clone = "1.0.8"
 anyhow = "1.0.58"
 thiserror = "1.0.31"
 dotenv = "0.15.0"
@@ -25,6 +27,8 @@ bson = { version = "2.2.0", features = ["chrono-0_4"]}
 reqwest = { version = "0.11.11", features = ["json"] }
 chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 round = "0.1.2"
+env_logger = "0.9.0"
+log = "0.4"
 
 ta = {git = "https://github.com/pmagaz/ta-rs", features = ["serde"], rev="3b2d78c"}
 
@@ -34,9 +38,20 @@ git = "https://github.com/pmagaz/plotters"
 branch = "master"
 features = ["all_series"]
 
+[dependencies.futures-util]
+optional = true
+version = "0.3.17"
+default-features = false
+features = ["std"]
+
 [dependencies.tungstenite]
 optional = true
 version = "0.17.2"
+features = ["native-tls"]
+
+[dependencies.tokio-tungstenite]
+optional = true
+version = "0.17"
 features = ["native-tls"]
 
 [dependencies.openssl]
@@ -49,3 +64,7 @@ optional = true
 version = "1.19.1"
 features = ["rt-multi-thread", "macros"] 
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

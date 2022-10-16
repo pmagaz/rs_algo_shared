@@ -10,5 +10,6 @@ pub mod market;
 pub mod pattern;
 pub mod peak;
 pub mod status;
+pub mod strategy;
 pub mod time_frame;
 pub mod watch_instrument;

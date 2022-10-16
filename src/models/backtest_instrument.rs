@@ -1,6 +1,6 @@
 use crate::helpers::date::*;
-use crate::models::backtest_strategy::*;
 use crate::models::market::*;
+use crate::models::strategy::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

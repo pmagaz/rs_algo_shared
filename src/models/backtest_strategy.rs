@@ -1,16 +1,8 @@
 use crate::helpers::date::*;
 use crate::models::market::*;
-use serde::{Deserialize, Serialize};
+use crate::models::strategy::*;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum StrategyType {
-    LongShort,
-    OnlyLong,
-    OnlyShort,
-    LongShortMultiTF,
-    OnlyLongMultiTF,
-    OnlyShortMultiTF,
-}
+use serde::{Deserialize, Serialize};
 
 impl std::fmt::Display for StrategyType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
