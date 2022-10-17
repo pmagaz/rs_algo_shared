@@ -13,6 +13,33 @@ use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
 
+#[async_trait::async_trait]
+pub trait Broker {
+    async fn new() -> Self;
+    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self>
+    where
+        Self: Sized;
+    async fn get_symbols(&mut self) -> Result<Response<VEC_DOHLC>>;
+    async fn read(&mut self) -> Result<Response<VEC_DOHLC>>;
+    fn get_session_id(&mut self) -> &String;
+    async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
+    where
+        F: Send + FnMut(Message) -> T,
+        T: Future<Output = Result<()>> + Send + 'static;
+    async fn get_instrument_data(
+        &mut self,
+        symbol: &str,
+        period: usize,
+        start: i64,
+    ) -> Result<Response<VEC_DOHLC>>;
+    async fn get_tick_prices(
+        &mut self,
+        symbol: &str,
+        level: usize,
+        timestamp: i64,
+    ) -> Result<String>;
+}
+
 #[derive(Debug)]
 pub struct Xtb {
     websocket: WebSocket,
@@ -20,7 +47,6 @@ pub struct Xtb {
     streamSessionId: String,
     time_frame: usize,
     from_date: i64,
-    //leches: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
 }
 
 #[async_trait::async_trait]
@@ -220,7 +246,6 @@ impl Xtb {
                 }
             }
         };
-        println!("43333333 {:?}", response);
         Ok(response)
     }
 

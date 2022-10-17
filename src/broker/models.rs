@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 
 pub type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 pub type VEC_DOHLC = Vec<DOHLC>;
+pub type LECHES = (f64, f64, f64, f64, f64, f64, f64);
+pub type VEC_LECHES = Vec<LECHES>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MessageType {
