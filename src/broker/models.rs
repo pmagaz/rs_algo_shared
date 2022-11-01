@@ -1,9 +1,10 @@
 use crate::helpers::date::{DateTime, Local};
+use crate::models::time_frame::*;
 use serde::{Deserialize, Serialize};
 
 pub type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 pub type VEC_DOHLC = Vec<DOHLC>;
-pub type LECHES = (f64, f64, f64, f64, f64, f64, f64);
+pub type LECHES = (DateTime<Local>, f64, f64, f64, f64, f64, f64);
 pub type VEC_LECHES = Vec<LECHES>;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,6 +27,7 @@ pub struct Symbol {
 pub struct Response<R> {
     pub msg_type: MessageType,
     pub symbol: String,
+    pub time_frame: TimeFrameType,
     pub data: R,
     pub symbols: Vec<Symbol>,
 }

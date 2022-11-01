@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StrategyType {
-    LongShort,
     OnlyLong,
     OnlyShort,
+    LongShort,
     LongShortMultiTF,
     OnlyLongMultiTF,
     OnlyShortMultiTF,

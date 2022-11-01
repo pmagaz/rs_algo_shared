@@ -13,6 +13,7 @@ default = []
 chart = ["plotters"]
 broker = ["tungstenite","tokio-tungstenite","futures-util","openssl","tokio"]
 websocket = ["tungstenite","tokio"]
+#instrument = ["find_peaks","polyfit-rs"]
 
 [dependencies]
 async-trait = "0.1.52"
@@ -30,7 +31,7 @@ round = "0.1.2"
 env_logger = "0.9.0"
 log = "0.4"
 
-ta = {git = "https://github.com/pmagaz/ta-rs", features = ["serde"], rev="3b2d78c"}
+
 
 [dependencies.plotters]
 optional = true
@@ -63,6 +64,20 @@ features = ["vendored"]
 optional = true
 version = "1.19.1"
 features = ["rt-multi-thread", "macros"] 
+
+[dependencies.find_peaks]
+optional = false
+version = "0.1.5"
+
+[dependencies.polyfit-rs]
+optional = false
+version = "0.2.0"
+
+[dependencies.ta]
+optional = false
+git = "ttps://github.com/pmagaz/ta-rs"
+branch = "master"
+features = ["serde"]
 
 [profile.release]
 strip = true

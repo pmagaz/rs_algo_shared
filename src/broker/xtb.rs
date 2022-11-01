@@ -4,6 +4,7 @@ use crate::ws::message::Message;
 use crate::ws::ws_client::WebSocket;
 
 use crate::helpers::date::parse_time;
+use crate::models::time_frame::*;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     Future, SinkExt, StreamExt,
@@ -216,6 +217,7 @@ impl Xtb {
                 Response {
                     msg_type: MessageType::Login,
                     symbol: "".to_owned(),
+                    time_frame: TimeFrameType::from_number(self.time_frame),
                     data: vec![],
                     symbols: vec![],
                 }
@@ -224,6 +226,7 @@ impl Xtb {
             _x if matches!(&data["returnData"], Value::Array(_x)) => Response::<VEC_DOHLC> {
                 msg_type: MessageType::GetInstrumentPrice,
                 symbol: self.symbol.to_owned(),
+                time_frame: TimeFrameType::from_number(self.time_frame),
                 data: vec![],
                 symbols: self.parse_symbols_data(&data).await.unwrap(),
             },
@@ -232,6 +235,7 @@ impl Xtb {
                 Response::<VEC_DOHLC> {
                     msg_type: MessageType::GetInstrumentPrice,
                     symbol: self.symbol.to_owned(),
+                    time_frame: TimeFrameType::from_number(self.time_frame),
                     symbols: vec![],
                     data: self.parse_price_data(&data).await.unwrap(),
                 }
@@ -241,6 +245,7 @@ impl Xtb {
                 Response {
                     msg_type: MessageType::Other,
                     symbol: "".to_owned(),
+                    time_frame: TimeFrameType::M1,
                     data: vec![],
                     symbols: vec![],
                 }

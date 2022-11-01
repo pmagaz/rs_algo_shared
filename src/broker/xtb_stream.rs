@@ -1,6 +1,7 @@
 use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
+use crate::models::time_frame::*;
 use crate::ws::message::{
     CommandType, Message, ResponseBody, ResponseType, StreamResponse, SymbolData,
 };
@@ -288,7 +289,7 @@ impl BrokerStream for Xtb {
             data["spreadTable"].as_f64().unwrap(),
         );
 
-        let msg: ResponseBody<LECHES> = ResponseBody {
+        let msg: ResponseBody<(f64, f64, f64, f64, f64, f64, f64)> = ResponseBody {
             response: ResponseType::SubscribeStream,
             data: Some(leches),
         };
@@ -348,23 +349,25 @@ impl Xtb {
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
                 self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
                 ResponseBody {
-                    response: ResponseType::GetSymbolData,
+                    response: ResponseType::GetInstrumentData,
                     data: Some(SymbolData {
                         symbol: "".to_owned(),
+                        time_frame: TimeFrameType::M1,
                         data: vec![],
                     }),
                 }
             }
             // // Get data
             _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => ResponseBody {
-                response: ResponseType::GetSymbolData,
+                response: ResponseType::GetInstrumentData,
                 data: Some(SymbolData {
                     symbol: self.symbol.clone(),
+                    time_frame: TimeFrameType::from_number(self.time_frame),
                     data: self.parse_price_data(&data).await.unwrap(),
                 }),
             },
             _ => ResponseBody {
-                response: ResponseType::GetSymbolData,
+                response: ResponseType::GetInstrumentData,
                 data: Option::None,
             },
         };

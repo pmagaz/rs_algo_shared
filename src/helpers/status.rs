@@ -1,9 +1,9 @@
 use crate::helpers::date::*;
-use crate::models::candle::*;
-use crate::models::divergence::*;
+use crate::scanner::candle::*;
+use crate::scanner::divergence::*;
 use crate::models::indicator::*;
-use crate::models::instrument::*;
-use crate::models::pattern::*;
+use crate::scanner::instrument::*;
+use crate::scanner::pattern::*;
 use crate::models::status::*;
 
 use round::round;

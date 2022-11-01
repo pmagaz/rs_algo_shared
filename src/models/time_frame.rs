@@ -2,13 +2,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TimeFrameType {
-    M5,
-    M15,
-    M30,
-    H1,
-    H4,
-    D,
     W,
+    D,
+    H4,
+    H1,
+    M30,
+    M15,
+    M5,
+    M1,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +19,7 @@ impl TimeFrame {
     pub fn new(time_frame: &str) -> TimeFrameType {
         match time_frame {
             "M5" => TimeFrameType::M5,
+            "M1" => TimeFrameType::M1,
             "M15" => TimeFrameType::M15,
             "M30" => TimeFrameType::M30,
             "H1" => TimeFrameType::H1,
@@ -30,8 +32,37 @@ impl TimeFrame {
 }
 
 impl TimeFrameType {
-    pub fn value(&self) -> usize {
+    pub fn from_number(time_frame: usize) -> TimeFrameType {
+        match time_frame {
+            1 => TimeFrameType::M1,
+            5 => TimeFrameType::M5,
+            15 => TimeFrameType::M15,
+            30 => TimeFrameType::M30,
+            60 => TimeFrameType::H1,
+            240 => TimeFrameType::H4,
+            1440 => TimeFrameType::D,
+            10080 => TimeFrameType::W,
+            _ => TimeFrameType::M1,
+        }
+    }
+
+    pub fn from_str(time_frame: &str) -> TimeFrameType {
+        match time_frame {
+            "M1" => TimeFrameType::M1,
+            "M5" => TimeFrameType::M5,
+            "M15" => TimeFrameType::M15,
+            "M30" => TimeFrameType::M30,
+            "H1" => TimeFrameType::H1,
+            "H4" => TimeFrameType::H4,
+            "D" => TimeFrameType::D,
+            "W" => TimeFrameType::W,
+            _ => TimeFrameType::M1,
+        }
+    }
+
+    pub fn to_number(&self) -> i64 {
         match *self {
+            TimeFrameType::M1 => 1,
             TimeFrameType::M5 => 5,
             TimeFrameType::M15 => 15,
             TimeFrameType::M30 => 30,
