@@ -9,3 +9,15 @@ pub enum StrategyType {
     OnlyLongMultiTF,
     OnlyShortMultiTF,
 }
+
+pub fn from_str(strategy: &str) -> StrategyType {
+    match strategy {
+        "OnlyLong" => StrategyType::OnlyLong,
+        "OnlyShort" => StrategyType::OnlyShort,
+        "LongShort" => StrategyType::LongShort,
+        "LongShortMultiTF" => StrategyType::LongShortMultiTF,
+        "OnlyLongMultiTF" => StrategyType::OnlyLongMultiTF,
+        "OnlyShortMultiTF" => StrategyType::OnlyShortMultiTF,
+        _ => StrategyType::OnlyLong,
+    }
+}

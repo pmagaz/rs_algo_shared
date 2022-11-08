@@ -4,6 +4,8 @@ pub mod backtest_strategy;
 pub mod indicator;
 pub mod market;
 pub mod status;
+pub mod stop_loss;
 pub mod strategy;
 pub mod time_frame;
+pub mod trade;
 pub mod watch_instrument;

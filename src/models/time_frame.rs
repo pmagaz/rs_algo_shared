@@ -1,3 +1,4 @@
+use crate::broker::{LECHES, VEC_DOHLC};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -10,6 +11,7 @@ pub enum TimeFrameType {
     M15,
     M5,
     M1,
+    ERR,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,7 +28,7 @@ impl TimeFrame {
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
             "W" => TimeFrameType::W,
-            &_ => TimeFrameType::H1,
+            &_ => TimeFrameType::ERR,
         }
     }
 }
@@ -42,7 +44,7 @@ impl TimeFrameType {
             240 => TimeFrameType::H4,
             1440 => TimeFrameType::D,
             10080 => TimeFrameType::W,
-            _ => TimeFrameType::M1,
+            _ => TimeFrameType::ERR,
         }
     }
 
@@ -56,12 +58,13 @@ impl TimeFrameType {
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
             "W" => TimeFrameType::W,
-            _ => TimeFrameType::M1,
+            _ => TimeFrameType::ERR,
         }
     }
 
     pub fn to_number(&self) -> i64 {
         match *self {
+            TimeFrameType::ERR => 0,
             TimeFrameType::M1 => 1,
             TimeFrameType::M5 => 5,
             TimeFrameType::M15 => 15,
@@ -84,4 +87,8 @@ impl std::fmt::Display for TimeFrameType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
+}
+
+pub fn parse_data_timeframe(data: LECHES, time_frame: TimeFrameType) -> LECHES {
+    data
 }

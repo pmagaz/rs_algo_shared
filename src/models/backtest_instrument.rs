@@ -1,24 +1,10 @@
 use crate::helpers::date::*;
 use crate::models::market::*;
+use crate::models::stop_loss::*;
 use crate::models::strategy::*;
+use crate::models::trade::*;
+
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TradeDirection {
-    Long,
-    Short,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum TradeType {
-    EntryLong,
-    ExitLong,
-    EntryShort,
-    ExitShort,
-    StopLoss,
-    TakeProfit,
-    None,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
@@ -54,61 +40,9 @@ pub struct BackTestInstrument {
     pub trades_out: Vec<TradeOut>,
 }
 
-pub enum TradeResult {
-    TradeIn(TradeIn),
-    TradeOut(TradeOut),
-    None,
-}
-
 pub enum BackTestResult {
     BackTestInstrumentResult(BackTestInstrumentResult),
     None,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum StopLossType {
-    Atr,
-    Price,
-    Percentage,
-    Trailing,
-    None,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct StopLoss {
-    pub stop_type: StopLossType,
-    pub price: f64,
-    pub value: f64,
-    pub created_at: DbDateTime,
-    pub updated_at: DbDateTime,
-    pub valid_until: DbDateTime,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TradeIn {
-    pub index_in: usize,
-    pub quantity: f64,
-    pub price_in: f64,
-    pub stop_loss: StopLoss,
-    pub date_in: DbDateTime,
-    pub trade_type: TradeType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TradeOut {
-    pub trade_type: TradeType,
-    pub index_in: usize,
-    pub price_in: f64,
-    pub date_in: DbDateTime,
-    pub index_out: usize,
-    pub price_out: f64,
-    pub date_out: DbDateTime,
-    pub profit: f64,
-    pub profit_per: f64,
-    pub run_up: f64,
-    pub run_up_per: f64,
-    pub draw_down: f64,
-    pub draw_down_per: f64,
 }
 
 impl std::fmt::Display for Market {
@@ -118,18 +52,6 @@ impl std::fmt::Display for Market {
 }
 
 impl std::fmt::Display for BackTestInstrument {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::fmt::Display for TradeIn {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl std::fmt::Display for TradeOut {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }

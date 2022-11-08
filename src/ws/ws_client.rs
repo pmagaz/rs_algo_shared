@@ -55,3 +55,9 @@ impl WebSocket {
         Ok(msg)
     }
 }
+
+// impl Default for WebSocket {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }

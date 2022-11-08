@@ -12,6 +12,7 @@ pub enum ResponseType {
     Connected,
     Error,
     GetInstrumentData,
+    ExecuteTrade,
     //GetHigherTMInstrumentData,
     SubscribeStream,
 }
@@ -19,6 +20,8 @@ pub enum ResponseType {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CommandType {
     GetInstrumentData,
+    UpdateBotData,
+    ExecuteTrade,
     //GetHigherTMInstrumentData,
     SubscribeStream,
 }
@@ -48,10 +51,15 @@ pub struct SessionData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SymbolData<T> {
+pub struct InstrumentData<T> {
     pub symbol: String,
     pub time_frame: TimeFrameType,
     pub data: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConnectedData {
+    pub session_id: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,14 +77,14 @@ pub struct StreamResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseBody<T> {
     pub response: ResponseType,
-    pub data: Option<T>,
+    pub payload: Option<T>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Response {
-    StreamResponse(ResponseBody<SymbolData<LECHES>>),
-    InstrumentData(ResponseBody<SymbolData<VEC_DOHLC>>),
-    //HigherTMInstrumentData(ResponseBody<SymbolData<VEC_DOHLC>>),
-    Connected(ResponseBody<bool>),
+    StreamResponse(ResponseBody<InstrumentData<LECHES>>),
+    InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
+    //HigherTMInstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
+    Connected(ResponseBody<Uuid>),
     Error(ResponseBody<bool>),
 }

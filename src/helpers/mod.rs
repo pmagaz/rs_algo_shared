@@ -1,3 +1,4 @@
+pub mod calc;
 pub mod comp;
 pub mod date;
 pub mod http;

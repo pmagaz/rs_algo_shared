@@ -110,6 +110,7 @@ impl Broker for Xtb {
         time_frame: usize,
         from_date: i64,
     ) -> Result<Response<VEC_DOHLC>> {
+        println!("11111111111111111111111 {}", time_frame);
         self.symbol = symbol.to_owned();
         self.send(&Command {
             command: "getChartLastRequest".to_owned(),

@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::helpers::date::parse_time;
 use crate::models::time_frame::*;
 use crate::ws::message::{
-    CommandType, Message, ResponseBody, ResponseType, StreamResponse, SymbolData,
+    CommandType, InstrumentData, Message, ResponseBody, ResponseType, StreamResponse,
 };
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
@@ -23,8 +23,8 @@ pub trait BrokerStream {
     async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self>
     where
         Self: Sized;
-    async fn get_symbols(&mut self) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>>;
-    async fn read(&mut self) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>>;
+    async fn get_symbols(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
+    async fn read(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
     fn get_session_id(&mut self) -> &String;
     async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
     where
@@ -35,7 +35,8 @@ pub trait BrokerStream {
         symbol: &str,
         period: usize,
         start: i64,
-    ) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>>;
+    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
+    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<SymbolDetail>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(
         &mut self,
@@ -49,7 +50,7 @@ pub trait BrokerStream {
         level: usize,
         timestamp: i64,
     ) -> Result<String>;
-    async fn parse_stream_data(msg: Message) -> Result<String>;
+    async fn parse_stream_data(msg: Message) -> Option<String>;
 }
 
 #[derive(Debug)]
@@ -116,7 +117,7 @@ impl BrokerStream for Xtb {
         &mut self.stream.read
     }
 
-    async fn read(&mut self) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>> {
+    async fn read(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => txt,
@@ -126,7 +127,7 @@ impl BrokerStream for Xtb {
         Ok(response)
     }
 
-    async fn get_symbols(&mut self) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>> {
+    async fn get_symbols(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         self.send(&CommandAllSymbols {
             command: "getAllSymbols".to_owned(),
         })
@@ -141,9 +142,10 @@ impl BrokerStream for Xtb {
         symbol: &str,
         time_frame: usize,
         from_date: i64,
-    ) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>> {
+    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         self.symbol = symbol.to_owned();
-        self.send(&Command {
+        self.time_frame = time_frame;
+        let instrument_command = Command {
             command: "getChartLastRequest".to_owned(),
             arguments: Instrument {
                 info: InstrumentCandles {
@@ -152,11 +154,37 @@ impl BrokerStream for Xtb {
                     start: from_date * 1000,
                 },
             },
-        })
-        .await?;
+        };
+
+        self.send(&instrument_command).await.unwrap();
 
         let res = self.get_response().await?;
         Ok(res)
+    }
+
+    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<SymbolDetail>> {
+        let symbol_command = Command {
+            command: "getSymbol".to_owned(),
+            arguments: SymbolArg {
+                symbol: symbol.to_owned(),
+            },
+        };
+
+        self.send(&symbol_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => {
+                let parsed: SymbolDetailResponse = serde_json::from_str(&txt).unwrap();
+                let symbol_detail: SymbolDetail = parsed.returnData;
+                ResponseBody {
+                    response: ResponseType::ExecuteTrade,
+                    payload: Some(symbol_detail),
+                }
+            }
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
     }
 
     async fn get_tick_prices(
@@ -166,7 +194,7 @@ impl BrokerStream for Xtb {
         timestamp: i64,
     ) -> Result<String> {
         self.symbol = symbol.to_owned();
-        let tick_command = &Command {
+        let tick_command = Command {
             command: "getTickPrices".to_owned(),
             arguments: TickParams {
                 timestamp,
@@ -175,10 +203,7 @@ impl BrokerStream for Xtb {
             },
         };
 
-        self.socket
-            .send(&serde_json::to_string(&tick_command).unwrap())
-            .await
-            .unwrap();
+        self.send(&tick_command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => txt,
@@ -194,23 +219,20 @@ impl BrokerStream for Xtb {
         minArrivalTime: usize,
         maxLevel: usize,
     ) -> Result<()> {
-        let command = &CommandGetTickPrices {
-            command: "getTickPrices".to_owned(),
+        let command = CommandGetTickPrices {
+            command: "getCandles".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
             symbol: symbol.to_owned(),
             minArrivalTime,
             maxLevel,
         };
 
-        let command_alive = &CommandStreaming {
+        let command_alive = CommandStreaming {
             command: "getKeepAlive".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
         };
 
-        // self.stream
-        //     .send(&serde_json::to_string(&command_alive).unwrap())
-        //     .await
-        //     .unwrap();
+        self.send_stream(&command_alive).await.unwrap();
 
         // let command = &CommandGetCandles {
         //     command: "getCandles".to_owned(),
@@ -218,19 +240,7 @@ impl BrokerStream for Xtb {
         //     symbol: symbol.to_owned(),
         // };
 
-        self.stream
-            .send(&serde_json::to_string(&command).unwrap())
-            .await
-            .unwrap();
-        // let url = &env::var("BROKER_STREAM_URL").unwrap();
-        // let mut wss = WebSocketStream::connect(url).await;
-        // let msg = self.stream.read().await.unwrap();
-        // let txt_msg = match msg {
-        //     Message::Text(txt) => txt,
-        //     _ => panic!(),
-        // };
-
-        // println!("22222222{}", txt_msg);
+        self.send_stream(&command).await.unwrap();
 
         Ok(())
     }
@@ -271,31 +281,52 @@ impl BrokerStream for Xtb {
             .unwrap();
     }
 
-    async fn parse_stream_data(msg: Message) -> Result<String> {
+    async fn parse_stream_data(msg: Message) -> Option<String> {
         let txt = match msg {
             Message::Text(txt) => txt,
             _ => "".to_owned(),
         };
 
         let obj: Value = serde_json::from_str(&txt).unwrap();
-        let data = &obj["data"];
-        let leches = (
-            data["ask"].as_f64().unwrap(),
-            data["bid"].as_f64().unwrap(),
-            data["high"].as_f64().unwrap(),
-            data["low"].as_f64().unwrap(),
-            data["bidVolume"].as_f64().unwrap(),
-            data["timestamp"].as_f64().unwrap(),
-            data["spreadTable"].as_f64().unwrap(),
-        );
+        // let leches = (
+        //     data["ask"].as_f64().unwrap(),
+        //     data["bid"].as_f64().unwrap(),
+        //     data["high"].as_f64().unwrap(),
+        //     data["low"].as_f64().unwrap(),
+        //     data["bidVolume"].as_f64().unwrap(),
+        //     data["timestamp"].as_f64().unwrap(),
+        //     data["spreadTable"].as_f64().unwrap(),
+        // );
+        let msg = match &obj {
+            Value::Object(obj) => {
+                let command = &obj["command"];
+                let data = &obj["data"];
+                if command == "candle" {
+                    log::info!("Broker Stream data received");
 
-        let msg: ResponseBody<(f64, f64, f64, f64, f64, f64, f64)> = ResponseBody {
-            response: ResponseType::SubscribeStream,
-            data: Some(leches),
+                    let date = data["ctm"].as_f64().unwrap() / 1000.;
+                    let open = data["open"].as_f64().unwrap();
+                    let high = open + data["high"].as_f64().unwrap();
+                    let low = open + data["low"].as_f64().unwrap();
+                    let close = open + data["close"].as_f64().unwrap();
+                    let volume = data["vol"].as_f64().unwrap() * 1000.;
+
+                    let leches = (date, open, high, low, close, volume, 0.);
+
+                    let msg: ResponseBody<(f64, f64, f64, f64, f64, f64, f64)> = ResponseBody {
+                        response: ResponseType::SubscribeStream,
+                        payload: Some(leches),
+                    };
+
+                    Some(serde_json::to_string(&msg).unwrap())
+                } else {
+                    None
+                }
+            }
+            _ => None,
         };
 
-        let msg: String = serde_json::to_string(&msg).unwrap();
-        Ok(msg)
+        msg
     }
 }
 
@@ -323,7 +354,7 @@ impl Xtb {
         Ok(())
     }
 
-    async fn get_response(&mut self) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>> {
+    async fn get_response(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => txt,
@@ -342,17 +373,17 @@ impl Xtb {
     pub async fn handle_response<'a, T>(
         &mut self,
         msg: &str,
-    ) -> Result<ResponseBody<SymbolData<VEC_DOHLC>>> {
+    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         let data = self.parse_message(&msg).await.unwrap();
-        let response: ResponseBody<SymbolData<VEC_DOHLC>> = match &data {
+        let response: ResponseBody<InstrumentData<VEC_DOHLC>> = match &data {
             // Login
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
                 self.streamSessionId = data["streamSessionId"].as_str().unwrap().to_owned();
                 ResponseBody {
                     response: ResponseType::GetInstrumentData,
-                    data: Some(SymbolData {
+                    payload: Some(InstrumentData {
                         symbol: "".to_owned(),
-                        time_frame: TimeFrameType::M1,
+                        time_frame: TimeFrameType::from_number(self.time_frame),
                         data: vec![],
                     }),
                 }
@@ -360,7 +391,7 @@ impl Xtb {
             // // Get data
             _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => ResponseBody {
                 response: ResponseType::GetInstrumentData,
-                data: Some(SymbolData {
+                payload: Some(InstrumentData {
                     symbol: self.symbol.clone(),
                     time_frame: TimeFrameType::from_number(self.time_frame),
                     data: self.parse_price_data(&data).await.unwrap(),
@@ -368,7 +399,7 @@ impl Xtb {
             },
             _ => ResponseBody {
                 response: ResponseType::GetInstrumentData,
-                data: Option::None,
+                payload: Option::None,
             },
         };
         Ok(response)
