@@ -1,5 +1,7 @@
-use crate::broker::{LECHES, VEC_DOHLC};
+use crate::helpers::date::{DateTime, Local};
 use serde::{Deserialize, Serialize};
+
+pub type LECHES = (DateTime<Local>, f64, f64, f64, f64, f64, f64);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TimeFrameType {

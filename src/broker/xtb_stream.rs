@@ -7,16 +7,18 @@ use crate::ws::message::{
 };
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
-
 use futures_util::{stream::SplitStream, Future};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
+use std::time::Duration;
+use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
+use tokio::time;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
-
 #[async_trait::async_trait]
 pub trait BrokerStream {
     async fn new() -> Self;
@@ -36,14 +38,10 @@ pub trait BrokerStream {
         period: usize,
         start: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<SymbolDetail>>;
+    async fn get_instrument_pricing(&mut self, symbol: &str)
+        -> Result<ResponseBody<SymbolPricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
-    async fn subscribe_stream(
-        &mut self,
-        symbol: &str,
-        minArrivalTime: usize,
-        maxLevel: usize,
-    ) -> Result<()>;
+    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn get_tick_prices(
         &mut self,
         symbol: &str,
@@ -51,6 +49,7 @@ pub trait BrokerStream {
         timestamp: i64,
     ) -> Result<String>;
     async fn parse_stream_data(msg: Message) -> Option<String>;
+    async fn keepalive_ping(&mut self) -> Result<String>;
 }
 
 #[derive(Debug)]
@@ -66,7 +65,7 @@ pub struct Xtb {
 #[async_trait::async_trait]
 impl BrokerStream for Xtb {
     async fn new() -> Self {
-        let socket;
+        let mut socket;
         let stream;
         let socket_url = &env::var("BROKER_URL").unwrap();
         let stream_url = &env::var("BROKER_STREAM_URL").unwrap();
@@ -162,7 +161,10 @@ impl BrokerStream for Xtb {
         Ok(res)
     }
 
-    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<SymbolDetail>> {
+    async fn get_instrument_pricing(
+        &mut self,
+        symbol: &str,
+    ) -> Result<ResponseBody<SymbolPricing>> {
         let symbol_command = Command {
             command: "getSymbol".to_owned(),
             arguments: SymbolArg {
@@ -174,8 +176,8 @@ impl BrokerStream for Xtb {
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => {
-                let parsed: SymbolDetailResponse = serde_json::from_str(&txt).unwrap();
-                let symbol_detail: SymbolDetail = parsed.returnData;
+                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
+                let symbol_detail: SymbolPricing = parsed.returnData;
                 ResponseBody {
                     response: ResponseType::ExecuteTrade,
                     payload: Some(symbol_detail),
@@ -213,18 +215,9 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn subscribe_stream(
-        &mut self,
-        symbol: &str,
-        minArrivalTime: usize,
-        maxLevel: usize,
-    ) -> Result<()> {
-        let command = CommandGetTickPrices {
-            command: "getCandles".to_owned(),
-            streamSessionId: self.streamSessionId.clone(),
-            symbol: symbol.to_owned(),
-            minArrivalTime,
-            maxLevel,
+    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()> {
+        let ping_command = Ping {
+            command: "ping".to_owned(),
         };
 
         let command_alive = CommandStreaming {
@@ -233,12 +226,23 @@ impl BrokerStream for Xtb {
         };
 
         self.send_stream(&command_alive).await.unwrap();
+        //self.send(&ping_command).await.unwrap();
 
-        // let command = &CommandGetCandles {
-        //     command: "getCandles".to_owned(),
-        //     streamSessionId: self.streamSessionId.clone(),
-        //     symbol: symbol.to_owned(),
-        // };
+        let command = CommandGetCandles {
+            command: "getCandles".to_owned(),
+            streamSessionId: self.streamSessionId.clone(),
+            symbol: symbol.to_owned(),
+        };
+
+        let command2 = CommandGetTickPrices {
+            command: "getTickPrices".to_owned(),
+            streamSessionId: self.streamSessionId.clone(),
+            symbol: symbol.to_owned(),
+            minArrivalTime: 0,
+            maxLevel: 0,
+        };
+
+        println!("{:?}", command);
 
         self.send_stream(&command).await.unwrap();
 
@@ -265,20 +269,19 @@ impl BrokerStream for Xtb {
         //     symbol: "BITCOINT".to_owned()
         // };
 
-        let tick_command = &CommandGetTickPrices {
-            command: "getTickPrices".to_owned(),
-            streamSessionId: session_id,
-            symbol: symbol.to_owned(),
-            minArrivalTime: 5000,
-            maxLevel: 2,
-        };
+        // let tick_command = &CommandGetTickPrices {
+        //     command: "getTickPrices".to_owned(),
+        //     streamSessionId: session_id,
+        //     symbol: symbol.to_owned(),
+        //     minArrivalTime: 5000,
+        //     maxLevel: 2,
+        // };
 
-        // let url = &env::var("BROKER_STREAM_URL").unwrap();
-        // let mut wss = WebSocketStream::connect(url).await;
-        self.stream
-            .send(&serde_json::to_string(&tick_command).unwrap())
-            .await
-            .unwrap();
+        // // let url = &env::var("BROKER_STREAM_URL").unwrap();
+        // // let mut wss = WebSocketStream::connect(url).await;
+        // self.send_stream(&serde_json::to_string(&tick_command).unwrap())
+        //     .await
+        //     .unwrap();
     }
 
     async fn parse_stream_data(msg: Message) -> Option<String> {
@@ -297,6 +300,8 @@ impl BrokerStream for Xtb {
         //     data["timestamp"].as_f64().unwrap(),
         //     data["spreadTable"].as_f64().unwrap(),
         // );
+
+        //println!("33333333333 {:?}", obj);
         let msg = match &obj {
             Value::Object(obj) => {
                 let command = &obj["command"];
@@ -327,6 +332,22 @@ impl BrokerStream for Xtb {
         };
 
         msg
+    }
+
+    async fn keepalive_ping(&mut self) -> Result<String> {
+        log::info!("Server sending keepalive ping");
+        let ping_command = Ping {
+            command: "ping".to_owned(),
+        };
+
+        self.send(&ping_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
     }
 }
 

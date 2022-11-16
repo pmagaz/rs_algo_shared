@@ -24,7 +24,7 @@ pub struct Symbol {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SymbolDetail {
+pub struct SymbolPricing {
     pub symbol: String,
     pub time: f64,
     pub ask: isize,
@@ -33,6 +33,7 @@ pub struct SymbolDetail {
     pub leverage: f64,
     pub high: f64,
     pub low: f64,
+    pub spread: f64,
     pub longOnly: bool,
     pub shortSelling: bool,
     pub swapLong: usize,
@@ -40,9 +41,9 @@ pub struct SymbolDetail {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SymbolDetailResponse {
+pub struct SymbolPricingResponse {
     pub status: bool,
-    pub returnData: SymbolDetail,
+    pub returnData: SymbolPricing,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,6 +59,11 @@ pub struct Response<R> {
 pub struct Command<T> {
     pub command: String,
     pub arguments: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Ping {
+    pub command: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

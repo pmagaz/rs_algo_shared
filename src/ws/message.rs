@@ -19,6 +19,7 @@ pub enum ResponseType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CommandType {
+    InitSession,
     GetInstrumentData,
     UpdateBotData,
     ExecuteTrade,

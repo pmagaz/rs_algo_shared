@@ -1,6 +1,5 @@
 use super::*;
 use crate::error::Result;
-use crate::ws::message::Message;
 use crate::ws::ws_client::WebSocket;
 
 use crate::helpers::date::parse_time;
@@ -8,6 +7,10 @@ use crate::models::time_frame::*;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     Future, SinkExt, StreamExt,
+};
+
+use crate::ws::message::{
+    CommandType, InstrumentData, Message, ResponseBody, ResponseType, StreamResponse,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -33,12 +36,16 @@ pub trait Broker {
         period: usize,
         start: i64,
     ) -> Result<Response<VEC_DOHLC>>;
+    async fn get_instrument_pricing(&mut self, symbol: &str)
+        -> Result<ResponseBody<SymbolPricing>>;
     async fn get_tick_prices(
         &mut self,
         symbol: &str,
         level: usize,
         timestamp: i64,
     ) -> Result<String>;
+    async fn parse_stream_data(msg: Message) -> Option<String>;
+    async fn keepalive_ping(&mut self) -> Result<String>;
 }
 
 #[derive(Debug)]
@@ -129,6 +136,34 @@ impl Broker for Xtb {
         Ok(res)
     }
 
+    async fn get_instrument_pricing(
+        &mut self,
+        symbol: &str,
+    ) -> Result<ResponseBody<SymbolPricing>> {
+        let symbol_command = Command {
+            command: "getSymbol".to_owned(),
+            arguments: SymbolArg {
+                symbol: symbol.to_owned(),
+            },
+        };
+
+        self.send(&symbol_command).await.unwrap();
+        let msg = self.websocket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => {
+                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
+                let symbol_detail: SymbolPricing = parsed.returnData;
+                ResponseBody {
+                    response: ResponseType::ExecuteTrade,
+                    payload: Some(symbol_detail),
+                }
+            }
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
+    }
+
     async fn get_tick_prices(
         &mut self,
         symbol: &str,
@@ -178,6 +213,72 @@ impl Broker for Xtb {
             println!("{:?}", response);
             //tokio::spawn(callback(response));
         }
+    }
+
+    async fn parse_stream_data(msg: Message) -> Option<String> {
+        let txt = match msg {
+            Message::Text(txt) => txt,
+            _ => "".to_owned(),
+        };
+
+        let obj: Value = serde_json::from_str(&txt).unwrap();
+        // let leches = (
+        //     data["ask"].as_f64().unwrap(),
+        //     data["bid"].as_f64().unwrap(),
+        //     data["high"].as_f64().unwrap(),
+        //     data["low"].as_f64().unwrap(),
+        //     data["bidVolume"].as_f64().unwrap(),
+        //     data["timestamp"].as_f64().unwrap(),
+        //     data["spreadTable"].as_f64().unwrap(),
+        // );
+
+        println!("33333333333 {:?}", obj);
+        let msg = match &obj {
+            Value::Object(obj) => {
+                let command = &obj["command"];
+                let data = &obj["data"];
+                if command == "candle" {
+                    log::info!("Broker Stream data received");
+
+                    let date = data["ctm"].as_f64().unwrap() / 1000.;
+                    let open = data["open"].as_f64().unwrap();
+                    let high = open + data["high"].as_f64().unwrap();
+                    let low = open + data["low"].as_f64().unwrap();
+                    let close = open + data["close"].as_f64().unwrap();
+                    let volume = data["vol"].as_f64().unwrap() * 1000.;
+
+                    let leches = (date, open, high, low, close, volume, 0.);
+
+                    let msg: ResponseBody<(f64, f64, f64, f64, f64, f64, f64)> = ResponseBody {
+                        response: ResponseType::SubscribeStream,
+                        payload: Some(leches),
+                    };
+
+                    Some(serde_json::to_string(&msg).unwrap())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        msg
+    }
+
+    async fn keepalive_ping(&mut self) -> Result<String> {
+        log::info!("Server sending keepalive ping");
+        let ping_command = Ping {
+            command: "ping".to_owned(),
+        };
+
+        self.send(&ping_command).await.unwrap();
+        let msg = self.websocket.read().await.unwrap();
+        let txt_msg = match msg {
+            Message::Text(txt) => txt,
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
     }
 }
 
