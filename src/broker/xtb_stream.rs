@@ -2,23 +2,21 @@ use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
 use crate::models::time_frame::*;
-use crate::ws::message::{
-    CommandType, InstrumentData, Message, ResponseBody, ResponseType, StreamResponse,
-};
+use crate::models::trade::*;
+use crate::ws::message::{InstrumentData, Message, ResponseBody, ResponseType};
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
+
+use chrono::{DateTime, Local};
 use futures_util::{stream::SplitStream, Future};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
-use std::time::Duration;
-use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpStream;
-use tokio::sync::Mutex;
-use tokio::time;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
+
 #[async_trait::async_trait]
 pub trait BrokerStream {
     async fn new() -> Self;
@@ -38,6 +36,8 @@ pub trait BrokerStream {
         period: usize,
         start: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
+    async fn open_trade(&mut self, trade_in: &TradeIn) -> Result<ResponseBody<TradeIn>>;
+    async fn close_trade(&mut self, trade_out: &TradeOut) -> Result<ResponseBody<TradeOut>>;
     async fn get_instrument_pricing(&mut self, symbol: &str)
         -> Result<ResponseBody<SymbolPricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
@@ -179,7 +179,7 @@ impl BrokerStream for Xtb {
                 let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
                 let symbol_detail: SymbolPricing = parsed.returnData;
                 ResponseBody {
-                    response: ResponseType::ExecuteTrade,
+                    response: ResponseType::ExecuteTradeIn,
                     payload: Some(symbol_detail),
                 }
             }
@@ -215,34 +215,68 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()> {
-        let ping_command = Ping {
-            command: "ping".to_owned(),
+    async fn open_trade(&mut self, trade_in: &TradeIn) -> Result<ResponseBody<TradeIn>> {
+        let trade_command = Command {
+            command: "tradeTransaction".to_owned(),
+            arguments: Transaction {
+                cmd: "".to_owned(),
+                symbol: "".to_owned(),
+                customComment: "".to_owned(),
+                expiration: 0,
+                order: 0,
+                price: 0.,
+                sl: 0.,
+                tp: 0.,
+                volume: 0.,
+                trans_type: 0,
+            },
         };
 
+        self.send(&trade_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+
+        //
+        let txt_msg = match msg {
+            Message::Text(txt) => {
+                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
+                let symbol_detail: SymbolPricing = parsed.returnData;
+                ResponseBody {
+                    response: ResponseType::ExecuteTradeIn,
+                    payload: Some(symbol_detail),
+                }
+            }
+            _ => panic!(),
+        };
+
+        let res = ResponseBody {
+            response: ResponseType::ExecuteTradeIn,
+            payload: Some(trade_in.clone()),
+        };
+
+        Ok(res)
+    }
+    async fn close_trade(&mut self, trade_out: &TradeOut) -> Result<ResponseBody<TradeOut>> {
+        let res = ResponseBody {
+            response: ResponseType::ExecuteTradeOut,
+            payload: Some(trade_out.clone()),
+        };
+
+        Ok(res)
+    }
+
+    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()> {
         let command_alive = CommandStreaming {
             command: "getKeepAlive".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
         };
 
         self.send_stream(&command_alive).await.unwrap();
-        //self.send(&ping_command).await.unwrap();
 
         let command = CommandGetCandles {
             command: "getCandles".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
             symbol: symbol.to_owned(),
         };
-
-        let command2 = CommandGetTickPrices {
-            command: "getTickPrices".to_owned(),
-            streamSessionId: self.streamSessionId.clone(),
-            symbol: symbol.to_owned(),
-            minArrivalTime: 0,
-            maxLevel: 0,
-        };
-
-        println!("{:?}", command);
 
         self.send_stream(&command).await.unwrap();
 
@@ -291,37 +325,27 @@ impl BrokerStream for Xtb {
         };
 
         let obj: Value = serde_json::from_str(&txt).unwrap();
-        // let leches = (
-        //     data["ask"].as_f64().unwrap(),
-        //     data["bid"].as_f64().unwrap(),
-        //     data["high"].as_f64().unwrap(),
-        //     data["low"].as_f64().unwrap(),
-        //     data["bidVolume"].as_f64().unwrap(),
-        //     data["timestamp"].as_f64().unwrap(),
-        //     data["spreadTable"].as_f64().unwrap(),
-        // );
 
-        //println!("33333333333 {:?}", obj);
         let msg = match &obj {
             Value::Object(obj) => {
                 let command = &obj["command"];
                 let data = &obj["data"];
                 if command == "candle" {
                     log::info!("Broker Stream data received");
-
-                    let date = data["ctm"].as_f64().unwrap() / 1000.;
+                    let date = parse_time(data["ctm"].as_i64().unwrap() / 1000);
                     let open = data["open"].as_f64().unwrap();
-                    let high = open + data["high"].as_f64().unwrap();
-                    let low = open + data["low"].as_f64().unwrap();
-                    let close = open + data["close"].as_f64().unwrap();
+                    let high = data["high"].as_f64().unwrap();
+                    let low = data["low"].as_f64().unwrap();
+                    let close = data["close"].as_f64().unwrap();
                     let volume = data["vol"].as_f64().unwrap() * 1000.;
 
-                    let leches = (date, open, high, low, close, volume, 0.);
+                    let leches = (date, open, high, low, close, volume);
 
-                    let msg: ResponseBody<(f64, f64, f64, f64, f64, f64, f64)> = ResponseBody {
-                        response: ResponseType::SubscribeStream,
-                        payload: Some(leches),
-                    };
+                    let msg: ResponseBody<(DateTime<Local>, f64, f64, f64, f64, f64)> =
+                        ResponseBody {
+                            response: ResponseType::SubscribeStream,
+                            payload: Some(leches),
+                        };
 
                     Some(serde_json::to_string(&msg).unwrap())
                 } else {

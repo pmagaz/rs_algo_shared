@@ -117,7 +117,6 @@ impl Broker for Xtb {
         time_frame: usize,
         from_date: i64,
     ) -> Result<Response<VEC_DOHLC>> {
-        println!("11111111111111111111111 {}", time_frame);
         self.symbol = symbol.to_owned();
         self.send(&Command {
             command: "getChartLastRequest".to_owned(),
@@ -154,7 +153,7 @@ impl Broker for Xtb {
                 let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
                 let symbol_detail: SymbolPricing = parsed.returnData;
                 ResponseBody {
-                    response: ResponseType::ExecuteTrade,
+                    response: ResponseType::ExecuteTradeIn,
                     payload: Some(symbol_detail),
                 }
             }
@@ -232,7 +231,6 @@ impl Broker for Xtb {
         //     data["spreadTable"].as_f64().unwrap(),
         // );
 
-        println!("33333333333 {:?}", obj);
         let msg = match &obj {
             Value::Object(obj) => {
                 let command = &obj["command"];

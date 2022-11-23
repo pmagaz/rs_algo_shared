@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 pub type VEC_DOHLC = Vec<DOHLC>;
-pub type LECHES = (DateTime<Local>, f64, f64, f64, f64, f64, f64);
+pub type LECHES = (f64, f64, f64, f64, f64, f64);
 pub type VEC_LECHES = Vec<LECHES>;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -135,4 +135,19 @@ pub struct CommandGetTickPrices {
     pub symbol: String,
     pub minArrivalTime: usize,
     pub maxLevel: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Transaction {
+    pub cmd: String,
+    pub customComment: String,
+    pub symbol: String,
+    pub expiration: isize,
+    pub order: isize,
+    pub price: f64,
+    pub sl: f64,
+    pub tp: f64,
+    pub volume: f64,
+    #[serde(rename = "type")]
+    pub trans_type: isize,
 }

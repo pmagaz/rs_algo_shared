@@ -1,8 +1,6 @@
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
-use crate::models::market::*;
 use crate::models::stop_loss::*;
-use crate::models::strategy::*;
 use crate::scanner::instrument::*;
 use round::round;
 
@@ -37,6 +35,7 @@ pub fn type_from_str(trade_type: &str) -> TradeType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeIn {
+    pub id: usize,
     pub index_in: usize,
     pub quantity: f64,
     pub price_in: f64,
@@ -47,6 +46,7 @@ pub struct TradeIn {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeOut {
+    pub id: usize,
     pub trade_type: TradeType,
     pub index_in: usize,
     pub price_in: f64,
@@ -88,6 +88,8 @@ pub fn resolve_trade_in(
     stop_loss: &StopLoss,
 ) -> TradeResult {
     if entry_type == TradeType::EntryLong || entry_type == TradeType::EntryShort {
+        log::info!("Executing tradeIn");
+
         let nex_candle_index = index + 1;
         let next_day_candle = instrument.data.get(nex_candle_index);
         let next_day_price = match next_day_candle {
@@ -99,6 +101,7 @@ pub fn resolve_trade_in(
         let quantity = round(order_size / next_day_price, 3);
 
         TradeResult::TradeIn(TradeIn {
+            id: 0,
             index_in: nex_candle_index,
             price_in: next_day_price,
             quantity,
@@ -144,12 +147,15 @@ pub fn resolve_trade_out(
             || exit_type == TradeType::ExitShort
             || stop_loss_activated)
     {
+        log::info!("Executing tradeOut");
+
         let trade_type = match stop_loss_activated {
             true => TradeType::StopLoss,
             false => exit_type,
         };
 
         TradeResult::TradeOut(TradeOut {
+            id: 0,
             index_in,
             price_in,
             trade_type,

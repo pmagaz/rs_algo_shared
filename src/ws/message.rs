@@ -2,24 +2,17 @@ use bson::Uuid;
 #[cfg(feature = "websocket")]
 pub use tungstenite::Message;
 
-use crate::broker::{LECHES, VEC_DOHLC};
+use crate::broker::{DOHLC, VEC_DOHLC};
+use crate::models::bot::BotData;
 use crate::models::strategy::StrategyType;
 use crate::models::time_frame::TimeFrameType;
+use crate::models::trade::{TradeIn, TradeOut};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ResponseType {
-    Connected,
-    Error,
-    GetInstrumentData,
-    ExecuteTrade,
-    //GetHigherTMInstrumentData,
-    SubscribeStream,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CommandType {
     InitSession,
+    GetCurrentState,
     GetInstrumentData,
     UpdateBotData,
     ExecuteTrade,
@@ -33,21 +26,29 @@ pub struct Command<T> {
     pub data: Option<T>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ResponseType {
+    Connected,
+    Error,
+    GetInstrumentData,
+    ExecuteTradeIn,
+    ExecuteTradeOut,
+    InitSession,
+    //GetHigherTMInstrumentData,
+    SubscribeStream,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResponseBody<T> {
+    pub response: ResponseType,
+    pub payload: Option<T>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Payload<'a> {
     pub symbol: &'a str,
     pub strategy: &'a str,
     pub strategy_type: StrategyType,
-    pub time_frame: TimeFrameType,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionData {
-    #[serde(rename = "_id")]
-    pub id: Uuid,
-    pub strategy: String,
-    pub strategy_type: StrategyType,
-    pub symbol: String,
     pub time_frame: TimeFrameType,
 }
 
@@ -76,15 +77,12 @@ pub struct StreamResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseBody<T> {
-    pub response: ResponseType,
-    pub payload: Option<T>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Response {
-    StreamResponse(ResponseBody<InstrumentData<LECHES>>),
+pub enum MessageType {
+    StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
+    InitSession(ResponseBody<BotData>),
+    ExecuteTradeIn(ResponseBody<TradeIn>),
+    ExecuteTradeOut(ResponseBody<TradeOut>),
     //HigherTMInstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     Connected(ResponseBody<Uuid>),
     Error(ResponseBody<bool>),

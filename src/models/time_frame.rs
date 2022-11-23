@@ -1,10 +1,17 @@
-use crate::helpers::date::{DateTime, Local};
+use crate::{
+    helpers::date::{DateTime, Local},
+    scanner::candle::Candle,
+};
+
+use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 
-pub type LECHES = (DateTime<Local>, f64, f64, f64, f64, f64, f64);
+type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
+type VEC_DOHLC = Vec<DOHLC>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TimeFrameType {
+    MN,
     W,
     D,
     H4,
@@ -30,6 +37,7 @@ impl TimeFrame {
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
             "W" => TimeFrameType::W,
+            "MN" => TimeFrameType::MN,
             &_ => TimeFrameType::ERR,
         }
     }
@@ -46,6 +54,7 @@ impl TimeFrameType {
             240 => TimeFrameType::H4,
             1440 => TimeFrameType::D,
             10080 => TimeFrameType::W,
+            43200 => TimeFrameType::MN,
             _ => TimeFrameType::ERR,
         }
     }
@@ -60,6 +69,7 @@ impl TimeFrameType {
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
             "W" => TimeFrameType::W,
+            "MN" => TimeFrameType::MN,
             _ => TimeFrameType::ERR,
         }
     }
@@ -75,6 +85,30 @@ impl TimeFrameType {
             TimeFrameType::H4 => 240,
             TimeFrameType::D => 1440,
             TimeFrameType::W => 10080,
+            TimeFrameType::MN => 43200,
+        }
+    }
+
+    pub fn prev_candles(&self) -> i64 {
+        self.to_number()
+    }
+
+    pub fn close_candle(&self) -> Vec<u32> {
+        match *self {
+            TimeFrameType::ERR => vec![0],
+            TimeFrameType::M1 => vec![0],
+            TimeFrameType::M5 => vec![0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
+            TimeFrameType::M15 => vec![0, 15, 30, 45],
+            TimeFrameType::M30 => vec![0, 30],
+            TimeFrameType::H1 => vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                23, 24,
+            ],
+            //FIXME when it starts?
+            TimeFrameType::H4 => vec![0, 4, 8, 12, 16, 20, 24],
+            TimeFrameType::D => vec![1],
+            TimeFrameType::W => vec![1],
+            TimeFrameType::MN => vec![1],
         }
     }
 }
@@ -91,6 +125,90 @@ impl std::fmt::Display for TimeFrameType {
     }
 }
 
-pub fn parse_data_timeframe(data: LECHES, time_frame: TimeFrameType) -> LECHES {
-    data
+pub fn calculate_previous_dohlc(
+    time_frame: &TimeFrameType,
+    mut new_data: DOHLC,
+    instrument_data: &Vec<Candle>,
+) -> DOHLC {
+    let date = new_data.0;
+    let minute = date.minute();
+    let hour = date.hour();
+    let last_date = instrument_data.last().unwrap();
+    let last_minute = last_date.date().minute();
+    let last_hour = last_date.date().hour();
+
+    //println!("111111111 {} {}", last_minute, minute);
+    // let highest_high = instrument_data
+    //     .iter()
+    //     .take(5)
+    //     .map(|candle| candle.high())
+    //     .fold(0. / 0., f64::max);
+
+    // let lowest_low = instrument_data
+    //     .iter()
+    //     .take(5)
+    //     .map(|candle| candle.low())
+    //     .fold(0. / 0., f64::min);
+
+    new_data
+}
+
+pub fn adapt_to_time_frame(
+    mut new_data: DOHLC,
+    instrument_data: &Vec<Candle>,
+    time_frame: &TimeFrameType,
+) -> DOHLC {
+    let date = new_data.0;
+    let current_minute = date.minute();
+    let current_hour = date.hour();
+
+    let last_date = instrument_data.last().unwrap();
+    let last_minute = last_date.date().minute();
+    let last_hour = last_date.date().hour();
+
+    let minute_diff = current_minute - last_minute;
+    let hour_diff = current_hour - last_hour;
+
+    match time_frame {
+        TimeFrameType::M5 => {
+            // 1111111111 45 47 2
+            // 1111111111 45 48 3
+            // 1111111111 45 49 4
+            // 1111111111 45 50 5 --> cierre
+
+            if !TimeFrameType::M5.close_candle().contains(&current_minute) {
+                new_data.4 = 0.;
+            }
+            let leches = calculate_previous_dohlc(time_frame, new_data, instrument_data);
+            new_data
+        }
+        TimeFrameType::M15 => {
+            if !TimeFrameType::M15.close_candle().contains(&current_minute) {
+                new_data.4 = 0.;
+            }
+            new_data
+        }
+        TimeFrameType::M30 => {
+            if !TimeFrameType::M30.close_candle().contains(&current_minute) {
+                new_data.4 = 0.;
+            }
+            new_data
+        }
+        TimeFrameType::H1 => {
+            if !TimeFrameType::H1.close_candle().contains(&current_hour) {
+                new_data.4 = 0.;
+            }
+            new_data
+        }
+        TimeFrameType::H4 => {
+            if !TimeFrameType::H4.close_candle().contains(&current_hour) {
+                new_data.4 = 0.;
+            }
+            new_data
+        }
+        //M1
+        _ => new_data,
+    };
+
+    new_data
 }

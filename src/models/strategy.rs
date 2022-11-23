@@ -22,6 +22,15 @@ pub fn from_str(strategy: &str) -> StrategyType {
     }
 }
 
+pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
+    match strategy_type {
+        StrategyType::OnlyLongMultiTF => true,
+        StrategyType::LongShortMultiTF => true,
+        StrategyType::OnlyShortMultiTF => true,
+        _ => false,
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyStats {
     pub trades: usize,

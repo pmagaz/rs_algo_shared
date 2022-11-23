@@ -11,8 +11,9 @@ use crate::scanner::horizontal_level::HorizontalLevels;
 use crate::scanner::pattern::PatternSize;
 use crate::scanner::pattern::Patterns;
 use crate::scanner::peak::Peaks;
-use serde::{Deserialize, Serialize};
 
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::env;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -191,7 +192,7 @@ impl Instrument {
     pub fn process_next_candle(
         &self,
         id: usize,
-        x: (DateTime<Local>, f64, f64, f64, f64, f64, f64),
+        x: (DateTime<Local>, f64, f64, f64, f64, f64),
         data: &Vec<Candle>,
         logarithmic_scanner: bool,
     ) -> Candle {
@@ -201,7 +202,89 @@ impl Instrument {
         let low: f64;
         let close: f64;
         let volume = x.5;
-        let _spread = x.6;
+        //let _spread = x.6;
+
+        match logarithmic_scanner {
+            true => {
+                open = x.1.ln();
+                high = x.2.ln();
+                close = x.4.ln();
+                low = match x.3 {
+                    _x if x.3 > 0. => x.3.ln(),
+                    _x if x.3 <= 0. => 0.01,
+                    _ => x.3.ln(),
+                };
+            }
+            false => {
+                open = x.1;
+                high = x.2;
+                close = x.4;
+                low = match x.3 {
+                    _x if x.3 > 0. => x.3,
+                    _x if x.3 <= 0. => 0.01,
+                    _ => x.3,
+                };
+            }
+        };
+
+        let pre_0 = match id {
+            0 => id,
+            _ => id - 1,
+        };
+
+        let prev_1 = match pre_0 {
+            0 => id,
+            _ => id - 1,
+        };
+
+        let last = data[pre_0].clone();
+        let last_candle = (
+            last.date(),
+            last.open(),
+            last.high(),
+            last.low(),
+            last.close(),
+            last.volume(),
+        );
+
+        let second_last = data[prev_1].clone();
+        let second_last_candle = (
+            second_last.date(),
+            second_last.open(),
+            second_last.high(),
+            second_last.low(),
+            second_last.close(),
+            second_last.volume(),
+        );
+        //DOHLCV
+
+        Candle::new()
+            .date(date)
+            .open(open)
+            .high(high)
+            .low(low)
+            .close(close)
+            .volume(volume)
+            .previous_candles(vec![last_candle, second_last_candle])
+            .logarithmic(logarithmic_scanner)
+            .build()
+            .unwrap()
+    }
+
+    pub fn update_candle(
+        &self,
+        id: usize,
+        x: (DateTime<Local>, f64, f64, f64, f64, f64),
+        data: &Vec<Candle>,
+        logarithmic_scanner: bool,
+    ) -> Candle {
+        let date = x.0;
+        let open: f64;
+        let high: f64;
+        let low: f64;
+        let close: f64;
+        let volume = x.5;
+        //let _spread = x.6;
 
         match logarithmic_scanner {
             true => {
@@ -456,15 +539,14 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn next(&mut self, x: (DateTime<Local>, f64, f64, f64, f64, f64, f64)) -> Result<()> {
+    pub fn next(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) -> Result<()> {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
             .unwrap();
 
-        let next_id = self.data.len() + 1;
-
-        let candle = self.process_next_candle(next_id, x, &self.data, logarithmic_scanner);
+        let next_id = self.data.len();
+        let candle = self.process_next_candle(next_id, data, &self.data, logarithmic_scanner);
 
         let ohlc_indicators = self.get_ohlc_indicators(&candle, logarithmic_scanner);
 
@@ -472,8 +554,38 @@ impl Instrument {
             .calculate_indicators(ohlc_indicators)
             .unwrap();
 
-        println!("111111 {:?}", self.indicators);
+        match data.5 {
+            _ if data.4 == 0. => self.update_last_candle(candle),
+            _ => self.insert_new_candle(candle),
+        };
+
         Ok(())
+    }
+
+    pub fn update_last_candle(&mut self, candle: Candle) {
+        *self.data.last_mut().unwrap() = candle;
+    }
+
+    pub fn insert_new_candle(&mut self, candle: Candle) {
+        self.data.push(candle);
+        self.data.remove(0);
+    }
+
+    pub fn init(mut self) -> Self {
+        self.set_data(vec![
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
+        ])
+        .unwrap();
+        self
     }
 }
 
