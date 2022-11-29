@@ -27,17 +27,18 @@ pub struct Symbol {
 pub struct SymbolPricing {
     pub symbol: String,
     pub time: f64,
-    pub ask: isize,
-    pub bid: isize,
+    pub ask: f64,
+    pub bid: f64,
     pub contractSize: isize,
     pub leverage: f64,
     pub high: f64,
     pub low: f64,
-    pub spread: f64,
+    pub spreadRaw: f64,
+    pub spreadTable: f64,
     pub longOnly: bool,
     pub shortSelling: bool,
-    pub swapLong: usize,
-    pub swapShort: usize,
+    pub swapLong: f64,
+    pub swapShort: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

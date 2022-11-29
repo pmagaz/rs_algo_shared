@@ -1,9 +1,10 @@
 use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
+use crate::models::stop_loss;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
-use crate::ws::message::{InstrumentData, Message, ResponseBody, ResponseType};
+use crate::ws::message::{InstrumentData, Message, ResponseBody, ResponseType, TradeData};
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
 
@@ -36,8 +37,14 @@ pub trait BrokerStream {
         period: usize,
         start: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    async fn open_trade(&mut self, trade_in: &TradeIn) -> Result<ResponseBody<TradeIn>>;
-    async fn close_trade(&mut self, trade_out: &TradeOut) -> Result<ResponseBody<TradeOut>>;
+    async fn open_trade(
+        &mut self,
+        trade_in: TradeData<TradeIn>,
+    ) -> Result<ResponseBody<TradeData<TradeIn>>>;
+    async fn close_trade(
+        &mut self,
+        trade_out: TradeData<TradeOut>,
+    ) -> Result<ResponseBody<TradeData<TradeOut>>>;
     async fn get_instrument_pricing(&mut self, symbol: &str)
         -> Result<ResponseBody<SymbolPricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
@@ -215,7 +222,10 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn open_trade(&mut self, trade_in: &TradeIn) -> Result<ResponseBody<TradeIn>> {
+    async fn open_trade(
+        &mut self,
+        trade: TradeData<TradeIn>,
+    ) -> Result<ResponseBody<TradeData<TradeIn>>> {
         let trade_command = Command {
             command: "tradeTransaction".to_owned(),
             arguments: Transaction {
@@ -232,36 +242,76 @@ impl BrokerStream for Xtb {
             },
         };
 
-        self.send(&trade_command).await.unwrap();
-        let msg = self.socket.read().await.unwrap();
+        let symbol = &trade.symbol;
+        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
+        let pricing = pricing.payload.unwrap();
+        let ask = pricing.ask;
+        let bid = pricing.bid;
 
-        //
-        let txt_msg = match msg {
-            Message::Text(txt) => {
-                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
-                let symbol_detail: SymbolPricing = parsed.returnData;
-                ResponseBody {
-                    response: ResponseType::ExecuteTradeIn,
-                    payload: Some(symbol_detail),
-                }
-            }
-            _ => panic!(),
-        };
+        log::info!(
+            "Ask pricing {} for {}_{}",
+            ask,
+            trade.symbol,
+            trade.time_frame
+        );
 
-        let res = ResponseBody {
+        let mut data = trade.data.clone();
+        let entry_type = &data.trade_type;
+        let stop_loss = data.stop_loss;
+        data.id = Local::now().timestamp_millis() as usize;
+        data.price_in = ask;
+
+        data.stop_loss = stop_loss::update_bot_stop_loss(bid, &entry_type, &stop_loss);
+
+        log::info!(
+            "222222222 {} {} {} {} {}",
+            trade.data.price_in,
+            pricing.ask,
+            pricing.bid,
+            stop_loss.price,
+            data.stop_loss.price
+        );
+
+        let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,
-            payload: Some(trade_in.clone()),
+            payload: Some(TradeData {
+                symbol: trade.symbol,
+                time_frame: trade.time_frame,
+                data: data,
+            }),
         };
 
-        Ok(res)
+        Ok(txt_msg)
     }
-    async fn close_trade(&mut self, trade_out: &TradeOut) -> Result<ResponseBody<TradeOut>> {
-        let res = ResponseBody {
-            response: ResponseType::ExecuteTradeOut,
-            payload: Some(trade_out.clone()),
-        };
+    async fn close_trade(
+        &mut self,
+        trade: TradeData<TradeOut>,
+    ) -> Result<ResponseBody<TradeData<TradeOut>>> {
+        let symbol = &trade.symbol;
+        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
+        let pricing = pricing.payload.unwrap();
+        let bid = pricing.bid;
 
-        Ok(res)
+        log::info!(
+            "Bid pricing {} for {}_{}",
+            bid,
+            trade.symbol,
+            trade.time_frame
+        );
+
+        let mut data = trade.data;
+        data.id = Local::now().timestamp_millis() as usize;
+        data.price_out = bid;
+
+        let txt_msg = ResponseBody {
+            response: ResponseType::ExecuteTradeOut,
+            payload: Some(TradeData {
+                symbol: trade.symbol,
+                time_frame: trade.time_frame,
+                data: data,
+            }),
+        };
+        Ok(txt_msg)
     }
 
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()> {
@@ -359,7 +409,7 @@ impl BrokerStream for Xtb {
     }
 
     async fn keepalive_ping(&mut self) -> Result<String> {
-        log::info!("Server sending keepalive ping");
+        //log::info!("Server sending keepalive ping");
         let ping_command = Ping {
             command: "ping".to_owned(),
         };

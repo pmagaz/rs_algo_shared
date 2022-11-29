@@ -1,9 +1,10 @@
 use crate::error::Result;
-use crate::helpers::comp::*;
 use crate::helpers::maxima_minima::maxima_minima;
 use crate::helpers::regression::kernel_regression;
 use serde::{Deserialize, Serialize};
 use std::env;
+
+use super::candle::Candle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Peaks {
@@ -67,7 +68,31 @@ impl Peaks {
         &self.extrema_minima
     }
 
-    pub fn calculate_peaks(&mut self, max_price: &f64, min_price: &f64) -> Result<()> {
+    pub fn next(&mut self, candle: &Candle, max_price: &f64, min_price: &f64) {
+        // self.highs.remove(0);
+        // self.lows.remove(0);
+        // self.close.remove(0);
+        self.highs.push(candle.high());
+        self.lows.push(candle.low());
+        self.close.push(candle.close());
+    }
+
+    pub fn calculate_peaks(
+        &mut self,
+        max_price: &f64,
+        min_price: &f64,
+        start_index: &usize,
+    ) -> Result<()> {
+        // let highs = match start_index.cmp(&0) {
+        //     Equal => &self.highs,
+        //     _ => &self.highs[self.highs.len() - start_index..self.highs.len() - 1].to_vec(),
+        // };
+
+        // let lows = match start_index.cmp(&0) {
+        //     Equal => self.lows,
+        //     _ => self.lows[self.lows.len() - start_index..self.lows.len() - 1].to_vec(),
+        // };
+
         let mut local_prominence = env::var("LOCAL_MIN_PROMINENCE")
             .unwrap()
             .parse::<f64>()

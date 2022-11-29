@@ -60,6 +60,13 @@ pub struct InstrumentData<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TradeData<T> {
+    pub symbol: String,
+    pub time_frame: TimeFrameType,
+    pub data: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ConnectedData {
     pub session_id: Uuid,
 }
@@ -81,8 +88,8 @@ pub enum MessageType {
     StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     InitSession(ResponseBody<BotData>),
-    ExecuteTradeIn(ResponseBody<TradeIn>),
-    ExecuteTradeOut(ResponseBody<TradeOut>),
+    ExecuteTradeIn(ResponseBody<TradeData<TradeIn>>),
+    ExecuteTradeOut(ResponseBody<TradeData<TradeOut>>),
     //HigherTMInstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     Connected(ResponseBody<Uuid>),
     Error(ResponseBody<bool>),

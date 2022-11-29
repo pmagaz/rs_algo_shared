@@ -89,11 +89,26 @@ impl TimeFrameType {
         }
     }
 
+    pub fn max_bars(&self) -> i64 {
+        match *self {
+            TimeFrameType::ERR => 0,
+            TimeFrameType::M1 => 1,
+            TimeFrameType::M5 => 5,
+            TimeFrameType::M15 => 15,
+            TimeFrameType::M30 => 30,
+            TimeFrameType::H1 => 60,
+            TimeFrameType::H4 => 240,
+            TimeFrameType::D => 1440,
+            TimeFrameType::W => 10080,
+            TimeFrameType::MN => 43200,
+        }
+    }
+
     pub fn prev_candles(&self) -> i64 {
         self.to_number()
     }
 
-    pub fn close_candle(&self) -> Vec<u32> {
+    pub fn closing_time(&self) -> Vec<u32> {
         match *self {
             TimeFrameType::ERR => vec![0],
             TimeFrameType::M1 => vec![0],
@@ -125,89 +140,58 @@ impl std::fmt::Display for TimeFrameType {
     }
 }
 
-pub fn calculate_previous_dohlc(
-    time_frame: &TimeFrameType,
-    mut new_data: DOHLC,
-    instrument_data: &Vec<Candle>,
-) -> DOHLC {
+pub fn adapt_to_time_frame(mut new_data: DOHLC, time_frame: &TimeFrameType) -> DOHLC {
     let date = new_data.0;
-    let minute = date.minute();
-    let hour = date.hour();
-    let last_date = instrument_data.last().unwrap();
-    let last_minute = last_date.date().minute();
-    let last_hour = last_date.date().hour();
-
-    //println!("111111111 {} {}", last_minute, minute);
-    // let highest_high = instrument_data
-    //     .iter()
-    //     .take(5)
-    //     .map(|candle| candle.high())
-    //     .fold(0. / 0., f64::max);
-
-    // let lowest_low = instrument_data
-    //     .iter()
-    //     .take(5)
-    //     .map(|candle| candle.low())
-    //     .fold(0. / 0., f64::min);
-
-    new_data
-}
-
-pub fn adapt_to_time_frame(
-    mut new_data: DOHLC,
-    instrument_data: &Vec<Candle>,
-    time_frame: &TimeFrameType,
-) -> DOHLC {
-    let date = new_data.0;
-    let current_minute = date.minute();
-    let current_hour = date.hour();
-
-    let last_date = instrument_data.last().unwrap();
-    let last_minute = last_date.date().minute();
-    let last_hour = last_date.date().hour();
-
-    let minute_diff = current_minute - last_minute;
-    let hour_diff = current_hour - last_hour;
+    let current_minute = date.minute() + 1;
+    let current_hour = date.hour() + 1;
+    let add = 1000000.;
 
     match time_frame {
         TimeFrameType::M5 => {
-            // 1111111111 45 47 2
-            // 1111111111 45 48 3
-            // 1111111111 45 49 4
-            // 1111111111 45 50 5 --> cierre
-
-            if !TimeFrameType::M5.close_candle().contains(&current_minute) {
-                new_data.4 = 0.;
+            if !TimeFrameType::M5.closing_time().contains(&current_minute) {
+                new_data.4 = new_data.4 + add;
+            } else {
+                log::info!("Closing {} candle ", time_frame);
             }
-            let leches = calculate_previous_dohlc(time_frame, new_data, instrument_data);
             new_data
         }
         TimeFrameType::M15 => {
-            if !TimeFrameType::M15.close_candle().contains(&current_minute) {
-                new_data.4 = 0.;
+            if !TimeFrameType::M15.closing_time().contains(&current_minute) {
+                new_data.4 = new_data.4 + add;
+            } else {
+                log::info!("Closing {} candle ", time_frame);
             }
             new_data
         }
         TimeFrameType::M30 => {
-            if !TimeFrameType::M30.close_candle().contains(&current_minute) {
-                new_data.4 = 0.;
+            if !TimeFrameType::M30.closing_time().contains(&current_minute) {
+                new_data.4 = new_data.4 + add;
+            } else {
+                log::info!("Closing {} candle ", time_frame);
             }
             new_data
         }
         TimeFrameType::H1 => {
-            if !TimeFrameType::H1.close_candle().contains(&current_hour) {
-                new_data.4 = 0.;
+            if !TimeFrameType::H1.closing_time().contains(&current_hour) {
+                new_data.4 = new_data.4 + add;
+            } else {
+                log::info!("Closing {} candle ", time_frame);
             }
             new_data
         }
         TimeFrameType::H4 => {
-            if !TimeFrameType::H4.close_candle().contains(&current_hour) {
-                new_data.4 = 0.;
+            if !TimeFrameType::H4.closing_time().contains(&current_hour) {
+                new_data.4 = new_data.4 + add;
+            } else {
+                log::info!("Closing candle");
             }
             new_data
         }
         //M1
-        _ => new_data,
+        _ => {
+            log::info!("Closing {} candle ", time_frame);
+            new_data
+        }
     };
 
     new_data

@@ -209,7 +209,6 @@ impl Broker for Xtb {
                 _ => panic!(),
             };
             let response = self.handle_response::<VEC_DOHLC>(&txt_msg).await.unwrap();
-            println!("{:?}", response);
             //tokio::spawn(callback(response));
         }
     }
@@ -264,7 +263,7 @@ impl Broker for Xtb {
     }
 
     async fn keepalive_ping(&mut self) -> Result<String> {
-        log::info!("Server sending keepalive ping");
+        //log::info!("Server sending keepalive ping");
         let ping_command = Ping {
             command: "ping".to_owned(),
         };

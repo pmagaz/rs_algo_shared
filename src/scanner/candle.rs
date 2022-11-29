@@ -54,12 +54,40 @@ impl Candle {
         self.high
     }
 
+    pub fn set_high(&mut self, value: f64) -> f64 {
+        self.high = value;
+        self.high
+    }
+
     pub fn low(&self) -> f64 {
         self.low
     }
 
+    pub fn set_low(&mut self, value: f64) -> f64 {
+        self.low = value;
+        self.low
+    }
+
     pub fn close(&self) -> f64 {
+        let add = 1000000.;
+        if self.close > add {
+            self.close - add
+        } else {
+            self.close
+        }
+    }
+
+    pub fn set_close(&mut self, value: f64) -> f64 {
+        self.close = value;
         self.close
+    }
+
+    pub fn is_closed(&self) -> bool {
+        if self.close < 1000000. {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn volume(&self) -> f64 {

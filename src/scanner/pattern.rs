@@ -2,12 +2,13 @@ use crate::helpers::poly::poly_fit;
 use crate::helpers::slope_intercept::{add_next_bottom_points, add_next_top_points};
 use crate::patterns::*;
 use crate::scanner::candle::Candle;
-use crate::scanner::prices::{calculate_price_change, calculate_price_target};
+use crate::scanner::prices::calculate_price_target;
 
 use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
 use crate::models::status::Status;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::env;
 
 pub type PatternActiveResult = (bool, usize, f64, DbDateTime);
@@ -111,6 +112,30 @@ impl Patterns {
             local_patterns: vec![],
             extrema_patterns: vec![],
         }
+    }
+
+    pub fn next(
+        &mut self,
+        pattern_size: PatternSize,
+        maxima: &Vec<(usize, f64)>,
+        minima: &Vec<(usize, f64)>,
+        candles: &Vec<Candle>,
+    ) {
+        let pattern_prev_bars = env::var("MAX_PREVIOUS_BARS")
+            .unwrap()
+            .parse::<usize>()
+            .unwrap();
+        let len = candles.len();
+
+        // let last_candles = match len.cmp(&0) {
+        //     Ordering::Greater => {
+        //         let last_candles: Vec<Candle> = candles[len - pattern_prev_bars..len].to_vec();
+        //         last_candles
+        //     }
+        //     _ => vec![],
+        // };
+
+        self.detect_pattern(pattern_size, maxima, minima, &candles);
     }
 
     pub fn detect_pattern(

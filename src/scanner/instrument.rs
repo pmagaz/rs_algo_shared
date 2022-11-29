@@ -129,20 +129,15 @@ impl Instrument {
         &self.divergences
     }
 
-    pub fn process_candle(
-        &mut self,
-        id: usize,
+    pub fn get_scale_ohlc(
+        &self,
         x: (DateTime<Local>, f64, f64, f64, f64, f64),
-        data: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
         logarithmic_scanner: bool,
-    ) -> Candle {
-        let date = x.0;
+    ) -> (f64, f64, f64, f64) {
         let open: f64;
         let high: f64;
         let low: f64;
         let close: f64;
-        let volume = x.5;
-
         match logarithmic_scanner {
             true => {
                 open = x.1.ln();
@@ -165,6 +160,38 @@ impl Instrument {
                 };
             }
         };
+
+        (open, high, low, close)
+    }
+
+    pub fn get_scale_ohlc_indicators(
+        &mut self,
+        candle: &Candle,
+        logarithmic_scanner: bool,
+    ) -> (f64, f64, f64, f64) {
+        let ohlc_indicators = match logarithmic_scanner {
+            true => (
+                candle.open().exp(),
+                candle.high().exp(),
+                candle.low().exp(),
+                candle.close().exp(),
+            ),
+            false => (candle.open(), candle.high(), candle.low(), candle.close()),
+        };
+
+        ohlc_indicators
+    }
+
+    pub fn process_candle(
+        &mut self,
+        id: usize,
+        x: (DateTime<Local>, f64, f64, f64, f64, f64),
+        data: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
+        logarithmic_scanner: bool,
+    ) -> Candle {
+        let date = x.0;
+        let volume = x.5;
+        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -197,35 +224,8 @@ impl Instrument {
         logarithmic_scanner: bool,
     ) -> Candle {
         let date = x.0;
-        let open: f64;
-        let high: f64;
-        let low: f64;
-        let close: f64;
         let volume = x.5;
-        //let _spread = x.6;
-
-        match logarithmic_scanner {
-            true => {
-                open = x.1.ln();
-                high = x.2.ln();
-                close = x.4.ln();
-                low = match x.3 {
-                    _x if x.3 > 0. => x.3.ln(),
-                    _x if x.3 <= 0. => 0.01,
-                    _ => x.3.ln(),
-                };
-            }
-            false => {
-                open = x.1;
-                high = x.2;
-                close = x.4;
-                low = match x.3 {
-                    _x if x.3 > 0. => x.3,
-                    _x if x.3 <= 0. => 0.01,
-                    _ => x.3,
-                };
-            }
-        };
+        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -279,35 +279,8 @@ impl Instrument {
         logarithmic_scanner: bool,
     ) -> Candle {
         let date = x.0;
-        let open: f64;
-        let high: f64;
-        let low: f64;
-        let close: f64;
         let volume = x.5;
-        //let _spread = x.6;
-
-        match logarithmic_scanner {
-            true => {
-                open = x.1.ln();
-                high = x.2.ln();
-                close = x.4.ln();
-                low = match x.3 {
-                    _x if x.3 > 0. => x.3.ln(),
-                    _x if x.3 <= 0. => 0.01,
-                    _ => x.3.ln(),
-                };
-            }
-            false => {
-                open = x.1;
-                high = x.2;
-                close = x.4;
-                low = match x.3 {
-                    _x if x.3 > 0. => x.3,
-                    _x if x.3 <= 0. => 0.01,
-                    _ => x.3,
-                };
-            }
-        };
+        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -353,30 +326,20 @@ impl Instrument {
             .unwrap()
     }
 
-    pub fn get_ohlc_indicators(
-        &mut self,
-        candle: &Candle,
-        logarithmic_scanner: bool,
-    ) -> (f64, f64, f64, f64) {
-        let ohlc_indicators = match logarithmic_scanner {
-            true => (
-                candle.open().exp(),
-                candle.high().exp(),
-                candle.low().exp(),
-                candle.close().exp(),
-            ),
-            false => (candle.open(), candle.high(), candle.low(), candle.close()),
-        };
-
-        ohlc_indicators
-    }
-
     pub fn set_data(
         &mut self,
         data: Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
     ) -> Result<()> {
         let mut avg_volume = vec![];
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap();
+
+        let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
+        let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
+        let process_divergences = env::var("DIVERGENCES").unwrap().parse::<bool>().unwrap();
+        let process_horizontal_levels = env::var("HORIZONTAL_LEVELS")
             .unwrap()
             .parse::<bool>()
             .unwrap();
@@ -390,51 +353,6 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                // let date = x.0;
-                // let open: f64;
-                // let high: f64;
-                // let low: f64;
-                // let close: f64;
-                // let volume = x.5;
-
-                // match logarithmic_scanner {
-                //     true => {
-                //         open = x.1.ln();
-                //         high = x.2.ln();
-                //         close = x.4.ln();
-                //         low = match x.3 {
-                //             _x if x.3 > 0. => x.3.ln(),
-                //             _x if x.3 <= 0. => 0.01,
-                //             _ => x.3.ln(),
-                //         };
-                //     }
-                //     false => {
-                //         open = x.1;
-                //         high = x.2;
-                //         close = x.4;
-                //         low = match x.3 {
-                //             _x if x.3 > 0. => x.3,
-                //             _x if x.3 <= 0. => 0.01,
-                //             _ => x.3,
-                //         };
-                //     }
-                // };
-
-                // let pre_0 = match id {
-                //     0 => id,
-                //     _ => id - 1,
-                // };
-
-                // let prev_1 = match pre_0 {
-                //     0 => id,
-                //     _ => id - 1,
-                // };
-
-                // let ohlc_indicators = match logarithmic_scanner {
-                //     true => (open.exp(), high.exp(), low.exp(), close.exp()),
-                //     false => (open, high, low, close),
-                // };
-
                 let candle = self.process_candle(id, *x, &data, logarithmic_scanner);
 
                 let low = candle.low();
@@ -457,54 +375,65 @@ impl Instrument {
                 }
 
                 avg_volume.push(volume);
-                self.peaks.highs.push(high);
-                self.peaks.lows.push(low);
-                self.peaks.close.push(close);
 
-                let ohlc_indicators = self.get_ohlc_indicators(&candle, logarithmic_scanner);
+                if process_patterns {
+                    self.peaks.next(&candle, &self.max_price, &self.min_price);
+                }
 
-                self.indicators
-                    .calculate_indicators(ohlc_indicators)
-                    .unwrap();
+                if process_indicators {
+                    let ohlc_indicators =
+                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+                    self.indicators.next(ohlc_indicators).unwrap();
+                }
 
                 candle
             })
             .collect();
 
         if candles.len() > 0 {
-            self.peaks
-                .calculate_peaks(&self.max_price, &self.min_price)
-                .unwrap();
+            if process_patterns {
+                self.peaks
+                    .calculate_peaks(&self.max_price, &self.min_price, &0)
+                    .unwrap();
 
-            let local_maxima = self.peaks.local_maxima();
-            let local_minima = self.peaks.local_minima();
-            // let extrema_maxima = self.peaks.extrema_maxima();
-            // let extrema_minima = self.peaks.extrema_minima();
+                let local_maxima = self.peaks.local_maxima();
+                let local_minima = self.peaks.local_minima();
+                // let extrema_maxima = self.peaks.extrema_maxima();
+                // let extrema_minima = self.peaks.extrema_minima();
 
-            self.patterns
-                .detect_pattern(PatternSize::Local, local_maxima, local_minima, &candles);
+                self.patterns.detect_pattern(
+                    PatternSize::Local,
+                    local_maxima,
+                    local_minima,
+                    &candles,
+                );
 
-            // self.patterns.detect_pattern(
-            //     PatternSize::Extrema,
-            //     extrema_maxima,
-            //     extrema_minima,
-            //     &candles,
-            // );
+                // self.patterns.process_pattern(
+                //     PatternSize::Extrema,
+                //     extrema_maxima,
+                //     extrema_minima,
+                //     &candles,
+                // );
+            }
 
-            self.horizontal_levels
-                .calculate_horizontal_highs(&self.current_price, &self.peaks)
-                .unwrap();
+            if process_horizontal_levels {
+                self.horizontal_levels
+                    .calculate_horizontal_highs(&self.current_price, &self.peaks)
+                    .unwrap();
 
-            self.horizontal_levels
-                .calculate_horizontal_lows(&self.current_price, &self.peaks)
-                .unwrap();
+                self.horizontal_levels
+                    .calculate_horizontal_lows(&self.current_price, &self.peaks)
+                    .unwrap();
+            }
 
-            // self.divergences.detect_divergences(
-            //     &self.indicators,
-            //     &self.patterns.local_patterns,
-            //     &candles,
-            //     &local_maxima,
-            // );
+            if process_divergences {
+                // self.divergences.process_divergences(
+                //     &self.indicators,
+                //     &self.patterns.local_patterns,
+                //     &candles,
+                //     &local_maxima,
+                // );
+            }
 
             self.data = candles
                 .into_iter()
@@ -539,36 +468,89 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn next(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) -> Result<()> {
+    pub fn next(
+        &mut self,
+        data: (DateTime<Local>, f64, f64, f64, f64, f64),
+        last_candle: &Candle,
+    ) -> Result<()> {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
             .unwrap();
 
+        let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
+        let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
+        // let process_divergences = env::var("DIVERGENCES").unwrap().parse::<bool>().unwrap();
+        // let process_horizontal_levels = env::var("HORIZONTAL_LEVELS")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap();
+
         let next_id = self.data.len();
         let candle = self.process_next_candle(next_id, data, &self.data, logarithmic_scanner);
 
-        let ohlc_indicators = self.get_ohlc_indicators(&candle, logarithmic_scanner);
+        if process_indicators {
+            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+            //FIXME remove first indicator value
+            self.indicators.next(ohlc_indicators).unwrap();
+        }
 
-        self.indicators
-            .calculate_indicators(ohlc_indicators)
-            .unwrap();
+        if process_patterns {
+            //FIXME peaks next detection iterates the whole list
+            self.peaks.next(&candle, &self.max_price, &self.min_price);
+            self.peaks
+                .calculate_peaks(&self.max_price, &self.min_price, &0)
+                .unwrap();
+            let local_maxima = self.peaks.local_maxima();
+            let local_minima = self.peaks.local_minima();
+            //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+            self.patterns
+                .next(PatternSize::Local, local_maxima, local_minima, &self.data);
+        }
 
-        match data.5 {
-            _ if data.4 == 0. => self.update_last_candle(candle),
-            _ => self.insert_new_candle(candle),
+        //DIVERGENCES and HORIZONTAL LEVELS
+
+        match last_candle.is_closed() {
+            true => {
+                log::info!("Adding new candle");
+                self.insert_new_candle(candle);
+            }
+            false => {
+                log::info!("Updating candle");
+                self.update_last_candle(candle, &last_candle)
+            }
         };
 
         Ok(())
     }
 
-    pub fn update_last_candle(&mut self, candle: Candle) {
+    pub fn update_last_candle(&mut self, mut candle: Candle, last_candle: &Candle) {
+        let current_high = candle.high();
+        let previous_high = last_candle.high();
+
+        let current_low = candle.low();
+        let previous_low = last_candle.low();
+
+        let higher_value = match current_high {
+            _ if current_high > previous_high => current_high,
+            _ => previous_high,
+        };
+
+        let lower_value = match current_low {
+            _ if current_low < previous_low => current_low,
+            _ => previous_low,
+        };
+
+        candle.set_high(higher_value);
+        candle.set_low(lower_value);
+
         *self.data.last_mut().unwrap() = candle;
     }
 
-    pub fn insert_new_candle(&mut self, candle: Candle) {
+    pub fn insert_new_candle(&mut self, mut candle: Candle) {
+        //self.data.remove(0);
+        //candle.set_close(candle.close - 1000000.0);
         self.data.push(candle);
-        self.data.remove(0);
     }
 
     pub fn init(mut self) -> Self {

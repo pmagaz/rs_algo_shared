@@ -61,12 +61,6 @@ pub fn create_stop_loss(
         _ => stop_loss_price,
     };
 
-    // let price = match entry_type {
-    //     TradeType::EntryLong => current_price - atr_value,
-    //     TradeType::EntryShort => current_price + atr_value,
-    //     _ => current_price - atr_value,
-    // };
-
     StopLoss {
         price,
         value: stop_loss_value,
@@ -89,6 +83,33 @@ pub fn update_stop_loss_values(
         created_at: stop_loss.created_at,
         updated_at: to_dbtime(Local::now()),
         valid_until: stop_loss.valid_until,
+    }
+}
+
+pub fn update_bot_stop_loss(price: f64, entry_type: &TradeType, stop_loss: &StopLoss) -> StopLoss {
+    let stop_loss_value = stop_loss.value;
+    let stop_loss_price = stop_loss.price;
+
+    let price = match stop_loss.stop_type {
+        StopLossType::Atr => {
+            let atr_value = stop_loss.value;
+            let price = match entry_type {
+                TradeType::EntryLong => price - atr_value,
+                TradeType::EntryShort => price + atr_value,
+                _ => price - atr_value,
+            };
+            price
+        }
+        _ => stop_loss_price,
+    };
+
+    StopLoss {
+        price,
+        value: stop_loss_value,
+        stop_type: stop_loss.stop_type.to_owned(),
+        created_at: to_dbtime(Local::now()),
+        updated_at: to_dbtime(Local::now()),
+        valid_until: to_dbtime(Local::now() + Duration::days(1000)),
     }
 }
 
