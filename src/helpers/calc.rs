@@ -14,8 +14,16 @@ pub fn calculate_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
     size * (price_out - price_in)
 }
 
+pub fn calculate_trade_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
+    calculate_profit(size, price_in, price_out)
+}
+
 pub fn calculate_profit_per(price_in: f64, price_out: f64) -> f64 {
     ((price_out - price_in) / price_in) * 100.
+}
+
+pub fn calculate_trade_profit_per(price_in: f64, price_out: f64) -> f64 {
+    calculate_profit_per(price_in, price_out)
 }
 
 pub fn calculate_cum_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
@@ -43,6 +51,16 @@ pub fn calculate_runup(
     (max_price - price_in).abs() * 100.
 }
 
+pub fn calculate_trade_runup(data: &Vec<Candle>, price_in: f64) -> f64 {
+    let max_price = data
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.high.partial_cmp(&b.1.high).unwrap())
+        .map(|(_i, x)| x.high)
+        .unwrap();
+    (max_price - price_in).abs() * 100.
+}
+
 pub fn calculate_drawdown(
     data: &Vec<Candle>,
     price_in: f64,
@@ -58,12 +76,29 @@ pub fn calculate_drawdown(
     (price_in - min_price).abs()
 }
 
+pub fn calculate_trade_drawdown(data: &Vec<Candle>, price_in: f64) -> f64 {
+    let min_price = data
+        .iter()
+        .enumerate()
+        .map(|(_i, x)| x.low)
+        .fold(0. / 0., f64::min);
+    (price_in - min_price).abs()
+}
+
 pub fn calculate_drawdown_per(draw_down: f64, price_in: f64) -> f64 {
     (draw_down / price_in) * 100.
 }
 
+pub fn calculate_trade_drawdown_per(draw_down: f64, price_in: f64) -> f64 {
+    calculate_drawdown_per(draw_down, price_in)
+}
+
 pub fn calculate_runup_per(run_up: f64, price_in: f64) -> f64 {
     (run_up / price_in).abs() * 100.
+}
+
+pub fn calculate_trade_runup_per(run_up: f64, price_in: f64) -> f64 {
+    calculate_runup_per(run_up, price_in)
 }
 
 pub fn total_gross(trades_out: &Vec<&TradeOut>) -> f64 {
@@ -228,6 +263,39 @@ where
     F: Send + FnMut((usize, usize, &Instrument)) -> bool,
 {
     let base_date = &instrument.data.get(index).unwrap().date;
+    let upper_tf_data = match upper_tf_instrument {
+        HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
+            let upper_indexes: Vec<usize> = upper_instrument
+                .data
+                .iter()
+                .enumerate()
+                .filter(|(_id, x)| &x.date <= base_date)
+                .map(|(id, _x)| id)
+                .collect();
+
+            let upper_tf_indx = match upper_indexes.last() {
+                Some(val) => *val,
+                _ => 0,
+            };
+
+            let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
+
+            (upper_tf_indx, prev_upper_tf_indx, upper_instrument)
+        }
+        _ => (0, 0, instrument),
+    };
+    callback(upper_tf_data)
+}
+
+pub fn get_bot_upper_timeframe<F>(
+    instrument: &Instrument,
+    upper_tf_instrument: &HigherTMInstrument,
+    mut callback: F,
+) -> bool
+where
+    F: Send + FnMut((usize, usize, &Instrument)) -> bool,
+{
+    let base_date = &instrument.data.last().unwrap().date;
     let upper_tf_data = match upper_tf_instrument {
         HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
             let upper_indexes: Vec<usize> = upper_instrument
