@@ -75,7 +75,7 @@ version = "0.2.0"
 
 [dependencies.ta]
 optional = false
-git = "ttps://github.com/pmagaz/ta-rs"
+git = "https://github.com/pmagaz/ta-rs"
 branch = "master"
 features = ["serde"]
 
