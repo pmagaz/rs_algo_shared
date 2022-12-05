@@ -7,7 +7,7 @@ use crate::models::trade::*;
 use crate::scanner::instrument::{HigherTMInstrument, Instrument};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BotData {
     _id: Uuid,
     symbol: String,
@@ -25,6 +25,20 @@ pub struct BotData {
     strategy_stats: StrategyStats,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct CompactBotData {
+    pub _id: Uuid,
+    pub symbol: String,
+    pub market: Market,
+    pub strategy_name: String,
+    pub strategy_type: StrategyType,
+    pub time_frame: TimeFrameType,
+    pub higher_time_frame: TimeFrameType,
+    pub date_start: DbDateTime,
+    pub last_update: DbDateTime,
+    pub strategy_stats: StrategyStats,
+}
+
 impl BotData {
     pub fn uuid(&self) -> &Uuid {
         &self._id
@@ -40,5 +54,11 @@ impl BotData {
     }
     pub fn strategy_stats(&self) -> &StrategyStats {
         &self.strategy_stats
+    }
+    pub fn strategy_name(&self) -> &String {
+        &self.strategy_name
+    }
+    pub fn strategy_type(&self) -> &StrategyType {
+        &self.strategy_type
     }
 }

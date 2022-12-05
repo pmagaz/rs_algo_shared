@@ -6,7 +6,7 @@ use std::env;
 
 use super::candle::Candle;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Peaks {
     pub highs: Vec<f64>,
     pub close: Vec<f64>,

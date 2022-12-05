@@ -27,7 +27,7 @@ pub enum CandleType {
     BearishGap,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Candle {
     pub candle_type: CandleType,
     pub date: DateTime<Local>,

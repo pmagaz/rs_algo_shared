@@ -12,7 +12,7 @@ path = "src/lib.rs"
 default = []
 chart = ["plotters"]
 broker = ["tungstenite","tokio-tungstenite","futures-util","openssl","tokio"]
-websocket = ["tungstenite","tokio"]
+websocket = ["tungstenite","tokio","futures-util"]
 #instrument = ["find_peaks","polyfit-rs"]
 
 [dependencies]
@@ -30,8 +30,6 @@ chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 round = "0.1.2"
 env_logger = "0.9.0"
 log = "0.4"
-
-
 
 [dependencies.plotters]
 optional = true

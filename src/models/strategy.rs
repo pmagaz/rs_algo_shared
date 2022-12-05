@@ -31,7 +31,7 @@ pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StrategyStats {
     pub trades: usize,
     pub wining_trades: usize,
