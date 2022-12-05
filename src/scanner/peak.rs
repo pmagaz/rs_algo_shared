@@ -69,9 +69,9 @@ impl Peaks {
     }
 
     pub fn next(&mut self, candle: &Candle, max_price: &f64, min_price: &f64) {
-        // self.highs.remove(0);
-        // self.lows.remove(0);
-        // self.close.remove(0);
+        self.highs.remove(0);
+        self.lows.remove(0);
+        self.close.remove(0);
         self.highs.push(candle.high());
         self.lows.push(candle.low());
         self.close.push(candle.close());

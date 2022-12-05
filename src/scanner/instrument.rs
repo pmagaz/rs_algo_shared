@@ -548,7 +548,7 @@ impl Instrument {
     }
 
     pub fn insert_new_candle(&mut self, mut candle: Candle) {
-        //self.data.remove(0);
+        self.data.remove(0);
         //candle.set_close(candle.close - 1000000.0);
         self.data.push(candle);
     }

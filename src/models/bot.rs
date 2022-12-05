@@ -43,6 +43,15 @@ impl BotData {
     pub fn uuid(&self) -> &Uuid {
         &self._id
     }
+    pub fn symbol(&self) -> &str {
+        &self.symbol
+    }
+    pub fn instrument(&self) -> &Instrument {
+        &self.instrument
+    }
+    pub fn higher_tf_instrument(&self) -> &HigherTMInstrument {
+        &self.higher_tf_instrument
+    }
     pub fn date_start(&self) -> &DbDateTime {
         &self.date_start
     }
