@@ -119,13 +119,15 @@ impl Indicators {
     pub fn next(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
-        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-            self.adx.remove_a(0);
-            self.adx.next(close).unwrap();
-        }
+        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+        //     self.adx.remove_a(0);
+        //     self.adx.next(close).unwrap();
+        // }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            self.atr.remove_a(0);
+            if self.atr.get_data_a().len() > 0 {
+                self.atr.remove_a(0);
+            }
             self.atr.next(close).unwrap();
         }
 
@@ -134,8 +136,10 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.atr.remove_a(0);
-            self.atr.remove_b(0);
+            if self.macd.get_data_a().len() > 0 {
+                self.macd.remove_a(0);
+                self.macd.remove_b(0);
+            }
             self.macd.next(close).unwrap();
         }
 
@@ -144,27 +148,35 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.atr.remove_a(0);
-            self.atr.remove_b(0);
+            if self.stoch.get_data_a().len() > 0 {
+                self.stoch.remove_a(0);
+                self.stoch.remove_b(0);
+            }
             self.stoch.next(close).unwrap();
         }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            self.atr.remove_a(0);
+            if self.rsi.get_data_a().len() > 0 {
+                self.rsi.remove_a(0);
+            }
             self.rsi.next(close).unwrap();
         }
 
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            self.bb.remove_a(0);
-            self.bb.remove_b(0);
-            self.bb.remove_c(0);
+            if self.bb.get_data_a().len() > 0 {
+                self.bb.remove_a(0);
+                self.bb.remove_b(0);
+                self.bb.remove_c(0);
+            }
             self.bb.next(close).unwrap();
         }
 
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            self.bbw.remove_a(0);
-            self.bbw.remove_b(0);
-            self.bbw.remove_c(0);
+            if self.bbw.get_data_a().len() > 0 {
+                self.bbw.remove_a(0);
+                self.bbw.remove_b(0);
+                self.bbw.remove_c(0);
+            }
             self.bbw.next(close).unwrap();
         }
 
@@ -173,7 +185,9 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_a.remove_a(0);
+            if self.ema_a.get_data_a().len() > 0 {
+                self.ema_a.remove_a(0);
+            }
             self.ema_a.next(close).unwrap();
         }
 
@@ -182,7 +196,9 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_b.remove_a(0);
+            if self.ema_b.get_data_a().len() > 0 {
+                self.ema_b.remove_a(0);
+            }
             self.ema_b.next(close).unwrap();
         }
 
@@ -191,7 +207,9 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_c.remove_a(0);
+            if self.ema_c.get_data_a().len() > 0 {
+                self.ema_c.remove_a(0);
+            }
             self.ema_c.next(close).unwrap();
         }
 
