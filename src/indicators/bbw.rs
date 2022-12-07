@@ -60,7 +60,20 @@ impl Indicator for BollingerBW {
         // self.data_c.push(a.average);
         Ok(())
     }
+
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
+    }
+
+    fn remove_a(&mut self, index: usize) -> f64 {
+        self.data_a.remove(index)
+    }
+
+    fn remove_b(&mut self, index: usize) -> f64 {
+        self.data_b.remove(index)
+    }
+
+    fn remove_c(&mut self, index: usize) -> f64 {
+        self.data_c.remove(index)
     }
 }

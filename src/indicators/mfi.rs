@@ -44,4 +44,8 @@ impl Indicator for Mfi {
         self.data_a.push(a);
         Ok(())
     }
+
+    fn remove(&mut self, data: &mut Vec<f64>, index: usize) -> f64 {
+        data.remove(index)
+    }
 }

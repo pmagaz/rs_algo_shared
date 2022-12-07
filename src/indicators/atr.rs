@@ -54,6 +54,7 @@ impl Indicator for Atr {
         self.data_a.push(a);
         Ok(())
     }
+
     //FIXME MONEKY PATCHING
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let bar = Bar::new().high(OHLC.1).low(OHLC.2).close(OHLC.3);
@@ -61,5 +62,17 @@ impl Indicator for Atr {
         let a = self.atr.next(&bar);
         self.data_a.push(a);
         Ok(())
+    }
+
+    fn remove_a(&mut self, index: usize) -> f64 {
+        self.data_a.remove(index)
+    }
+
+    fn remove_b(&mut self, index: usize) -> f64 {
+        self.data_b.remove(index)
+    }
+
+    fn remove_c(&mut self, index: usize) -> f64 {
+        self.data_b.remove(index)
     }
 }
