@@ -69,8 +69,10 @@ impl Peaks {
     }
 
     pub fn next(&mut self, candle: &Candle, max_price: &f64, min_price: &f64) {
+        let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
+        let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
         let len = self.highs.len();
-        if len > 0 {
+        if len >= max_bars + next_delete {
             self.highs.remove(0);
             self.lows.remove(0);
             self.close.remove(0);

@@ -548,7 +548,14 @@ impl Instrument {
     }
 
     pub fn insert_new_candle(&mut self, mut candle: Candle) {
-        self.data.remove(0);
+        let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
+        let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
+
+        let len = self.data.len();
+        if len >= max_bars + next_delete {
+            self.data.remove(0);
+        }
+
         //candle.set_close(candle.close - 1000000.0);
         self.data.push(candle);
     }
