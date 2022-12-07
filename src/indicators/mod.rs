@@ -165,7 +165,9 @@ impl Indicators {
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
             if self.bb.get_data_a().len() > 0 {
                 self.bb.remove_a(0);
+            } else if self.bb.get_data_b().len() > 0 {
                 self.bb.remove_b(0);
+            } else if self.bb.get_data_c().len() > 0 {
                 self.bb.remove_c(0);
             }
             self.bb.next(close).unwrap();
@@ -174,7 +176,9 @@ impl Indicators {
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
             if self.bbw.get_data_a().len() > 0 {
                 self.bbw.remove_a(0);
+            } else if self.bbw.get_data_b().len() > 0 {
                 self.bbw.remove_b(0);
+            } else if self.bbw.get_data_c().len() > 0 {
                 self.bbw.remove_c(0);
             }
             self.bbw.next(close).unwrap();
