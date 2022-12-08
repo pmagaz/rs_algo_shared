@@ -61,6 +61,15 @@ impl Indicator for BollingerBW {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.bb.next(value);
+        let last_a_index = self.data_a.len() - 1;
+        let w = (a.upper - a.lower) / a.average;
+        let last_a = self.data_a.get_mut(last_a_index).unwrap();
+        *last_a = w;
+        Ok(())
+    }
+
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }

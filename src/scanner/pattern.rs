@@ -138,6 +138,16 @@ impl Patterns {
         self.detect_pattern(pattern_size, maxima, minima, &candles);
     }
 
+    pub fn update(
+        &mut self,
+        pattern_size: PatternSize,
+        maxima: &Vec<(usize, f64)>,
+        minima: &Vec<(usize, f64)>,
+        candles: &Vec<Candle>,
+    ) {
+        self.detect_pattern(pattern_size, maxima, minima, &candles);
+    }
+
     pub fn detect_pattern(
         &mut self,
         pattern_size: PatternSize,

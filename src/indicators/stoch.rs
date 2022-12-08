@@ -63,6 +63,18 @@ impl Indicator for Stoch {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.stoch.next(value);
+        let b = self.ema.next(a);
+        let last_a_index = self.data_a.len() - 1;
+        let last_b_index = self.data_b.len() - 1;
+        let last_a = self.data_a.get_mut(last_a_index).unwrap();
+        let last_b = self.data_b.get_mut(last_b_index).unwrap();
+        *last_a = a;
+        *last_b = b;
+        Ok(())
+    }
+
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }

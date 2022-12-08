@@ -58,6 +58,14 @@ impl Indicator for Rsi {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.rsi.next(value);
+        let last_index = self.data_a.len() - 1;
+        let last = self.data_a.get_mut(last_index).unwrap();
+        *last = a;
+        Ok(())
+    }
+
     fn remove_a(&mut self, index: usize) -> f64 {
         self.data_a.remove(index)
     }

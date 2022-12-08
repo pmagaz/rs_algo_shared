@@ -62,6 +62,20 @@ impl Indicator for BollingerB {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.bb.next(value);
+        let last_a_index = self.data_a.len() - 1;
+        let last_b_index = self.data_b.len() - 1;
+        let last_c_index = self.data_c.len() - 1;
+        let last_a = self.data_a.get_mut(last_a_index).unwrap();
+        let last_b = self.data_b.get_mut(last_b_index).unwrap();
+        let last_c = self.data_c.get_mut(last_c_index).unwrap();
+        *last_a = a.upper;
+        *last_b = a.lower;
+        *last_c = a.average;
+        Ok(())
+    }
+
     fn remove_a(&mut self, index: usize) -> f64 {
         self.data_a.remove(index)
     }

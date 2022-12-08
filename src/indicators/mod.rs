@@ -28,6 +28,7 @@ pub trait Indicator {
         Self: Sized;
     fn next(&mut self, value: f64) -> Result<()>;
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()>;
+    fn update(&mut self, value: f64) -> Result<()>;
     // fn get_mut_data_a(&mut self) -> &Vec<f64>;
     // fn get_mut_data_b(&mut self) -> &Vec<f64>;
     fn get_data_a(&self) -> &Vec<f64>;
@@ -218,6 +219,73 @@ impl Indicators {
                 self.ema_c.remove_a(0);
             }
             self.ema_c.next(close).unwrap();
+        }
+
+        Ok(())
+    }
+
+    pub fn update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+        let close = OHLC.3;
+
+        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+        //     self.adx.remove_a(0);
+        //     self.adx.next(close).unwrap();
+        // }
+
+        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
+            self.atr.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_MACD")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.macd.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_STOCH")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.stoch.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
+            self.rsi.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
+            self.bb.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
+            self.bbw.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_A")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_a.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_B")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_b.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_C")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_c.update(close).unwrap();
         }
 
         Ok(())

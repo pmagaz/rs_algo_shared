@@ -377,7 +377,7 @@ impl Instrument {
                 avg_volume.push(volume);
 
                 if process_patterns {
-                    self.peaks.next(&candle, &self.max_price, &self.min_price);
+                    self.peaks.next(&candle);
                 }
 
                 if process_indicators {
@@ -489,35 +489,56 @@ impl Instrument {
         let next_id = self.data.len();
         let candle = self.process_next_candle(next_id, data, &self.data, logarithmic_scanner);
 
-        if process_indicators {
-            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-            //FIXME remove first indicator value
-            self.indicators.next(ohlc_indicators).unwrap();
-        }
-
-        if process_patterns {
-            //FIXME peaks next detection iterates the whole list
-            self.peaks.next(&candle, &self.max_price, &self.min_price);
-            self.peaks
-                .calculate_peaks(&self.max_price, &self.min_price, &0)
-                .unwrap();
-            let local_maxima = self.peaks.local_maxima();
-            let local_minima = self.peaks.local_minima();
-            //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
-            self.patterns
-                .next(PatternSize::Local, local_maxima, local_minima, &self.data);
-        }
-
-        //DIVERGENCES and HORIZONTAL LEVELS
-
         match last_candle.is_closed() {
             true => {
                 log::info!("Adding new candle");
-                self.insert_new_candle(candle);
+                self.insert_new_candle(candle.clone());
+
+                if process_patterns {
+                    //FIXME peaks next detection iterates the whole list
+                    self.peaks.next(&candle);
+                    self.peaks
+                        .calculate_peaks(&self.max_price, &self.min_price, &0)
+                        .unwrap();
+                    let local_maxima = self.peaks.local_maxima();
+                    let local_minima = self.peaks.local_minima();
+                    //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+                    self.patterns
+                        .next(PatternSize::Local, local_maxima, local_minima, &self.data);
+                }
+
+                if process_indicators {
+                    let ohlc_indicators =
+                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+                    self.indicators.next(ohlc_indicators).unwrap();
+                }
             }
             false => {
                 log::info!("Updating candle");
-                self.update_last_candle(candle, &last_candle)
+                self.update_last_candle(candle.clone(), &last_candle);
+
+                if process_patterns {
+                    //FIXME peaks next detection iterates the whole list
+                    self.peaks.update(&candle);
+                    self.peaks
+                        .calculate_peaks(&self.max_price, &self.min_price, &0)
+                        .unwrap();
+                    let local_maxima = self.peaks.local_maxima();
+                    let local_minima = self.peaks.local_minima();
+                    //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+                    self.patterns.update(
+                        PatternSize::Local,
+                        local_maxima,
+                        local_minima,
+                        &self.data,
+                    );
+                }
+
+                if process_indicators {
+                    let ohlc_indicators =
+                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+                    self.indicators.update(ohlc_indicators).unwrap();
+                }
             }
         };
 

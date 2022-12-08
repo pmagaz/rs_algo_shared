@@ -54,6 +54,14 @@ impl Indicator for StandardD {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.sd.next(value);
+        let last_index = self.data_a.len() - 1;
+        let last = self.data_a.get_mut(last_index).unwrap();
+        *last = a;
+        Ok(())
+    }
+
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }

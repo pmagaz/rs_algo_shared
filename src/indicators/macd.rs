@@ -68,6 +68,18 @@ impl Indicator for Macd {
         Ok(())
     }
 
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.ema_a.next(value) - self.ema_b.next(value);
+        let b = self.ema_c.next(a);
+        let last_a_index = self.data_a.len() - 1;
+        let last_b_index = self.data_b.len() - 1;
+        let last_a = self.data_a.get_mut(last_a_index).unwrap();
+        let last_b = self.data_b.get_mut(last_b_index).unwrap();
+        *last_a = a;
+        *last_b = b;
+        Ok(())
+    }
+
     fn remove_a(&mut self, index: usize) -> f64 {
         self.data_a.remove(index)
     }

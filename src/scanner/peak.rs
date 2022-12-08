@@ -68,7 +68,7 @@ impl Peaks {
         &self.extrema_minima
     }
 
-    pub fn next(&mut self, candle: &Candle, max_price: &f64, min_price: &f64) {
+    pub fn next(&mut self, candle: &Candle) {
         let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
         let len = self.highs.len();
@@ -80,6 +80,16 @@ impl Peaks {
         self.highs.push(candle.high());
         self.lows.push(candle.low());
         self.close.push(candle.close());
+    }
+
+    pub fn update(&mut self, candle: &Candle) {
+        let last_index = self.highs.len() - 1;
+        let highs = self.highs.get_mut(last_index).unwrap();
+        let lows = self.lows.get_mut(last_index).unwrap();
+        let close = self.close.get_mut(last_index).unwrap();
+        *highs = candle.high();
+        *lows = candle.low();
+        *close = candle.close();
     }
 
     pub fn calculate_peaks(

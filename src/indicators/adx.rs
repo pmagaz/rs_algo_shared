@@ -3,7 +3,6 @@ use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
 use ta::indicators::AverageDirectionalIndex;
-use ta::test_helper::Bar;
 use ta::Next;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +58,14 @@ impl Indicator for Adx {
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         // let a = self.adx.next(&bar);
         // self.data_a.push(a);
+        Ok(())
+    }
+
+    fn update(&mut self, value: f64) -> Result<()> {
+        let a = self.adx.next(value);
+        let last_index = self.data_a.len() - 1;
+        let last = self.data_a.get_mut(last_index).unwrap();
+        *last = a;
         Ok(())
     }
 
