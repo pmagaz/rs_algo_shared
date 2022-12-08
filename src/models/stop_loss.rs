@@ -46,11 +46,10 @@ pub fn create_stop_loss(
     let current_price = &instrument.data.get(index).unwrap().open;
     let stop_loss_value = stop_loss.value;
     let stop_loss_price = stop_loss.price;
+    let atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap() * stop_loss_value;
 
     let price = match stop_loss.stop_type {
         StopLossType::Atr => {
-            let atr_value =
-                instrument.indicators.atr.get_data_a().get(index).unwrap() * stop_loss_value;
             let price = match entry_type {
                 TradeType::EntryLong => current_price - atr_value,
                 TradeType::EntryShort => current_price + atr_value,
@@ -63,7 +62,7 @@ pub fn create_stop_loss(
 
     StopLoss {
         price,
-        value: stop_loss_value,
+        value: atr_value,
         stop_type: stop_loss.stop_type.to_owned(),
         created_at: to_dbtime(Local::now()),
         updated_at: to_dbtime(Local::now()),
@@ -87,9 +86,8 @@ pub fn update_stop_loss_values(
 }
 
 pub fn update_bot_stop_loss(price: f64, entry_type: &TradeType, stop_loss: &StopLoss) -> StopLoss {
-    let stop_loss_value = stop_loss.value;
     let stop_loss_price = stop_loss.price;
-
+    let atr_value = stop_loss.value;
     let price = match stop_loss.stop_type {
         StopLossType::Atr => {
             let atr_value = stop_loss.value;
@@ -105,7 +103,7 @@ pub fn update_bot_stop_loss(price: f64, entry_type: &TradeType, stop_loss: &Stop
 
     StopLoss {
         price,
-        value: stop_loss_value,
+        value: atr_value,
         stop_type: stop_loss.stop_type.to_owned(),
         created_at: to_dbtime(Local::now()),
         updated_at: to_dbtime(Local::now()),

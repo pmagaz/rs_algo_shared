@@ -256,21 +256,13 @@ impl BrokerStream for Xtb {
         );
 
         let mut data = trade.data.clone();
+
         let entry_type = &data.trade_type;
         let stop_loss = data.stop_loss;
         data.id = Local::now().timestamp_millis() as usize;
         data.price_in = ask;
 
         data.stop_loss = stop_loss::update_bot_stop_loss(ask, &entry_type, &stop_loss);
-
-        log::info!(
-            "222222222 {} {} {} {} {}",
-            trade.data.price_in,
-            pricing.ask,
-            pricing.bid,
-            stop_loss.price,
-            data.stop_loss.price
-        );
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,

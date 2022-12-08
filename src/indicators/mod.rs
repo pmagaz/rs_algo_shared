@@ -125,6 +125,73 @@ impl Indicators {
         //     self.adx.next(close).unwrap();
         // }
 
+        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
+            self.atr.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_MACD")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.macd.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_STOCH")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.stoch.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
+            self.rsi.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
+            self.bb.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
+            self.bbw.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_A")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_a.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_B")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_b.next(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_C")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_c.next(close).unwrap();
+        }
+
+        Ok(())
+    }
+
+    pub fn next_delete(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+        let close = OHLC.3;
+
+        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+        //     self.adx.remove_a(0);
+        //     self.adx.next(close).unwrap();
+        // }
+
         let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
 

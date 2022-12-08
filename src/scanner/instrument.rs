@@ -349,6 +349,9 @@ impl Instrument {
             .parse::<usize>()
             .unwrap();
 
+        //FIXME Instrument should be Optional
+        self.reset();
+
         let candles: Vec<Candle> = data
             .iter()
             .enumerate()
@@ -496,7 +499,7 @@ impl Instrument {
 
                 if process_patterns {
                     //FIXME peaks next detection iterates the whole list
-                    self.peaks.next(&candle);
+                    self.peaks.next_delete(&candle);
                     self.peaks
                         .calculate_peaks(&self.max_price, &self.min_price, &0)
                         .unwrap();
@@ -510,7 +513,7 @@ impl Instrument {
                 if process_indicators {
                     let ohlc_indicators =
                         self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-                    self.indicators.next(ohlc_indicators).unwrap();
+                    self.indicators.next_delete(ohlc_indicators).unwrap();
                 }
             }
             false => {
@@ -596,6 +599,18 @@ impl Instrument {
         ])
         .unwrap();
         self
+    }
+
+    //pub fn reset_and_set(&mut self, data: Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>) {}
+
+    pub fn reset(&mut self) {
+        self.data = vec![];
+        self.peaks = Peaks::new();
+        self.horizontal_levels = HorizontalLevels::new();
+        self.patterns = Patterns::new();
+        self.indicators = Indicators::new().unwrap();
+        self.divergences = Divergences::new().unwrap();
+        //self.set_data(data).unwrap();
     }
 }
 

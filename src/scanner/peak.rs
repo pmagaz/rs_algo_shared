@@ -69,6 +69,12 @@ impl Peaks {
     }
 
     pub fn next(&mut self, candle: &Candle) {
+        self.highs.push(candle.high());
+        self.lows.push(candle.low());
+        self.close.push(candle.close());
+    }
+
+    pub fn next_delete(&mut self, candle: &Candle) {
         let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
         let len = self.highs.len();
