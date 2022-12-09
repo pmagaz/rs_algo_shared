@@ -59,6 +59,8 @@ pub struct TradeIn {
     pub index_in: usize,
     pub quantity: f64,
     pub price_in: f64,
+    pub ask: f64,
+    pub spread: f64,
     pub stop_loss: StopLoss,
     pub date_in: DbDateTime,
     pub trade_type: TradeType,
@@ -70,9 +72,13 @@ pub struct TradeOut {
     pub trade_type: TradeType,
     pub index_in: usize,
     pub price_in: f64,
+    pub ask: f64,
+    pub spread_in: f64,
     pub date_in: DbDateTime,
     pub index_out: usize,
     pub price_out: f64,
+    pub bid: f64,
+    pub spread_out: f64,
     pub date_out: DbDateTime,
     pub profit: f64,
     pub profit_per: f64,
@@ -123,6 +129,8 @@ pub fn resolve_trade_in(
             id: 0,
             index_in: nex_candle_index,
             price_in: next_day_price,
+            ask: next_day_price,
+            spread: next_day_price,
             quantity,
             stop_loss: create_stop_loss(&entry_type, instrument, nex_candle_index, stop_loss),
             date_in: to_dbtime(current_date),
@@ -179,8 +187,12 @@ pub fn resolve_trade_out(
             price_in,
             trade_type,
             date_in: to_dbtime(date_in),
+            spread_in: current_price,
+            ask: current_price,
             index_out: nex_candle_index,
             price_out: current_price,
+            bid: current_price,
+            spread_out: current_price,
             date_out: to_dbtime(date_out),
             profit,
             profit_per,
@@ -211,8 +223,10 @@ pub fn resolve_bot_trade_in(
             id: 0,
             index_in: index,
             price_in: close_price,
+            spread: close_price,
+            ask: close_price,
             quantity: quantity,
-            stop_loss: create_stop_loss(&entry_type, instrument, index, stop_loss),
+            stop_loss: create_bot_stop_loss(&entry_type, instrument, index, stop_loss),
             date_in: to_dbtime(current_date),
             trade_type: entry_type,
         })
@@ -232,6 +246,8 @@ pub fn resolve_bot_trade_out(
     let quantity = trade_in.quantity;
     let index_in = trade_in.index_in;
     let price_in = trade_in.price_in;
+    let spread_in = trade_in.spread;
+    let ask = trade_in.ask;
     let date_in = trade_in.date_in;
 
     let candle = data.last().unwrap();
@@ -260,10 +276,14 @@ pub fn resolve_bot_trade_out(
             id: 0,
             index_in,
             price_in,
+            ask,
+            spread_in,
             trade_type,
             date_in: date_in,
             index_out: index,
-            price_out: stop_loss_price,
+            price_out: candle.close(),
+            bid: stop_loss_price,
+            spread_out: spread_in,
             date_out: to_dbtime(date_out),
             profit: 0.,
             profit_per: 0.,

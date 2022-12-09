@@ -70,6 +70,39 @@ pub fn create_stop_loss(
     }
 }
 
+pub fn create_bot_stop_loss(
+    entry_type: &TradeType,
+    instrument: &Instrument,
+    index: usize,
+    stop_loss: &StopLoss,
+) -> StopLoss {
+    let current_price = &instrument.data.last().unwrap().open;
+    let stop_loss_value = stop_loss.value;
+    let stop_loss_price = stop_loss.price;
+    let atr_value = instrument.indicators.atr.get_data_a().last().unwrap() * stop_loss_value;
+
+    let price = match stop_loss.stop_type {
+        StopLossType::Atr => {
+            let price = match entry_type {
+                TradeType::EntryLong => current_price - atr_value,
+                TradeType::EntryShort => current_price + atr_value,
+                _ => current_price - atr_value,
+            };
+            price
+        }
+        _ => stop_loss_price,
+    };
+
+    StopLoss {
+        price,
+        value: atr_value,
+        stop_type: stop_loss.stop_type.to_owned(),
+        created_at: to_dbtime(Local::now()),
+        updated_at: to_dbtime(Local::now()),
+        valid_until: to_dbtime(Local::now() + Duration::days(1000)),
+    }
+}
+
 pub fn update_stop_loss_values(
     stop_loss: &StopLoss,
     stop_type: StopLossType,

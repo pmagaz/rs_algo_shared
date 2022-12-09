@@ -247,6 +247,7 @@ impl BrokerStream for Xtb {
         let pricing = pricing.payload.unwrap();
         let ask = pricing.ask;
         let bid = pricing.bid;
+        let spread = pricing.spreadRaw;
 
         log::info!(
             "Ask pricing {} for {}_{}",
@@ -260,7 +261,9 @@ impl BrokerStream for Xtb {
         let entry_type = &data.trade_type;
         let stop_loss = data.stop_loss;
         data.id = Local::now().timestamp_millis() as usize;
-        data.price_in = ask;
+        data.price_in = bid;
+        data.ask = ask;
+        data.spread = spread;
 
         data.stop_loss = stop_loss::update_bot_stop_loss(bid, &entry_type, &stop_loss);
 
@@ -282,10 +285,13 @@ impl BrokerStream for Xtb {
         let symbol = &trade.symbol;
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
+        let price_out = trade.data.price_out.clone();
         let bid = pricing.bid;
+        let ask = pricing.ask;
+        let spread = pricing.spreadRaw;
 
         log::info!(
-            "Bid pricing {} for {}_{}",
+            "Bid pricing {} for {}_{:?}",
             bid,
             trade.symbol,
             trade.time_frame
@@ -293,7 +299,10 @@ impl BrokerStream for Xtb {
 
         let mut data = trade.data;
         data.id = Local::now().timestamp_millis() as usize;
-        data.price_out = bid;
+        data.price_out = price_out;
+        data.bid = bid;
+        data.ask = ask;
+        data.spread_out = spread;
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeOut,
