@@ -262,7 +262,7 @@ impl BrokerStream for Xtb {
         data.id = Local::now().timestamp_millis() as usize;
         data.price_in = ask;
 
-        data.stop_loss = stop_loss::update_bot_stop_loss(ask, &entry_type, &stop_loss);
+        data.stop_loss = stop_loss::update_bot_stop_loss(bid, &entry_type, &stop_loss);
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,
