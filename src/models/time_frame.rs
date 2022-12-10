@@ -172,7 +172,9 @@ pub fn adapt_to_time_frame(mut new_data: DOHLC, time_frame: &TimeFrameType) -> D
             new_data
         }
         TimeFrameType::H1 => {
-            if !TimeFrameType::H1.closing_time().contains(&current_hour) {
+            if !TimeFrameType::H1.closing_time().contains(&current_hour)
+                && !TimeFrameType::M1.closing_time().contains(&current_minute)
+            {
                 new_data.4 = new_data.4 + add;
             } else {
                 log::info!("Closing {} candle ", time_frame);
@@ -180,7 +182,9 @@ pub fn adapt_to_time_frame(mut new_data: DOHLC, time_frame: &TimeFrameType) -> D
             new_data
         }
         TimeFrameType::H4 => {
-            if !TimeFrameType::H4.closing_time().contains(&current_hour) {
+            if !TimeFrameType::H4.closing_time().contains(&current_hour)
+                && !TimeFrameType::M1.closing_time().contains(&current_minute)
+            {
                 new_data.4 = new_data.4 + add;
             } else {
                 log::info!("Closing candle");
