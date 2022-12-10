@@ -207,7 +207,6 @@ pub fn resolve_trade_out(
 }
 
 pub fn resolve_bot_trade_in(
-    index: usize,
     order_size: f64,
     instrument: &Instrument,
     entry_type: TradeType,
@@ -218,6 +217,7 @@ pub fn resolve_bot_trade_in(
         let current_date = candle.date();
         let close_price = candle.close();
         let quantity = round(order_size / close_price, 3);
+        let index = current_date.timestamp_millis() as usize;
 
         TradeResult::TradeIn(TradeIn {
             id: 0,
@@ -236,7 +236,6 @@ pub fn resolve_bot_trade_in(
 }
 
 pub fn resolve_bot_trade_out(
-    index: usize,
     instrument: &Instrument,
     trade_in: TradeIn,
     exit_type: TradeType,
@@ -249,9 +248,10 @@ pub fn resolve_bot_trade_out(
     let spread_in = trade_in.spread;
     let ask = trade_in.ask;
     let date_in = trade_in.date_in;
-
     let candle = data.last().unwrap();
     let date_out = candle.date();
+    let index = date_out.timestamp_millis() as usize;
+
     let stop_loss_price = match &exit_type {
         TradeType::ExitLong => candle.low,
         TradeType::ExitShort => candle.high,
