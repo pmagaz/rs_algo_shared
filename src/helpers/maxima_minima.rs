@@ -1,4 +1,5 @@
 use crate::error::Result;
+
 use find_peaks::PeakFinder;
 use std::cmp::Ordering;
 use std::env;
