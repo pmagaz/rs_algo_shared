@@ -36,6 +36,7 @@ pub struct Candle {
     pub low: f64,
     pub close: f64,
     pub volume: f64,
+    pub is_closed: bool,
 }
 
 impl Candle {
@@ -68,6 +69,11 @@ impl Candle {
         self.low
     }
 
+    pub fn set_is_closed(&mut self, val: bool) -> bool {
+        self.is_closed = val;
+        self.is_closed
+    }
+
     pub fn close(&self) -> f64 {
         let add = 1000000.;
         if self.close > add {
@@ -76,18 +82,13 @@ impl Candle {
             self.close
         }
     }
-
     pub fn set_close(&mut self, value: f64) -> f64 {
         self.close = value;
         self.close
     }
 
     pub fn is_closed(&self) -> bool {
-        if self.close < 1000000. {
-            true
-        } else {
-            false
-        }
+        self.is_closed
     }
 
     pub fn volume(&self) -> f64 {
@@ -105,6 +106,7 @@ impl Candle {
             low: self.low.exp(),
             close: self.close.exp(),
             volume: self.volume,
+            is_closed: false,
             candle_type: self.candle_type.clone(),
         }
     }
@@ -117,6 +119,7 @@ pub struct CandleBuilder {
     low: Option<f64>,
     close: Option<f64>,
     volume: Option<f64>,
+    is_closed: Option<bool>,
     previous_candles: Option<Vec<DOHLCV>>,
     logarithmic: Option<bool>,
 }
@@ -130,6 +133,7 @@ impl CandleBuilder {
             low: None,
             close: None,
             volume: None,
+            is_closed: None,
             previous_candles: None,
             logarithmic: None,
         }
@@ -162,6 +166,11 @@ impl CandleBuilder {
 
     pub fn volume(mut self, val: f64) -> Self {
         self.volume = Some(val);
+        self
+    }
+
+    pub fn is_closed(mut self, val: bool) -> Self {
+        self.is_closed = Some(val);
         self
     }
 
@@ -429,6 +438,7 @@ impl CandleBuilder {
             Some(low),
             Some(close),
             Some(volume),
+            Some(is_closed),
             Some(previous_candles),
             Some(logarithmic),
         ) = (
@@ -438,6 +448,7 @@ impl CandleBuilder {
             self.low,
             self.close,
             self.volume,
+            self.is_closed,
             self.previous_candles.as_ref(),
             self.logarithmic,
         ) {
@@ -449,6 +460,7 @@ impl CandleBuilder {
                 high,
                 low,
                 volume,
+                is_closed,
             })
         } else {
             Err(RsAlgoError {

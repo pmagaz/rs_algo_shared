@@ -28,6 +28,7 @@ pub fn maxima_minima(
             return (x, y);
         })
         .collect();
+
     Ok(result)
 }
 

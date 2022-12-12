@@ -4,7 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::Indicators;
 use crate::models::indicator::CompactIndicators;
 use crate::models::market::*;
-use crate::models::time_frame::TimeFrameType;
+use crate::models::time_frame::{adapt_to_time_frame, TimeFrameType};
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
 use crate::scanner::horizontal_level::HorizontalLevels;
@@ -131,7 +131,7 @@ impl Instrument {
 
     pub fn get_scale_ohlc(
         &self,
-        x: (DateTime<Local>, f64, f64, f64, f64, f64),
+        x: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
         logarithmic_scanner: bool,
     ) -> (f64, f64, f64, f64) {
         let open: f64;
@@ -185,13 +185,14 @@ impl Instrument {
     pub fn process_candle(
         &mut self,
         id: usize,
-        x: (DateTime<Local>, f64, f64, f64, f64, f64),
-        data: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
+        data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
+        candles: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
         logarithmic_scanner: bool,
     ) -> Candle {
-        let date = x.0;
-        let volume = x.5;
-        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
+        let date = data.0;
+        let volume = data.5;
+        let is_closed = data.6;
+        let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -210,7 +211,8 @@ impl Instrument {
             .low(low)
             .close(close)
             .volume(volume)
-            .previous_candles(vec![data[pre_0], data[prev_1]])
+            .is_closed(is_closed)
+            .previous_candles(vec![candles[pre_0], candles[prev_1]])
             .logarithmic(logarithmic_scanner)
             .build()
             .unwrap()
@@ -219,13 +221,14 @@ impl Instrument {
     pub fn process_next_candle(
         &self,
         id: usize,
-        x: (DateTime<Local>, f64, f64, f64, f64, f64),
-        data: &Vec<Candle>,
+        data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
+        candle: &Vec<Candle>,
         logarithmic_scanner: bool,
     ) -> Candle {
-        let date = x.0;
-        let volume = x.5;
-        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
+        let date = data.0;
+        let volume = data.5;
+        let is_closed = data.6;
+        let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -237,7 +240,7 @@ impl Instrument {
             _ => id - 1,
         };
 
-        let last = data[pre_0].clone();
+        let last = candle[pre_0].clone();
         let last_candle = (
             last.date(),
             last.open(),
@@ -247,7 +250,7 @@ impl Instrument {
             last.volume(),
         );
 
-        let second_last = data[prev_1].clone();
+        let second_last = candle[prev_1].clone();
         let second_last_candle = (
             second_last.date(),
             second_last.open(),
@@ -265,66 +268,67 @@ impl Instrument {
             .low(low)
             .close(close)
             .volume(volume)
+            .is_closed(is_closed)
             .previous_candles(vec![last_candle, second_last_candle])
             .logarithmic(logarithmic_scanner)
             .build()
             .unwrap()
     }
 
-    pub fn update_candle(
-        &self,
-        id: usize,
-        x: (DateTime<Local>, f64, f64, f64, f64, f64),
-        data: &Vec<Candle>,
-        logarithmic_scanner: bool,
-    ) -> Candle {
-        let date = x.0;
-        let volume = x.5;
-        let (open, high, low, close) = self.get_scale_ohlc(x, logarithmic_scanner);
+    // pub fn update_candle(
+    //     &self,
+    //     id: usize,
+    //     data: (DateTime<Local>, f64, f64, f64, f64, f64),
+    //     candles: &Vec<Candle>,
+    //     logarithmic_scanner: bool,
+    // ) -> Candle {
+    //     let date = data.0;
+    //     let volume = data.5;
+    //     let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
 
-        let pre_0 = match id {
-            0 => id,
-            _ => id - 1,
-        };
+    //     let pre_0 = match id {
+    //         0 => id,
+    //         _ => id - 1,
+    //     };
 
-        let prev_1 = match pre_0 {
-            0 => id,
-            _ => id - 1,
-        };
+    //     let prev_1 = match pre_0 {
+    //         0 => id,
+    //         _ => id - 1,
+    //     };
 
-        let last = data[pre_0].clone();
-        let last_candle = (
-            last.date(),
-            last.open(),
-            last.high(),
-            last.low(),
-            last.close(),
-            last.volume(),
-        );
+    //     let last = candles[pre_0].clone();
+    //     let last_candle = (
+    //         last.date(),
+    //         last.open(),
+    //         last.high(),
+    //         last.low(),
+    //         last.close(),
+    //         last.volume(),
+    //     );
 
-        let second_last = data[prev_1].clone();
-        let second_last_candle = (
-            second_last.date(),
-            second_last.open(),
-            second_last.high(),
-            second_last.low(),
-            second_last.close(),
-            second_last.volume(),
-        );
-        //DOHLCV
+    //     let second_last = candles[prev_1].clone();
+    //     let second_last_candle = (
+    //         second_last.date(),
+    //         second_last.open(),
+    //         second_last.high(),
+    //         second_last.low(),
+    //         second_last.close(),
+    //         second_last.volume(),
+    //     );
+    //     //DOHLCV
 
-        Candle::new()
-            .date(date)
-            .open(open)
-            .high(high)
-            .low(low)
-            .close(close)
-            .volume(volume)
-            .previous_candles(vec![last_candle, second_last_candle])
-            .logarithmic(logarithmic_scanner)
-            .build()
-            .unwrap()
-    }
+    //     Candle::new()
+    //         .date(date)
+    //         .open(open)
+    //         .high(high)
+    //         .low(low)
+    //         .close(close)
+    //         .volume(volume)
+    //         .previous_candles(vec![last_candle, second_last_candle])
+    //         .logarithmic(logarithmic_scanner)
+    //         .build()
+    //         .unwrap()
+    // }
 
     pub fn set_data(
         &mut self,
@@ -356,7 +360,8 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                let candle = self.process_candle(id, *x, &data, logarithmic_scanner);
+                let adapted_DOHLCC = adapt_to_time_frame(*x, &self.time_frame);
+                let candle = self.process_candle(id, adapted_DOHLCC, &data, logarithmic_scanner);
 
                 let low = candle.low();
                 let high = candle.high();
@@ -473,7 +478,7 @@ impl Instrument {
 
     pub fn next(
         &mut self,
-        data: (DateTime<Local>, f64, f64, f64, f64, f64),
+        data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
         last_candle: &Candle,
     ) -> Result<()> {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
@@ -492,7 +497,13 @@ impl Instrument {
         let next_id = self.data.len();
         let candle = self.process_next_candle(next_id, data, &self.data, logarithmic_scanner);
 
-        match last_candle.is_closed() {
+        println!(
+            "3333333 {:?} {:?}",
+            last_candle.is_closed(),
+            candle.is_closed()
+        );
+
+        match candle.is_closed() {
             true => {
                 log::info!("Adding new candle");
                 self.insert_new_candle(candle.clone());

@@ -1,12 +1,10 @@
-use crate::{
-    helpers::date::{DateTime, Local},
-    scanner::candle::Candle,
-};
+use crate::helpers::date::{DateTime, Duration, Local};
 
 use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 
 type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
+type DOHLCC = (DateTime<Local>, f64, f64, f64, f64, f64, bool);
 type VEC_DOHLC = Vec<DOHLC>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -140,63 +138,62 @@ impl std::fmt::Display for TimeFrameType {
     }
 }
 
-pub fn adapt_to_time_frame(mut new_data: DOHLC, time_frame: &TimeFrameType) -> DOHLC {
-    let date = new_data.0;
+pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType) -> DOHLCC {
+    let date = data.0;
     let current_minute = date.minute() + 1;
     let current_hour = date.hour() + 1;
-    let add = 1000000.;
+
+    let add_minutes = time_frame.max_bars();
+    let open_until = date + Duration::minutes(add_minutes);
+    let still_open = Local::now() <= open_until && date <= open_until;
+    let is_closed = !still_open;
+    let mut adapted: DOHLCC = (data.0, data.1, data.2, data.3, data.4, data.5, is_closed);
 
     match time_frame {
         TimeFrameType::M5 => {
-            if !TimeFrameType::M5.closing_time().contains(&current_minute) {
-                new_data.4 = new_data.4 + add;
-            } else {
-                log::info!("Closing {} candle ", time_frame);
+            if TimeFrameType::M5.closing_time().contains(&current_minute) && still_open {
+                log::info!("Candle {} closed ", time_frame);
+                adapted.6 = true;
             }
-            new_data
+            adapted
         }
         TimeFrameType::M15 => {
-            if !TimeFrameType::M15.closing_time().contains(&current_minute) {
-                new_data.4 = new_data.4 + add;
-            } else {
-                log::info!("Closing {} candle ", time_frame);
+            if TimeFrameType::M15.closing_time().contains(&current_minute) && still_open {
+                log::info!("Candle {} closed ", time_frame);
+                adapted.6 = true;
             }
-            new_data
+            adapted
         }
         TimeFrameType::M30 => {
-            if !TimeFrameType::M30.closing_time().contains(&current_minute) {
-                new_data.4 = new_data.4 + add;
-            } else {
-                log::info!("Closing {} candle ", time_frame);
+            if TimeFrameType::M30.closing_time().contains(&current_minute) && still_open {
+                log::info!("Candle {} closed ", time_frame);
+                adapted.6 = true;
             }
-            new_data
+            adapted
         }
         TimeFrameType::H1 => {
-            if !TimeFrameType::H1.closing_time().contains(&current_hour)
-                && !TimeFrameType::M1.closing_time().contains(&current_minute)
-            {
-                new_data.4 = new_data.4 + add;
-            } else {
-                log::info!("Closing {} candle ", time_frame);
+            if TimeFrameType::M1.closing_time().contains(&current_minute) && still_open {
+                log::info!("Candle {} closed ", time_frame);
+                adapted.6 = true;
             }
-            new_data
+            adapted
         }
         TimeFrameType::H4 => {
-            if !TimeFrameType::H4.closing_time().contains(&current_hour)
-                && !TimeFrameType::M1.closing_time().contains(&current_minute)
+            if TimeFrameType::H4.closing_time().contains(&current_hour)
+                && TimeFrameType::M1.closing_time().contains(&current_minute)
+                && still_open
             {
-                new_data.4 = new_data.4 + add;
-            } else {
-                log::info!("Closing candle");
+                log::info!("Candle {} closed ", time_frame);
+                adapted.6 = true;
             }
-            new_data
+            adapted
         }
         //M1
         _ => {
-            log::info!("Closing {} candle ", time_frame);
-            new_data
+            log::info!("Candle {} closed ", time_frame);
+            adapted.6 = true;
+            adapted
         }
     };
-
-    new_data
+    adapted
 }
