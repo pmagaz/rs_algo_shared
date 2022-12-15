@@ -47,6 +47,11 @@ impl Candle {
         self.date
     }
 
+    pub fn set_date(&mut self, date: DateTime<Local>) -> DateTime<Local> {
+        self.date = date;
+        self.date
+    }
+
     pub fn open(&self) -> f64 {
         self.open
     }

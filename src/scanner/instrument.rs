@@ -4,7 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::Indicators;
 use crate::models::indicator::CompactIndicators;
 use crate::models::market::*;
-use crate::models::time_frame::{adapt_to_time_frame, TimeFrameType};
+use crate::models::time_frame::{adapt_to_time_frame, get_open_until, TimeFrameType};
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
 use crate::scanner::horizontal_level::HorizontalLevels;
@@ -360,7 +360,7 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                let adapted_DOHLCC = adapt_to_time_frame(*x, &self.time_frame);
+                let adapted_DOHLCC = adapt_to_time_frame(*x, &self.time_frame, false);
                 let candle = self.process_candle(id, adapted_DOHLCC, &data, logarithmic_scanner);
 
                 let low = candle.low();
@@ -478,9 +478,9 @@ impl Instrument {
 
     pub fn next(
         &mut self,
-        data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
+        data: (DateTime<Local>, f64, f64, f64, f64, f64),
         last_candle: &Candle,
-    ) -> Result<()> {
+    ) -> Result<Candle> {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -494,73 +494,90 @@ impl Instrument {
         //     .parse::<bool>()
         //     .unwrap();
 
+        let adapted_DOHLCC = adapt_to_time_frame(data, &self.time_frame, true);
+
         let next_id = self.data.len();
-        let candle = self.process_next_candle(next_id, data, &self.data, logarithmic_scanner);
+        let candle =
+            self.process_next_candle(next_id, adapted_DOHLCC, &self.data, logarithmic_scanner);
 
-        println!(
-            "3333333 {:?} {:?}",
-            last_candle.is_closed(),
-            candle.is_closed()
-        );
+        println!("5555555 {:?} {:?}", data, candle);
 
-        match candle.is_closed() {
-            true => {
-                log::info!("Adding new candle");
-                self.insert_new_candle(candle.clone());
+        self.update_last_candle(candle.clone(), &last_candle);
 
-                if process_patterns {
-                    //FIXME peaks next detection iterates the whole list
-                    self.peaks.next_delete(&candle);
-                    self.peaks
-                        .calculate_peaks(&self.max_price, &self.min_price, &0)
-                        .unwrap();
-                    let local_maxima = self.peaks.local_maxima();
-                    let local_minima = self.peaks.local_minima();
-                    //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
-                    self.patterns
-                        .next(PatternSize::Local, local_maxima, local_minima, &self.data);
-                }
+        if process_patterns {
+            //FIXME peaks next detection iterates the whole list
+            self.peaks.update(&candle);
+            self.peaks
+                .calculate_peaks(&self.max_price, &self.min_price, &0)
+                .unwrap();
+            let local_maxima = self.peaks.local_maxima();
+            let local_minima = self.peaks.local_minima();
+            //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+            self.patterns
+                .update(PatternSize::Local, local_maxima, local_minima, &self.data);
+        }
 
-                if process_indicators {
-                    let ohlc_indicators =
-                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-                    self.indicators.next_delete(ohlc_indicators).unwrap();
-                }
-            }
-            false => {
-                log::info!("Updating candle");
-                self.update_last_candle(candle.clone(), &last_candle);
+        // match candle.is_closed() {
+        //     true => {
+        //         log::info!("Updating last candle");
+        //         self.update_last_candle(candle.clone(), &last_candle);
 
-                if process_patterns {
-                    //FIXME peaks next detection iterates the whole list
-                    self.peaks.update(&candle);
-                    self.peaks
-                        .calculate_peaks(&self.max_price, &self.min_price, &0)
-                        .unwrap();
-                    let local_maxima = self.peaks.local_maxima();
-                    let local_minima = self.peaks.local_minima();
-                    //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
-                    self.patterns.update(
-                        PatternSize::Local,
-                        local_maxima,
-                        local_minima,
-                        &self.data,
-                    );
-                }
+        //         if process_patterns {
+        //             //FIXME peaks next detection iterates the whole list
+        //             self.peaks.update(&candle);
+        //             self.peaks
+        //                 .calculate_peaks(&self.max_price, &self.min_price, &0)
+        //                 .unwrap();
+        //             let local_maxima = self.peaks.local_maxima();
+        //             let local_minima = self.peaks.local_minima();
+        //             //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+        //             self.patterns.update(
+        //                 PatternSize::Local,
+        //                 local_maxima,
+        //                 local_minima,
+        //                 &self.data,
+        //             );
+        //         }
 
-                if process_indicators {
-                    let ohlc_indicators =
-                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-                    self.indicators.update(ohlc_indicators).unwrap();
-                }
-            }
-        };
+        //         if process_indicators {
+        //             let ohlc_indicators =
+        //                 self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+        //             self.indicators.update(ohlc_indicators).unwrap();
+        //         }
+        //     }
 
-        Ok(())
+        //     false => {
+        //         log::info!("Adding new candle");
+        //         //self.insert_new_candle(candle.clone());
+
+        //         if process_patterns {
+        //             //FIXME peaks next detection iterates the whole list
+        //             self.peaks.next_delete(&candle);
+        //             self.peaks
+        //                 .calculate_peaks(&self.max_price, &self.min_price, &0)
+        //                 .unwrap();
+        //             let local_maxima = self.peaks.local_maxima();
+        //             let local_minima = self.peaks.local_minima();
+        //             //Fixme CALCULATE ONLY LAST CHANGES clean first pattern
+        //             self.patterns
+        //                 .next(PatternSize::Local, local_maxima, local_minima, &self.data);
+        //         }
+
+        //         if process_indicators {
+        //             let ohlc_indicators =
+        //                 self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+        //             self.indicators.next_delete(ohlc_indicators).unwrap();
+        //         }
+        //     }
+        // };
+
+        Ok(candle)
     }
 
     pub fn update_last_candle(&mut self, mut candle: Candle, last_candle: &Candle) {
+        log::info!("Updating last candle");
         let current_high = candle.high();
+        let is_closed = candle.is_closed();
         let previous_high = last_candle.high();
 
         let current_low = candle.low();
@@ -578,20 +595,34 @@ impl Instrument {
 
         candle.set_high(higher_value);
         candle.set_low(lower_value);
+        candle.set_is_closed(is_closed);
 
         *self.data.last_mut().unwrap() = candle;
     }
 
-    pub fn insert_new_candle(&mut self, mut candle: Candle) {
+    pub fn insert_new_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
+        log::info!("Inserting new candle");
+        let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap();
         let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
+
+        let adapted = adapt_to_time_frame(data, &self.time_frame, true);
+        let open_until = get_open_until(data, &self.time_frame, true);
+
+        let next_id = self.data.len();
+        let mut candle =
+            self.process_next_candle(next_id, adapted, &self.data, logarithmic_scanner);
+
+        candle.set_is_closed(false);
+        candle.set_date(open_until);
 
         let len = self.data.len();
         if len >= max_bars + next_delete {
             self.data.remove(0);
         }
-
-        //candle.set_close(candle.close - 1000000.0);
         self.data.push(candle);
     }
 

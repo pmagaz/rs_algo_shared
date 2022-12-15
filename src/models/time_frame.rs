@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::helpers::date::{DateTime, Duration, Local};
 
 use chrono::Timelike;
@@ -106,7 +108,7 @@ impl TimeFrameType {
         self.to_number()
     }
 
-    pub fn closing_time(&self) -> Vec<u32> {
+    pub fn closing_time(&self) -> Vec<i64> {
         match *self {
             TimeFrameType::ERR => vec![0],
             TimeFrameType::M1 => vec![0],
@@ -138,42 +140,93 @@ impl std::fmt::Display for TimeFrameType {
     }
 }
 
-pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType) -> DOHLCC {
+pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
     let date = data.0;
-    let current_minute = date.minute() + 1;
-    let current_hour = date.hour() + 1;
+    let current_minute = date.minute() as i64 + 1;
+    let current_hour = date.hour() as i64 + 1;
+    let add_minutes = time_frame.max_bars().clone();
+    let open_until = match next {
+        true => {
+            let next_close_idx = time_frame
+                .closing_time()
+                .iter()
+                .enumerate()
+                .filter(|(i, val)| current_minute > **val)
+                .map(|(i, _val)| i)
+                .last()
+                .unwrap();
 
-    let add_minutes = time_frame.max_bars();
-    let open_until = date + Duration::minutes(add_minutes);
-    let still_open = Local::now() <= open_until && date <= open_until;
-    let is_closed = !still_open;
-    let mut adapted: DOHLCC = (data.0, data.1, data.2, data.3, data.4, data.5, is_closed);
+            let closing_time = time_frame.closing_time().clone();
+            let next_close = match closing_time.get(next_close_idx + 1) {
+                Some(val) => val,
+                _ => closing_time.first().unwrap(),
+            };
+
+            let diff = next_close - current_minute;
+            //FIXME CHANGE TO NEXT HOUR
+            let add_diff = match current_minute.cmp(&55) {
+                Ordering::Greater => 120,
+                Ordering::Equal => 120,
+                _ => diff + 1,
+            };
+
+            date + Duration::minutes(add_diff)
+        }
+        false => date + Duration::minutes(add_minutes),
+    };
+
+    open_until
+}
+
+pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
+    //COntinue here salto al cerrar
+    // 444444 2022-12-15T15:49:00+01:00 - 2022-12-15T15:45:00+01:00 - 2022-12-15T15:50:00+01:00 false - 2022-12-15T15:45:00+01:00
+    // 444444 2022-12-15T15:50:00+01:00 - 2022-12-15T15:50:00+01:00 - 2022-12-15T15:55:00+01:00 true - 2022-12-15T15:50:00+01:00
+
+    let date = data.0;
+    let current_minute = date.minute() as i64 + 1;
+    let current_hour = date.hour() as i64 + 1;
+    let add_minutes = time_frame.max_bars().clone();
+
+    let open_until = get_open_until(data, time_frame, next);
+    let open_from = open_until - Duration::minutes(add_minutes);
+    let is_closed = date <= open_from;
+
+    let mut adapted: DOHLCC = match next {
+        true => (open_from, data.1, data.2, data.3, data.4, data.5, is_closed),
+        false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
+    };
+
+    println!(
+        "444444 {:?} - {:?} - {:?} {} - {:?}",
+        date, open_from, open_until, is_closed, adapted.0
+    );
 
     match time_frame {
         TimeFrameType::M5 => {
-            if TimeFrameType::M5.closing_time().contains(&current_minute) && still_open {
-                log::info!("Candle {} closed ", time_frame);
+            if TimeFrameType::M5.closing_time().contains(&current_minute) && is_closed {
+                log::info!("Candle {} closed ", &time_frame);
                 adapted.6 = true;
             }
             adapted
         }
         TimeFrameType::M15 => {
-            if TimeFrameType::M15.closing_time().contains(&current_minute) && still_open {
-                log::info!("Candle {} closed ", time_frame);
+            if TimeFrameType::M15.closing_time().contains(&current_minute) && is_closed {
+                log::info!("Candle {} closed ", &time_frame);
                 adapted.6 = true;
             }
             adapted
         }
         TimeFrameType::M30 => {
-            if TimeFrameType::M30.closing_time().contains(&current_minute) && still_open {
-                log::info!("Candle {} closed ", time_frame);
+            if TimeFrameType::M30.closing_time().contains(&current_minute) && is_closed {
+                log::info!("Candle {} closed ", &time_frame);
                 adapted.6 = true;
             }
             adapted
         }
         TimeFrameType::H1 => {
-            if TimeFrameType::M1.closing_time().contains(&current_minute) && still_open {
-                log::info!("Candle {} closed ", time_frame);
+            if TimeFrameType::M1.closing_time().contains(&current_minute) && is_closed {
+                log::info!("Candle {} closed ", &time_frame);
                 adapted.6 = true;
             }
             adapted
@@ -181,16 +234,16 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType) -> DOHLCC {
         TimeFrameType::H4 => {
             if TimeFrameType::H4.closing_time().contains(&current_hour)
                 && TimeFrameType::M1.closing_time().contains(&current_minute)
-                && still_open
+                && is_closed
             {
-                log::info!("Candle {} closed ", time_frame);
+                log::info!("Candle {} closed ", &time_frame);
                 adapted.6 = true;
             }
             adapted
         }
         //M1
         _ => {
-            log::info!("Candle {} closed ", time_frame);
+            log::info!("Candle {} closed ", &time_frame);
             adapted.6 = true;
             adapted
         }
