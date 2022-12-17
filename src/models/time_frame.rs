@@ -142,16 +142,15 @@ impl std::fmt::Display for TimeFrameType {
 
 pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
     let date = data.0;
-    let current_minute = date.minute() as i64 + 1;
-    let current_hour = date.hour() as i64 + 1;
-    let add_minutes = time_frame.max_bars().clone();
+    let minutes = date.minute() as i64 + 1;
+    let minutes_interval = time_frame.max_bars().clone();
     let open_until = match next {
         true => {
             let next_close_idx = time_frame
                 .closing_time()
                 .iter()
                 .enumerate()
-                .filter(|(i, val)| current_minute > **val)
+                .filter(|(i, val)| minutes > **val)
                 .map(|(i, _val)| i)
                 .last()
                 .unwrap();
@@ -162,91 +161,43 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 _ => closing_time.first().unwrap(),
             };
 
-            let diff = next_close - current_minute;
-            //FIXME CHANGE TO NEXT HOUR
-            let add_diff = match current_minute.cmp(&55) {
-                Ordering::Greater => 120,
-                Ordering::Equal => 120,
-                _ => diff + 1,
-            };
-
-            date + Duration::minutes(add_diff)
+            date + Duration::minutes(next_close - minutes + 1)
         }
-        false => date + Duration::minutes(add_minutes),
+        false => date + Duration::minutes(minutes_interval),
     };
 
     open_until
 }
 
+pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
+    let minutes_interval = time_frame.max_bars().clone();
+    get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
+}
+
 pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
-    //COntinue here salto al cerrar
-    // 444444 2022-12-15T15:49:00+01:00 - 2022-12-15T15:45:00+01:00 - 2022-12-15T15:50:00+01:00 false - 2022-12-15T15:45:00+01:00
-    // 444444 2022-12-15T15:50:00+01:00 - 2022-12-15T15:50:00+01:00 - 2022-12-15T15:55:00+01:00 true - 2022-12-15T15:50:00+01:00
-
     let date = data.0;
-    let current_minute = date.minute() as i64 + 1;
-    let current_hour = date.hour() as i64 + 1;
-    let add_minutes = time_frame.max_bars().clone();
+    let now = Local::now();
+    let minutes = date.minute() as i64;
+    let minutes_interval = time_frame.max_bars().clone();
 
-    let open_until = get_open_until(data, time_frame, next);
-    let open_from = open_until - Duration::minutes(add_minutes);
-    let is_closed = date <= open_from;
+    let open_until = match next {
+        true => match time_frame.closing_time().contains(&minutes) {
+            true => get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval),
+            false => get_open_until(data, time_frame, next),
+        },
+        false => get_open_until(data, time_frame, next),
+    };
 
-    let mut adapted: DOHLCC = match next {
+    let open_from = open_until - Duration::minutes(minutes_interval);
+    let is_closed = match next {
+        true => date == open_until,
+        false => now >= open_until,
+    };
+
+    let adapted: DOHLCC = match next {
         true => (open_from, data.1, data.2, data.3, data.4, data.5, is_closed),
         false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
     };
 
-    println!(
-        "444444 {:?} - {:?} - {:?} {} - {:?}",
-        date, open_from, open_until, is_closed, adapted.0
-    );
-
-    match time_frame {
-        TimeFrameType::M5 => {
-            if TimeFrameType::M5.closing_time().contains(&current_minute) && is_closed {
-                log::info!("Candle {} closed ", &time_frame);
-                adapted.6 = true;
-            }
-            adapted
-        }
-        TimeFrameType::M15 => {
-            if TimeFrameType::M15.closing_time().contains(&current_minute) && is_closed {
-                log::info!("Candle {} closed ", &time_frame);
-                adapted.6 = true;
-            }
-            adapted
-        }
-        TimeFrameType::M30 => {
-            if TimeFrameType::M30.closing_time().contains(&current_minute) && is_closed {
-                log::info!("Candle {} closed ", &time_frame);
-                adapted.6 = true;
-            }
-            adapted
-        }
-        TimeFrameType::H1 => {
-            if TimeFrameType::M1.closing_time().contains(&current_minute) && is_closed {
-                log::info!("Candle {} closed ", &time_frame);
-                adapted.6 = true;
-            }
-            adapted
-        }
-        TimeFrameType::H4 => {
-            if TimeFrameType::H4.closing_time().contains(&current_hour)
-                && TimeFrameType::M1.closing_time().contains(&current_minute)
-                && is_closed
-            {
-                log::info!("Candle {} closed ", &time_frame);
-                adapted.6 = true;
-            }
-            adapted
-        }
-        //M1
-        _ => {
-            log::info!("Candle {} closed ", &time_frame);
-            adapted.6 = true;
-            adapted
-        }
-    };
     adapted
 }
