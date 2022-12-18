@@ -544,6 +544,7 @@ impl Instrument {
 
         let higher_value = match current_high {
             _ if current_high > previous_high => current_high,
+            _ if current_high <= previous_high => previous_high,
             _ => previous_high,
         };
 
@@ -554,6 +555,8 @@ impl Instrument {
 
         candle.set_high(higher_value);
         candle.set_low(lower_value);
+        candle.set_open(candle.open());
+        candle.set_close(candle.close());
         candle.set_is_closed(is_closed);
 
         *self.data.last_mut().unwrap() = candle;

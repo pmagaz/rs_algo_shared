@@ -80,16 +80,17 @@ impl Candle {
     }
 
     pub fn close(&self) -> f64 {
-        let add = 1000000.;
-        if self.close > add {
-            self.close - add
-        } else {
-            self.close
-        }
+        self.close
     }
+
     pub fn set_close(&mut self, value: f64) -> f64 {
         self.close = value;
         self.close
+    }
+
+    pub fn set_open(&mut self, value: f64) -> f64 {
+        self.open = value;
+        self.open
     }
 
     pub fn is_closed(&self) -> bool {
