@@ -478,7 +478,7 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn next_indicators(&mut self, candle: Candle) {
+    pub fn next_indicators(&mut self, candle: Candle, delete: bool) {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -506,7 +506,10 @@ impl Instrument {
 
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-            self.indicators.next(ohlc_indicators).unwrap();
+            match delete {
+                true => self.indicators.next(ohlc_indicators).unwrap(),
+                false => self.indicators.next_delete(ohlc_indicators).unwrap(),
+            };
         }
     }
 
@@ -528,7 +531,7 @@ impl Instrument {
 
         self.update_last_candle(candle.clone(), &last_candle);
 
-        self.next_indicators(candle.clone());
+        self.next_indicators(candle.clone(), false);
 
         Ok(candle)
     }
@@ -583,7 +586,7 @@ impl Instrument {
         candle.set_is_closed(false);
         candle.set_date(open_from);
 
-        self.next_indicators(candle.clone());
+        self.next_indicators(candle.clone(), true);
 
         let len = self.data.len();
         if len >= max_bars + next_delete {
