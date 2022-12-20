@@ -494,14 +494,14 @@ impl Instrument {
         let candle =
             self.process_next_candle(next_id, adapted_DOHLCC, &self.data, logarithmic_scanner);
 
-        self.update_last_candle(candle.clone(), &last_candle);
+        let updated_candle = self.update_last_candle(candle.clone(), &last_candle);
 
-        self.next_indicators(candle.clone(), false);
+        self.next_indicators(updated_candle, false);
 
         Ok(candle)
     }
 
-    pub fn update_last_candle(&mut self, mut candle: Candle, last_candle: &Candle) {
+    pub fn update_last_candle(&mut self, mut candle: Candle, last_candle: &Candle) -> Candle {
         log::info!("Updating last candle");
 
         let data = (
@@ -572,7 +572,8 @@ impl Instrument {
         //     candle.date()
         // );
 
-        *self.data.last_mut().unwrap() = candle;
+        *self.data.last_mut().unwrap() = candle.clone();
+        candle
     }
 
     pub fn next_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
