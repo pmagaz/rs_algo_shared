@@ -197,8 +197,11 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
 
             let closing_time = time_frame.closing_time().clone();
             let next_close = match closing_time.get(next_close_idx + 1) {
-                Some(val) => val,
-                _ => closing_time.first().unwrap(),
+                Some(val) => *val,
+                _ => match time_frame.is_minutely_time_frame() {
+                    true => closing_time.first().unwrap() + 60,
+                    false => closing_time.first().unwrap() + 1,
+                },
             };
 
             match time_frame.is_minutely_time_frame() {
@@ -223,22 +226,19 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
     let minutes = date.minute() as i64;
     let minutes_interval = time_frame.max_bars().clone();
 
-    println!("222222 {} {}", minutes, minutes_interval);
     let open_until = match next {
         true => match time_frame.closing_time().contains(&minutes) {
             true => {
-                println!("true");
+                //println!("true");
                 get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
             }
             false => {
-                println!("false");
+                //println!("false");
                 get_open_until(data, time_frame, next)
             }
         },
         false => get_open_until(data, time_frame, next),
     };
-
-    println!("3333333 {:?}", date);
 
     let open_from = open_until - Duration::minutes(minutes_interval);
     let is_closed = match next {
@@ -251,10 +251,10 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
     };
 
-    println!(
-        "444444 {:?} - {:?} - {:?} {} - {:?}",
-        date, open_from, open_until, is_closed, adapted.0
-    );
+    // println!(
+    //     "444444 {:?} - {:?} - {:?} {} - {:?}",
+    //     date, open_from, open_until, is_closed, adapted.0
+    // );
 
     adapted
 }

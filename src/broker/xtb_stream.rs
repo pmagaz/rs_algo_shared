@@ -392,6 +392,11 @@ impl BrokerStream for Xtb {
 
                     let leches = (date, open, high, low, close, volume);
 
+                    // println!(
+                    //     "1111111 open {} high {} low {} close {} date {}",
+                    //     leches.1, leches.2, leches.3, leches.4, leches.0
+                    // );
+
                     let msg: ResponseBody<(DateTime<Local>, f64, f64, f64, f64, f64)> =
                         ResponseBody {
                             response: ResponseType::SubscribeStream,

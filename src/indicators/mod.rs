@@ -184,6 +184,73 @@ impl Indicators {
         Ok(())
     }
 
+    pub fn next_update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+        let close = OHLC.3;
+
+        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+        //     self.adx.remove_a(0);
+        //     self.adx.next(close).unwrap();
+        // }
+
+        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
+            self.atr.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_MACD")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.macd.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_STOCH")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.stoch.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
+            self.rsi.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
+            self.bb.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
+            self.bbw.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_A")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_a.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_B")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_b.update(close).unwrap();
+        }
+
+        if env::var("INDICATORS_EMA_C")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.ema_c.update(close).unwrap();
+        }
+
+        Ok(())
+    }
+
     pub fn next_delete(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
