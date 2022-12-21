@@ -4,14 +4,10 @@ use crate::ws::ws_client::WebSocket;
 
 use crate::helpers::date::parse_time;
 use crate::models::time_frame::*;
-use futures_util::{
-    stream::{SplitSink, SplitStream},
-    Future, SinkExt, StreamExt,
-};
 
-use crate::ws::message::{
-    CommandType, InstrumentData, Message, ResponseBody, ResponseType, StreamResponse,
-};
+use futures_util::Future;
+
+use crate::ws::message::{Message, ResponseBody, ResponseType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;

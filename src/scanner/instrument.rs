@@ -4,9 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::{Indicator, Indicators};
 use crate::models::indicator::CompactIndicators;
 use crate::models::market::*;
-use crate::models::time_frame::{
-    adapt_to_time_frame, get_open_from, get_open_until, TimeFrameType,
-};
+use crate::models::time_frame::*;
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
 use crate::scanner::horizontal_level::HorizontalLevels;
@@ -15,7 +13,6 @@ use crate::scanner::pattern::Patterns;
 use crate::scanner::peak::Peaks;
 
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 use std::env;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -245,11 +245,13 @@ pub fn resolve_bot_trade_out(
     let quantity = trade_in.quantity;
     let index_in = trade_in.index_in;
     let price_in = trade_in.price_in;
+
     let spread_in = trade_in.spread;
     let ask = trade_in.ask;
     let date_in = trade_in.date_in;
     let candle = data.last().unwrap();
     let date_out = candle.date();
+    let price_out = candle.close();
     let index = date_out.timestamp_millis() as usize;
 
     let stop_loss_price = match &exit_type {
@@ -258,9 +260,16 @@ pub fn resolve_bot_trade_out(
         _ => candle.high,
     };
 
+    let margin = price_out - ask;
+    let is_profitable = match margin {
+        _ if margin > 0. => true,
+        _ => false,
+    };
+
     let stop_loss_activated = resolve_stop_loss(stop_loss_price, &trade_in);
 
-    if exit_type == TradeType::ExitLong || exit_type == TradeType::ExitShort || stop_loss_activated
+    if (is_profitable && exit_type == TradeType::ExitLong || exit_type == TradeType::ExitShort)
+        || stop_loss_activated
     {
         log::info!("Executing {:?}", exit_type);
 

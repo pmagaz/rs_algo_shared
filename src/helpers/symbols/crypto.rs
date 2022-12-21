@@ -35,8 +35,8 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "DOGECOIN",
-        "name": "DOGECOIN",
+        "symbol": "EURUSD",
+        "name": "EURUSD",
         "sector": "Crypto"
     },
     {

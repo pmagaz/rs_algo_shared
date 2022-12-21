@@ -1,8 +1,4 @@
 use crate::helpers::comp::*;
-use crate::models::stop_loss::*;
-use crate::models::strategy::StrategyType;
-use crate::models::strategy::*;
-use crate::models::time_frame::*;
 use crate::models::trade::*;
 use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
@@ -223,13 +219,6 @@ pub fn get_prev_index(index: usize) -> usize {
         Ordering::Equal => 0,
         Ordering::Less => 0,
     }
-}
-
-pub fn get_proportion(_base_time_frame: &TimeFrame, _time_frame: &TimeFrame) -> usize {
-    // match time_frame {
-    //     TimeFrameType::D => 5,
-    // }
-    1
 }
 
 pub fn get_current_pattern(index: usize, patterns: &Vec<Pattern>) -> PatternType {

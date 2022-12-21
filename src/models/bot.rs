@@ -5,7 +5,7 @@ use crate::models::strategy::*;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
 use crate::scanner::instrument::{HigherTMInstrument, Instrument};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BotData {
@@ -23,15 +23,6 @@ pub struct BotData {
     trades_in: Vec<TradeIn>,
     trades_out: Vec<TradeOut>,
     strategy_stats: StrategyStats,
-}
-
-fn null_to_default<'de, D, T>(de: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Default + Deserialize<'de>,
-{
-    let key = Option::<T>::deserialize(de)?;
-    Ok(key.unwrap_or_default())
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
