@@ -251,7 +251,7 @@ pub fn resolve_bot_trade_out(
     let date_in = trade_in.date_in;
     let candle = data.last().unwrap();
     let date_out = candle.date();
-    let price_out = candle.close();
+    let bid = candle.close();
     let index = date_out.timestamp_millis() as usize;
 
     let stop_loss_price = match &exit_type {
@@ -260,9 +260,9 @@ pub fn resolve_bot_trade_out(
         _ => candle.high,
     };
 
-    let margin = price_out - ask;
-    let is_profitable = match margin {
-        _ if margin > 0. => true,
+    let profit = bid - ask;
+    let is_profitable = match profit {
+        _ if profit > 0. => true,
         _ => false,
     };
 

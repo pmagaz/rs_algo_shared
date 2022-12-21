@@ -22,7 +22,6 @@ use crate::indicators::stoch::Stoch;
 use crate::indicators::Indicator;
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::marker::Sized;
 
 // pub trait Indicator {
 //     fn new() -> Result<Self>
