@@ -220,7 +220,7 @@ impl Instrument {
             .unwrap()
     }
 
-    pub fn process_next_candle(
+    pub fn create_new_candle(
         &self,
         id: usize,
         data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
@@ -432,7 +432,7 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn next_indicators(&mut self, candle: Candle, delete: bool) {
+    pub fn next_indicators(&mut self, candle: Candle) {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -460,10 +460,14 @@ impl Instrument {
 
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-            match delete {
-                true => self.indicators.next_delete(ohlc_indicators).unwrap(),
-                false => self.indicators.next_update(ohlc_indicators).unwrap(),
-            };
+            if candle.is_closed() {
+                print!("Processing indicators");
+                self.indicators.next_delete(ohlc_indicators).unwrap();
+            }
+            // match delete {
+            //     true => self.indicators.next_delete(ohlc_indicators).unwrap(),
+            //     false => self.indicators.next_update(ohlc_indicators).unwrap(),
+            // };
         }
     }
 
@@ -479,48 +483,25 @@ impl Instrument {
 
         let last_candle = self.data().last().unwrap().clone();
 
-        let adapted_DOHLCC = adapt_to_time_frame(data, &self.time_frame, true);
-
-        // println!(
-        //     "1111111 open {} high {} low {} close {} date {}",
-        //     adapted_DOHLCC.1,
-        //     adapted_DOHLCC.2,
-        //     adapted_DOHLCC.3,
-        //     adapted_DOHLCC.4,
-        //     adapted_DOHLCC.0
-        // );
+        let adapted_dohlcc = adapt_to_time_frame(data, &self.time_frame, true);
 
         let next_id = self.data.len();
         let candle =
-            self.process_next_candle(next_id, adapted_DOHLCC, &self.data, logarithmic_scanner);
+            self.create_new_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
 
-        let updated_candle = self.update_last_candle(candle.clone(), &last_candle);
+        let updated_candle = self.update_candle(candle.clone(), &last_candle);
 
-        self.next_indicators(updated_candle, false);
+        self.next_indicators(updated_candle);
 
         Ok(candle)
     }
 
-    pub fn update_last_candle(&mut self, mut candle: Candle, last_candle: &Candle) -> Candle {
+    pub fn update_candle(&mut self, mut candle: Candle, last_candle: &Candle) -> Candle {
         log::info!("Updating last candle");
 
-        let data = (
-            candle.date(),
-            candle.open(),
-            candle.high(),
-            candle.low(),
-            candle.close(),
-            candle.volume(),
-        );
-
-        let open_from = get_open_from(data, &self.time_frame, true);
-
         let current_high = candle.high();
-        let is_closed = candle.is_closed();
         let previous_open = last_candle.open();
         let previous_high = last_candle.high();
-        let previous_high = last_candle.high();
-        let previous_close = last_candle.close();
 
         let current_low = candle.low();
         let previous_low = last_candle.low();
@@ -536,47 +517,15 @@ impl Instrument {
             _ => previous_low,
         };
 
-        // match is_closed {
-        //     true => (),
-        //     false => {
-        //         candle.set_high(higher_value);
-        //         candle.set_low(lower_value);
-        //         candle.set_is_closed(is_closed);
-        //     }
-        // };
-
         candle.set_open(previous_open);
         candle.set_high(higher_value);
         candle.set_low(lower_value);
-
-        // if is_closed {
-        //     println!("66666666666 closed {}", previous_close);
-        //     candle.set_close(previous_close);
-        // }
-
-        // println!(
-        //     "2222222 open {} high {} low {} close {} date {}",
-        //     last_candle.open(),
-        //     last_candle.high(),
-        //     last_candle.low(),
-        //     last_candle.close(),
-        //     last_candle.date()
-        // );
-
-        // println!(
-        //     "33333333 open {} high {} low {} close {} date {}",
-        //     candle.open(),
-        //     candle.high(),
-        //     candle.low(),
-        //     candle.close(),
-        //     candle.date()
-        // );
 
         *self.data.last_mut().unwrap() = candle.clone();
         candle
     }
 
-    pub fn next_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
+    pub fn add_new_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
         log::info!("Inserting new candle");
 
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
@@ -591,13 +540,12 @@ impl Instrument {
         let open_from = get_open_from(data, &self.time_frame, true);
 
         let next_id = self.data.len();
-        let mut candle =
-            self.process_next_candle(next_id, adapted, &self.data, logarithmic_scanner);
+        let mut candle = self.create_new_candle(next_id, adapted, &self.data, logarithmic_scanner);
 
         candle.set_is_closed(false);
         candle.set_date(open_from);
 
-        self.next_indicators(candle.clone(), true);
+        //self.next_indicators(candle.clone());
 
         let len = self.data.len();
         if len >= max_bars + next_delete {
