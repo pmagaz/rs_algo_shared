@@ -54,7 +54,7 @@ impl Indicator for Rsi {
         Ok(())
     }
 
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 

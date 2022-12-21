@@ -225,7 +225,7 @@ pub fn resolve_bot_trade_in(
             price_in: close_price,
             spread: close_price,
             ask: close_price,
-            quantity: quantity,
+            quantity,
             stop_loss: create_bot_stop_loss(&entry_type, instrument, index, stop_loss),
             date_in: to_dbtime(current_date),
             trade_type: entry_type,
@@ -242,7 +242,7 @@ pub fn resolve_bot_trade_out(
 ) -> TradeResult {
     let data = &instrument.data;
 
-    let quantity = trade_in.quantity;
+    let _quantity = trade_in.quantity;
     let index_in = trade_in.index_in;
     let price_in = trade_in.price_in;
 
@@ -288,7 +288,7 @@ pub fn resolve_bot_trade_out(
             ask,
             spread_in,
             trade_type,
-            date_in: date_in,
+            date_in,
             index_out: index,
             price_out: candle.close(),
             bid: stop_loss_price,

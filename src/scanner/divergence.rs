@@ -3,7 +3,7 @@ use crate::helpers::date::*;
 use crate::helpers::maxima_minima::*;
 use crate::indicators::Indicator;
 use crate::models::indicator::IndicatorType;
-use crate::scanner::pattern::{DataPoints, Pattern, PatternType};
+use crate::scanner::pattern::{DataPoints, Pattern};
 use std::cmp::Ordering;
 use std::env;
 
@@ -79,12 +79,12 @@ impl Divergences {
 
         for (indicator_type, indicator_value) in data_indicators {
             let maxima =
-                maxima_minima_exp(&indicator_value, &indicator_value, prominence, min_distance)
+                maxima_minima_exp(indicator_value, indicator_value, prominence, min_distance)
                     .unwrap();
 
             let minima = maxima_minima_exp(
                 &indicator_value.iter().map(|x| -x).collect(),
-                &indicator_value,
+                indicator_value,
                 prominence,
                 min_distance,
             )
@@ -94,9 +94,9 @@ impl Divergences {
                 &maxima,
                 &minima,
                 &indicator_type,
-                &patterns,
-                &candles,
-                &maxima_minima,
+                patterns,
+                candles,
+                maxima_minima,
             );
         }
     }
@@ -127,7 +127,7 @@ impl Divergences {
 
         let fake_date = Local::now() - Duration::days(1000);
 
-        let last_pattern = patterns.last();
+        let _last_pattern = patterns.last();
 
         let mut max_start = 0;
         let mut max_end = 0;

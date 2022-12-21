@@ -8,7 +8,7 @@ use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
 use crate::models::status::Status;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+
 use std::env;
 
 pub type PatternActiveResult = (bool, usize, f64, DbDateTime);
@@ -121,11 +121,11 @@ impl Patterns {
         minima: &Vec<(usize, f64)>,
         candles: &Vec<Candle>,
     ) {
-        let pattern_prev_bars = env::var("MAX_PREVIOUS_BARS")
+        let _pattern_prev_bars = env::var("MAX_PREVIOUS_BARS")
             .unwrap()
             .parse::<usize>()
             .unwrap();
-        let len = candles.len();
+        let _len = candles.len();
 
         // let last_candles = match len.cmp(&0) {
         //     Ordering::Greater => {
@@ -135,7 +135,7 @@ impl Patterns {
         //     _ => vec![],
         // };
 
-        self.detect_pattern(pattern_size, maxima, minima, &candles);
+        self.detect_pattern(pattern_size, maxima, minima, candles);
     }
 
     pub fn update(
@@ -145,7 +145,7 @@ impl Patterns {
         minima: &Vec<(usize, f64)>,
         candles: &Vec<Candle>,
     ) {
-        self.detect_pattern(pattern_size, maxima, minima, &candles);
+        self.detect_pattern(pattern_size, maxima, minima, candles);
     }
 
     pub fn detect_pattern(
@@ -675,29 +675,29 @@ impl Patterns {
                 let x_values_top: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 == 0)
-                    .map(|(key, x)| x.0 as f64)
+                    .filter(|(key, _x)| key % 2 == 0)
+                    .map(|(_key, x)| x.0 as f64)
                     .collect();
 
                 let y_values_top: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 == 0)
-                    .map(|(key, x)| x.1)
+                    .filter(|(key, _x)| key % 2 == 0)
+                    .map(|(_key, x)| x.1)
                     .collect();
 
                 let x_values_bottom: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 != 0)
-                    .map(|(key, x)| x.0 as f64)
+                    .filter(|(key, _x)| key % 2 != 0)
+                    .map(|(_key, x)| x.0 as f64)
                     .collect();
 
                 let y_values_bottom: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 != 0)
-                    .map(|(key, x)| x.1)
+                    .filter(|(key, _x)| key % 2 != 0)
+                    .map(|(_key, x)| x.1)
                     .collect();
 
                 let polynomial_top = poly_fit(&x_values_top, &y_values_top, 1);
@@ -744,7 +744,7 @@ impl Patterns {
                         direction,
                         active,
                         pattern_size: pattern_size.clone(),
-                        data_points: data_points,
+                        data_points,
                     }),
                     PatternSize::Extrema => self.extrema_patterns.push(Pattern {
                         pattern_type,
@@ -754,7 +754,7 @@ impl Patterns {
                         direction,
                         active,
                         pattern_size: pattern_size.clone(),
-                        data_points: data_points,
+                        data_points,
                     }),
                 };
             }
@@ -772,7 +772,7 @@ pub fn pattern_active_result(
 
     //FIXME pattern direction
     if top_result {
-        let target = calculate_price_target(&PatternDirection::Top, &data);
+        let target = calculate_price_target(&PatternDirection::Top, data);
 
         PatternActive {
             active: true,
@@ -785,7 +785,7 @@ pub fn pattern_active_result(
             target,
         }
     } else if bottom_result {
-        let target = calculate_price_target(&PatternDirection::Bottom, &data);
+        let target = calculate_price_target(&PatternDirection::Bottom, data);
 
         PatternActive {
             active: true,

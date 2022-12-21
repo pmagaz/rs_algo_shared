@@ -55,7 +55,7 @@ impl Indicator for Adx {
     }
 
     //FIXME MONEKY PATCHING
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         // let a = self.adx.next(&bar);
         // self.data_a.push(a);
         Ok(())

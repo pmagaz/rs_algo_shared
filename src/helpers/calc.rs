@@ -138,10 +138,7 @@ pub fn total_drawdown(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
         .map(|(_i, x)| *x)
         .fold(f64::NAN, f64::min);
 
-    let min_equity_index = match equity_curve.iter().position(|&r| r == min_equity_peak) {
-        Some(idx) => idx,
-        None => 0,
-    };
+    let min_equity_index = equity_curve.iter().position(|&r| r == min_equity_peak).unwrap_or(0);
 
     let mut max_equity_peak = equity_curve
         .iter()
@@ -198,11 +195,11 @@ pub fn total_profitable_trades(winning_trades: usize, total_trades: usize) -> f6
 
 pub fn total_profit_per(
     equity: f64,
-    net_profit: f64,
+    _net_profit: f64,
     _trades_in: &Vec<TradeIn>,
     trades_out: &Vec<TradeOut>,
 ) -> f64 {
-    let initial_value = equity;
+    let _initial_value = equity;
     trades_out.iter().map(|trade| trade.profit_per).sum()
 }
 

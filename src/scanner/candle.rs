@@ -248,7 +248,7 @@ impl CandleBuilder {
 
     fn is_bullish_star(&self) -> bool {
         // ((O2>C2)AND((O2-C2)/(.001+H2-L2)>.6)AND(C2>O1) AND(O1>C1)AND((H1-L1)>(3*(C1-O1))) AND(C>O)AND(O>O1))
-        let (open, high, low, close) = &self.get_current_ohlc();
+        let (open, _high, _low, close) = &self.get_current_ohlc();
         let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
         let (prev_open1, prev_high1, prev_low1, prev_close1) = &self.get_previous_ohlc(1);
         (prev_open1 > prev_close1)
@@ -262,7 +262,7 @@ impl CandleBuilder {
 
     fn is_bearish_star(&self) -> bool {
         // ((O2>C2)AND((O2-C2)/(.001+H2-L2)>.6)AND(C2>O1) AND(O1>C1)AND((H1-L1)>(3*(C1-O1))) AND(C>O)AND(O>O1))
-        let (open, high, low, close) = &self.get_current_ohlc();
+        let (open, _high, _low, close) = &self.get_current_ohlc();
         let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
         let (prev_open1, prev_high1, prev_low1, prev_close1) = &self.get_previous_ohlc(1);
         (prev_open1 > prev_close1)
@@ -286,7 +286,7 @@ impl CandleBuilder {
         //O = H AND C = L.
         let (open, high, low, close) = &self.get_current_ohlc();
         let high_shadow = (high - open) / open;
-        let low_shadow = (low - close) / close;
+        let _low_shadow = (low - close) / close;
         (open >= high && high_shadow < 0.1) && (low <= close && high_shadow < 0.1)
     }
 
@@ -445,8 +445,8 @@ impl CandleBuilder {
             Some(close),
             Some(volume),
             Some(is_closed),
-            Some(previous_candles),
-            Some(logarithmic),
+            Some(_previous_candles),
+            Some(_logarithmic),
         ) = (
             self.date,
             self.open,

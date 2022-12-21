@@ -2541,7 +2541,7 @@ pub fn get_symbols() -> Vec<String> {
     }
 ]}"#;
 
-    let json: SPInstruments = serde_json::from_str(&content).expect("JSON was not well-formatted");
+    let json: SPInstruments = serde_json::from_str(content).expect("JSON was not well-formatted");
     let mut arr = vec![];
     for symbol in json.symbols {
         arr.push([&symbol.symbol, ".US"].concat());

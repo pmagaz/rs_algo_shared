@@ -2,7 +2,7 @@ use super::Indicator;
 use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
-use ta::indicators::{BollingerBands, BollingerBandsOutput};
+use ta::indicators::{BollingerBands};
 use ta::Next;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,7 +70,7 @@ impl Indicator for BollingerBW {
         Ok(())
     }
 
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 

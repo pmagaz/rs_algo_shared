@@ -14,7 +14,7 @@ pub fn maxima_minima(
         .unwrap()
         .parse::<bool>()
         .unwrap();
-    let result: Vec<(usize, f64)> = PeakFinder::new(&x_values)
+    let result: Vec<(usize, f64)> = PeakFinder::new(x_values)
         .with_min_prominence(min_prominence)
         .with_min_distance(min_distance)
         .find_peaks()
@@ -26,7 +26,7 @@ pub fn maxima_minima(
                 true => y.exp(),
                 false => y,
             };
-            return (x, y);
+            (x, y)
         })
         .collect();
 
@@ -39,7 +39,7 @@ pub fn maxima_minima_exp(
     min_prominence: f64,
     min_distance: usize,
 ) -> Result<Vec<(usize, f64)>> {
-    let result: Vec<(usize, f64)> = PeakFinder::new(&x_values)
+    let result: Vec<(usize, f64)> = PeakFinder::new(x_values)
         .with_min_prominence(min_prominence)
         .with_min_distance(min_distance)
         .find_peaks()
@@ -47,7 +47,7 @@ pub fn maxima_minima_exp(
         .map(|peak| {
             let x = peak.middle_position();
             let y = y_values[x];
-            return (x, y);
+            (x, y)
             //return (x, y);
         })
         .collect();

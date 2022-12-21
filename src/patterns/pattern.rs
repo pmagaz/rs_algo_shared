@@ -2,7 +2,7 @@ use crate::helpers::poly::poly_fit;
 use crate::helpers::slope_intercept::{add_next_bottom_points, add_next_top_points};
 use crate::patterns::*;
 use crate::scanner::candle::Candle;
-use crate::scanner::prices::{calculate_price_change, calculate_price_target};
+use crate::scanner::prices::{calculate_price_target};
 
 use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
@@ -555,29 +555,29 @@ impl Patterns {
                 let x_values_top: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 == 0)
-                    .map(|(key, x)| x.0 as f64)
+                    .filter(|(key, _x)| key % 2 == 0)
+                    .map(|(_key, x)| x.0 as f64)
                     .collect();
 
                 let y_values_top: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 == 0)
-                    .map(|(key, x)| x.1)
+                    .filter(|(key, _x)| key % 2 == 0)
+                    .map(|(_key, x)| x.1)
                     .collect();
 
                 let x_values_bottom: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 != 0)
-                    .map(|(key, x)| x.0 as f64)
+                    .filter(|(key, _x)| key % 2 != 0)
+                    .map(|(_key, x)| x.0 as f64)
                     .collect();
 
                 let y_values_bottom: Vec<f64> = data_points
                     .iter()
                     .enumerate()
-                    .filter(|(key, x)| key % 2 != 0)
-                    .map(|(key, x)| x.1)
+                    .filter(|(key, _x)| key % 2 != 0)
+                    .map(|(_key, x)| x.1)
                     .collect();
 
                 let polynomial_top = poly_fit(&x_values_top, &y_values_top, 1);
@@ -624,7 +624,7 @@ impl Patterns {
                         direction,
                         active,
                         pattern_size: pattern_size.clone(),
-                        data_points: data_points,
+                        data_points,
                     }),
                     PatternSize::Extrema => self.extrema_patterns.push(Pattern {
                         pattern_type,
@@ -634,7 +634,7 @@ impl Patterns {
                         direction,
                         active,
                         pattern_size: pattern_size.clone(),
-                        data_points: data_points,
+                        data_points,
                     }),
                 };
             }
@@ -652,7 +652,7 @@ pub fn pattern_active_result(
 
     //FIXME pattern direction
     if top_result {
-        let target = calculate_price_target(&PatternDirection::Top, &data);
+        let target = calculate_price_target(&PatternDirection::Top, data);
 
         PatternActive {
             active: true,
@@ -665,7 +665,7 @@ pub fn pattern_active_result(
             target,
         }
     } else if bottom_result {
-        let target = calculate_price_target(&PatternDirection::Bottom, &data);
+        let target = calculate_price_target(&PatternDirection::Bottom, data);
 
         PatternActive {
             active: true,

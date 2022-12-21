@@ -168,7 +168,9 @@ impl Instrument {
         candle: &Candle,
         logarithmic_scanner: bool,
     ) -> (f64, f64, f64, f64) {
-        let ohlc_indicators = match logarithmic_scanner {
+        
+
+        match logarithmic_scanner {
             true => (
                 candle.open().exp(),
                 candle.high().exp(),
@@ -176,9 +178,7 @@ impl Instrument {
                 candle.close().exp(),
             ),
             false => (candle.open(), candle.high(), candle.low(), candle.close()),
-        };
-
-        ohlc_indicators
+        }
     }
 
     pub fn process_candle(
@@ -309,8 +309,8 @@ impl Instrument {
 
                 let low = candle.low();
                 let high = candle.high();
-                let open = candle.open();
-                let close = candle.close();
+                let _open = candle.open();
+                let _close = candle.close();
                 let volume = candle.volume();
 
                 if self.min_price == -100. {
@@ -351,7 +351,7 @@ impl Instrument {
             })
             .collect();
 
-        if candles.len() > 0 {
+        if !candles.is_empty() {
             if process_patterns {
                 self.peaks
                     .calculate_peaks(&self.max_price, &self.min_price, &0)
@@ -637,7 +637,7 @@ impl InstrumentBuilder {
             Ok(Instrument {
                 symbol,
                 market,
-                time_frame: time_frame,
+                time_frame,
                 current_price: 0.,
                 date: to_dbtime(Local::now()), //FIXME
                 current_candle: CandleType::Default,

@@ -1,7 +1,7 @@
 use super::Indicator;
 use crate::error::Result;
 
-use crate::models::*;
+
 use serde::{Deserialize, Serialize};
 use ta::indicators::ExponentialMovingAverage;
 use ta::Next;
@@ -63,7 +63,7 @@ impl Indicator for Ema {
         Ok(())
     }
 
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 

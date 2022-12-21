@@ -48,7 +48,7 @@ impl HorizontalLevels {
         &mut self,
         current_price: &f64,
         local_maxima: &Vec<(usize, f64)>,
-        peak_type: &Vec<f64>,
+        _peak_type: &Vec<f64>,
     ) -> Result<Vec<HorizontalLevel>> {
         let mut hash: HashMap<String, HorizontalLevel> = HashMap::new();
 
@@ -74,8 +74,8 @@ impl HorizontalLevels {
                         occurrences += 1;
                     }
                     let level_type = match price {
-                        _x if &price >= &current_price => HorizontalLevelType::Resistance,
-                        _x if &price <= &current_price => HorizontalLevelType::Support,
+                        _x if &price >= current_price => HorizontalLevelType::Resistance,
+                        _x if &price <= current_price => HorizontalLevelType::Support,
                         _ => HorizontalLevelType::Support,
                     };
                     hash.insert(

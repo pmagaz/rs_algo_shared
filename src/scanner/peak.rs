@@ -102,7 +102,7 @@ impl Peaks {
         &mut self,
         max_price: &f64,
         min_price: &f64,
-        start_index: &usize,
+        _start_index: &usize,
     ) -> Result<()> {
         // let highs = match start_index.cmp(&0) {
         //     Equal => &self.highs,
@@ -119,7 +119,7 @@ impl Peaks {
             .parse::<f64>()
             .unwrap();
 
-        let mut extrema_prominence = env::var("EXTREMA_MIN_PROMINENCE")
+        let _extrema_prominence = env::var("EXTREMA_MIN_PROMINENCE")
             .unwrap()
             .parse::<f64>()
             .unwrap();
@@ -129,7 +129,7 @@ impl Peaks {
             .parse::<usize>()
             .unwrap();
 
-        let extrema_min_distance = env::var("EXTREMA_PROMINENCE_MIN_DISTANCE")
+        let _extrema_min_distance = env::var("EXTREMA_PROMINENCE_MIN_DISTANCE")
             .unwrap()
             .parse::<usize>()
             .unwrap();
@@ -151,10 +151,10 @@ impl Peaks {
         let mut smooth_close: Vec<f64> = vec![];
 
         let price_diff = max_price - min_price;
-        local_prominence = local_prominence * price_diff;
+        local_prominence *= price_diff;
 
         if price_smoothing {
-            kernel_bandwidth = kernel_bandwidth * price_diff;
+            kernel_bandwidth *= price_diff;
 
             let mut candle_id = 0;
 

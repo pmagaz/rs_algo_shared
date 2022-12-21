@@ -1,7 +1,7 @@
 use crate::helpers::date::*;
 use crate::indicators::Indicator;
-use crate::models::market::*;
-use crate::models::strategy::*;
+
+
 use crate::models::trade::*;
 use crate::scanner::instrument::Instrument;
 
@@ -50,12 +50,12 @@ pub fn create_stop_loss(
 
     let price = match stop_loss.stop_type {
         StopLossType::Atr => {
-            let price = match entry_type {
+            
+            match entry_type {
                 TradeType::EntryLong => current_price - atr_value,
                 TradeType::EntryShort => current_price + atr_value,
                 _ => current_price - atr_value,
-            };
-            price
+            }
         }
         _ => stop_loss_price,
     };
@@ -73,7 +73,7 @@ pub fn create_stop_loss(
 pub fn create_bot_stop_loss(
     entry_type: &TradeType,
     instrument: &Instrument,
-    index: usize,
+    _index: usize,
     stop_loss: &StopLoss,
 ) -> StopLoss {
     let current_price = &instrument.data.last().unwrap().open;
@@ -83,12 +83,12 @@ pub fn create_bot_stop_loss(
 
     let price = match stop_loss.stop_type {
         StopLossType::Atr => {
-            let price = match entry_type {
+            
+            match entry_type {
                 TradeType::EntryLong => current_price - atr_value,
                 TradeType::EntryShort => current_price + atr_value,
                 _ => current_price - atr_value,
-            };
-            price
+            }
         }
         _ => stop_loss_price,
     };
@@ -124,12 +124,12 @@ pub fn update_bot_stop_loss(price: f64, entry_type: &TradeType, stop_loss: &Stop
     let price = match stop_loss.stop_type {
         StopLossType::Atr => {
             let atr_value = stop_loss.value;
-            let price = match entry_type {
+            
+            match entry_type {
                 TradeType::EntryLong => price - atr_value,
                 TradeType::EntryShort => price + atr_value,
                 _ => price - atr_value,
-            };
-            price
+            }
         }
         _ => stop_loss_price,
     };

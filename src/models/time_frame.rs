@@ -88,31 +88,17 @@ impl TimeFrameType {
     }
 
     pub fn is_minutely_time_frame(&self) -> bool {
-        if self == &TimeFrameType::M1
+        self == &TimeFrameType::M1
             || self == &TimeFrameType::M5
-            || self == &TimeFrameType::M15
-            || self == &TimeFrameType::M30
-        {
-            true
-        } else {
-            false
-        }
+            || self == &TimeFrameType::M15 || self == &TimeFrameType::M30
     }
 
     pub fn is_hourly_time_frame(&self) -> bool {
-        if self == &TimeFrameType::H1 || self == &TimeFrameType::H4 {
-            true
-        } else {
-            false
-        }
+        self == &TimeFrameType::H1 || self == &TimeFrameType::H4
     }
 
     pub fn is_daily_time_frame(&self) -> bool {
-        if self == &TimeFrameType::D {
-            true
-        } else {
-            false
-        }
+        self == &TimeFrameType::D
     }
 
     pub fn max_bars(&self) -> i64 {
@@ -175,7 +161,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     let date = data.0;
     let minutes = date.minute() as i64 + 1;
     let hours = date.hour() as i64 + 1;
-    let minutes_interval = time_frame.max_bars().clone();
+    let minutes_interval = time_frame.max_bars();
 
     let comparator = match time_frame.is_minutely_time_frame() {
         true => minutes,
@@ -188,12 +174,12 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 .closing_time()
                 .iter()
                 .enumerate()
-                .filter(|(i, val)| comparator > **val)
+                .filter(|(_i, val)| comparator > **val)
                 .map(|(i, _val)| i)
                 .last()
                 .unwrap();
 
-            let closing_time = time_frame.closing_time().clone();
+            let closing_time = time_frame.closing_time();
             let next_close = match closing_time.get(next_close_idx + 1) {
                 Some(val) => *val,
                 _ => match time_frame.is_minutely_time_frame() {
@@ -214,7 +200,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
 }
 
 pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
-    let minutes_interval = time_frame.max_bars().clone();
+    let minutes_interval = time_frame.max_bars();
     get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
 }
 
@@ -222,7 +208,7 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
     let date = data.0;
     let now = Local::now();
     let minutes = date.minute() as i64;
-    let minutes_interval = time_frame.max_bars().clone();
+    let minutes_interval = time_frame.max_bars();
 
     let open_until = match next {
         true => match time_frame.closing_time().contains(&minutes) {

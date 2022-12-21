@@ -84,7 +84,7 @@ pub fn get_pattern_status(
 ) -> Status {
     let max_pattern_date = to_dbtime(Local::now() - Duration::days(max_days));
 
-    let max_activated_date = to_dbtime(Local::now() - Duration::days(max_days));
+    let _max_activated_date = to_dbtime(Local::now() - Duration::days(max_days));
 
     let super_date = to_dbtime(Local::now() - Duration::days(35));
 
@@ -106,7 +106,7 @@ pub fn get_pattern_status(
                 None => fake_date,
             };
 
-            let pattern_active_date = match pattern {
+            let _pattern_active_date = match pattern {
                 Some(val) => val.active.date,
                 None => fake_date,
             };
@@ -210,7 +210,7 @@ pub fn get_profit_per_status(profit: f64) -> Status {
 pub fn get_profit_factor_status(profit_factor: f64) -> Status {
     match profit_factor {
         _x if profit_factor < 1.2 => Status::Bearish,
-        _x if profit_factor >= 1.2 && profit_factor < 1.74 => Status::Neutral,
+        _x if (1.2..1.74).contains(&profit_factor) => Status::Neutral,
         _x if profit_factor >= 1.75 => Status::Bullish,
         _ => Status::Neutral,
     }
@@ -239,7 +239,7 @@ pub fn get_profit_status(profit: f64, buy_hold: f64) -> Status {
 pub fn get_max_drawdown_status(max_drawdown: f64) -> Status {
     match max_drawdown {
         _x if max_drawdown >= 20. => Status::Bearish,
-        _x if max_drawdown >= 15. && max_drawdown < 20. => Status::Neutral,
+        _x if (15. ..20.).contains(&max_drawdown) => Status::Neutral,
         _x if max_drawdown <= 15. => Status::Bullish,
         _ => Status::Neutral,
     }
