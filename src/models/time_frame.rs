@@ -87,10 +87,15 @@ impl TimeFrameType {
         }
     }
 
+    pub fn is_base_time_frame(&self) -> bool {
+        self == &TimeFrameType::M1
+    }
+
     pub fn is_minutely_time_frame(&self) -> bool {
         self == &TimeFrameType::M1
             || self == &TimeFrameType::M5
-            || self == &TimeFrameType::M15 || self == &TimeFrameType::M30
+            || self == &TimeFrameType::M15
+            || self == &TimeFrameType::M30
     }
 
     pub fn is_hourly_time_frame(&self) -> bool {
@@ -159,13 +164,13 @@ impl std::fmt::Display for TimeFrameType {
 
 pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
     let date = data.0;
-    let minutes = date.minute() as i64 + 1;
-    let hours = date.hour() as i64 + 1;
+    let candle_minute = date.minute() as i64 + 1;
+    let candle_hour = date.hour() as i64 + 1;
     let minutes_interval = time_frame.max_bars();
 
     let comparator = match time_frame.is_minutely_time_frame() {
-        true => minutes,
-        false => hours,
+        true => candle_minute,
+        false => candle_hour,
     };
 
     let open_until = match next {
@@ -188,9 +193,11 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 },
             };
 
+            let next_minute = 1;
+
             match time_frame.is_minutely_time_frame() {
-                true => date + Duration::minutes(next_close - minutes + 1),
-                false => date + Duration::minutes(minutes_interval - minutes + 1),
+                true => date + Duration::minutes(next_close - candle_minute + next_minute),
+                false => date + Duration::minutes(minutes_interval - candle_minute + next_minute),
             }
         }
         false => date + Duration::minutes(minutes_interval),
@@ -212,14 +219,8 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
 
     let open_until = match next {
         true => match time_frame.closing_time().contains(&minutes) {
-            true => {
-                //println!("true");
-                get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
-            }
-            false => {
-                //println!("false");
-                get_open_until(data, time_frame, next)
-            }
+            true => get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval),
+            false => get_open_until(data, time_frame, next),
         },
         false => get_open_until(data, time_frame, next),
     };

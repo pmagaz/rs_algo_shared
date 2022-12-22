@@ -261,6 +261,8 @@ pub fn resolve_bot_trade_out(
     };
 
     let profit = bid - ask;
+
+    println!("666666666 {:?} {:?} {:?}", bid, ask, profit);
     let is_profitable = match profit {
         _ if profit > 0. => true,
         _ => false,

@@ -168,8 +168,6 @@ impl Instrument {
         candle: &Candle,
         logarithmic_scanner: bool,
     ) -> (f64, f64, f64, f64) {
-        
-
         match logarithmic_scanner {
             true => (
                 candle.open().exp(),
@@ -447,7 +445,8 @@ impl Instrument {
         let candle =
             self.create_new_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
 
-        let updated_candle = self.update_candle(candle.clone(), &last_candle);
+        let time_frame = &self.time_frame.clone();
+        let updated_candle = self.update_candle(candle.clone(), &last_candle, &time_frame);
 
         // println!(
         //     "2222222 open {} high {} low {} close {} date {}",
@@ -507,7 +506,12 @@ impl Instrument {
         }
     }
 
-    pub fn update_candle(&mut self, mut candle: Candle, last_candle: &Candle) -> Candle {
+    pub fn update_candle(
+        &mut self,
+        mut candle: Candle,
+        last_candle: &Candle,
+        time_frame: &TimeFrameType,
+    ) -> Candle {
         log::info!("Updating last candle");
 
         let current_high = candle.high();
@@ -529,15 +533,21 @@ impl Instrument {
             _ => previous_low,
         };
 
-        candle.set_open(previous_open);
-        candle.set_high(higher_value);
-        candle.set_low(lower_value);
+        println!("44444444 {:?}", candle);
 
-        if candle.is_closed() {
-            candle.set_close(previous_close);
+        if !time_frame.is_base_time_frame() {
+            candle.set_open(previous_open);
+            candle.set_high(higher_value);
+            candle.set_low(lower_value);
+            if candle.is_closed() {
+                candle.set_close(previous_close);
+            }
         }
 
+        println!("555555555 {:?}", candle);
+
         *self.data.last_mut().unwrap() = candle.clone();
+
         candle
     }
 
