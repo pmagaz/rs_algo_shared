@@ -533,8 +533,6 @@ impl Instrument {
             _ => previous_low,
         };
 
-        println!("44444444 {:?}", candle);
-
         if !time_frame.is_base_time_frame() {
             candle.set_open(previous_open);
             candle.set_high(higher_value);
@@ -543,8 +541,6 @@ impl Instrument {
                 candle.set_close(previous_close);
             }
         }
-
-        println!("555555555 {:?}", candle);
 
         *self.data.last_mut().unwrap() = candle.clone();
 

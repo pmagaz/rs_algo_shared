@@ -285,9 +285,9 @@ impl BrokerStream for Xtb {
         let symbol = &trade.symbol;
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
-        let price_out = trade.data.price_out.clone();
+        let price_out = trade.data.price_out;
         let bid = pricing.bid;
-        let ask = pricing.ask;
+        let ask = trade.data.ask;
         let spread = pricing.spreadRaw;
 
         log::info!(
