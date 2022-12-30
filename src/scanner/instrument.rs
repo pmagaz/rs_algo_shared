@@ -512,7 +512,7 @@ impl Instrument {
         last_candle: &Candle,
         time_frame: &TimeFrameType,
     ) -> Candle {
-        log::info!("Updating last candle");
+        log::info!("Updating last candle {}", last_candle.date());
 
         let current_high = candle.high();
         let previous_open = last_candle.open();
@@ -547,8 +547,8 @@ impl Instrument {
         candle
     }
 
-    pub fn add_new_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
-        log::info!("Inserting new candle");
+    pub fn init_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
+        log::info!("Inserting new candle {}", data.0);
 
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
