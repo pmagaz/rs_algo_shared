@@ -201,8 +201,7 @@ pub fn get_target_status(target: f64) -> Status {
 pub fn get_profit_per_status(profit: f64) -> Status {
     match profit {
         _x if profit < 0.  => Status::Bearish,
-        _x if profit > 0. && profit < 2. => Status::Neutral,
-        _x if profit >= 2. => Status::Bullish,
+        _x if profit > 0. => Status::Bullish,
         _ => Status::Neutral,
     }
 }
