@@ -50,6 +50,51 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Currency"
     },
     {
+        "symbol": "CHFHUF",
+        "name": "CHFHUF",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "CHFPLN",
+        "name": "CHFPLN",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "CHFJPY",
+        "name": "CHFJPY",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURAUD",
+        "name": "EURAUD",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURCAD",
+        "name": "EURCAD",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURCHF",
+        "name": "EURCHF",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURCNH",
+        "name": "EURCNH",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURCZK",
+        "name": "EURCZK",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "EURGBP",
+        "name": "EURUGBP",
+        "sector": "Currency"
+    },
+    {
         "symbol": "EURUSD",
         "name": "EURUSD",
         "sector": "Currency"
@@ -57,6 +102,16 @@ pub fn get_symbols() -> Vec<String> {
     {
         "symbol": "GBPUSD",
         "name": "GBPUSD",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "GBPAUD",
+        "name": "GBPAUD",
+        "sector": "Currency"
+    },
+    {
+        "symbol": "GBPCAD",
+        "name": "GBPCAD",
         "sector": "Currency"
     },
     {
@@ -77,16 +132,6 @@ pub fn get_symbols() -> Vec<String> {
     {
         "symbol": "USDCAD",
         "name": "USDCAD",
-        "sector": "Currency"
-    },
-    {
-        "symbol": "CHFPLN",
-        "name": "CHFPLN",
-        "sector": "Currency"
-    },
-    {
-        "symbol": "CHFJPY",
-        "name": "CHFJPY",
         "sector": "Currency"
     }
 ]}"#;

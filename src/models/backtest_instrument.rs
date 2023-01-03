@@ -40,6 +40,12 @@ pub struct BackTestInstrument {
     pub trades_out: Vec<TradeOut>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackTestSpread {
+    pub symbol: String,
+    pub spread: f64,
+}
+
 pub enum BackTestResult {
     BackTestInstrumentResult(BackTestInstrumentResult),
     None,
