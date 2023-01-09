@@ -10,6 +10,25 @@ pub enum StrategyType {
     OnlyShortMultiTF,
 }
 
+impl StrategyType {
+    pub fn is_long_only(&self) -> bool {
+        match *self {
+            StrategyType::OnlyLong => true,
+            StrategyType::OnlyLongMultiTF => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_multi_timeframe(&self) -> bool {
+        match *self {
+            StrategyType::OnlyLongMultiTF => true,
+            StrategyType::LongShortMultiTF => true,
+            StrategyType::OnlyShortMultiTF => true,
+            _ => false,
+        }
+    }
+}
+
 pub fn from_str(strategy: &str) -> StrategyType {
     match strategy {
         "OnlyLong" => StrategyType::OnlyLong,
@@ -27,6 +46,14 @@ pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
         StrategyType::OnlyLongMultiTF => true,
         StrategyType::LongShortMultiTF => true,
         StrategyType::OnlyShortMultiTF => true,
+        _ => false,
+    }
+}
+
+pub fn is_long_only(strategy_type: &StrategyType) -> bool {
+    match strategy_type {
+        StrategyType::OnlyLong => true,
+        StrategyType::OnlyLongMultiTF => true,
         _ => false,
     }
 }

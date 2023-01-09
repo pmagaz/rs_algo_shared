@@ -236,10 +236,5 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
     };
 
-    // println!(
-    //     "444444 {:?} - {:?} - {:?} {} - {:?}",
-    //     date, open_from, open_until, is_closed, adapted.0
-    // );
-
     adapted
 }

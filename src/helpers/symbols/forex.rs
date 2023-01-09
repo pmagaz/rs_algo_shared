@@ -85,11 +85,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Currency"
     },
     {
-        "symbol": "EURCZK",
-        "name": "EURCZK",
-        "sector": "Currency"
-    },
-    {
         "symbol": "EURGBP",
         "name": "EURUGBP",
         "sector": "Currency"

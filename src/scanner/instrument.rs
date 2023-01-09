@@ -336,15 +336,6 @@ impl Instrument {
                     self.indicators.next(ohlc_indicators).unwrap();
                 }
 
-                // println!(
-                //     "1111111 open {} high {} low {} close {} date {}",
-                //     candle.open(),
-                //     candle.high(),
-                //     candle.low(),
-                //     candle.close(),
-                //     candle.date(),
-                // );
-
                 candle
             })
             .collect();

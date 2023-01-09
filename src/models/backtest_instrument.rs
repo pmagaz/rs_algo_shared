@@ -6,6 +6,8 @@ use crate::models::trade::*;
 
 use serde::{Deserialize, Serialize};
 
+use super::order::Order;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
     pub instrument: BackTestInstrument,
@@ -38,6 +40,7 @@ pub struct BackTestInstrument {
     pub symbol: String,
     pub trades_in: Vec<TradeIn>,
     pub trades_out: Vec<TradeOut>,
+    pub orders: Vec<Order>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

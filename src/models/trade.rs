@@ -1,9 +1,10 @@
+use super::order::{Order, OrderCondition, OrderType};
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
 use crate::models::stop_loss::*;
 use crate::scanner::instrument::*;
-use round::round;
 
+use round::round;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -14,28 +15,65 @@ pub enum TradeDirection {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeType {
-    EntryLong,
-    ExitLong,
-    EntryShort,
-    ExitShort,
+    MarketInLong,
+    MarketOutLong,
+    MarketInShort,
+    MarketOutShort,
+    OrderInLong,
+    OrderOutLong,
+    OrderInShort,
+    OrderOutShort,
     StopLoss,
-    TakeProfit,
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Operation {
+    MarketIn(Option<Vec<OrderType>>),
+    MarketOut(Option<Vec<OrderType>>),
+    MarketInOrder(Order),
+    MarketOutOrder(Order),
+    Order(Vec<OrderType>),
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OperationResult {
+    MarketIn(TradeResult, Option<Vec<Order>>),
+    MarketOut(TradeResult),
+    PendingOrder(Vec<Order>),
+    MarketInOrder(TradeResult, Order),
+    MarketOutOrder(TradeResult, Order),
     None,
 }
 
 impl TradeType {
     pub fn is_entry(&self) -> bool {
         match *self {
-            TradeType::EntryLong => true,
-            TradeType::EntryShort => true,
+            TradeType::MarketInLong
+            | TradeType::MarketInShort
+            | TradeType::OrderInLong
+            | TradeType::OrderInShort => true,
             _ => false,
         }
     }
 
-    pub fn is_exit(&self, trade_type: &TradeType) -> bool {
-        match trade_type {
-            TradeType::ExitLong => true,
-            TradeType::ExitShort => true,
+    pub fn is_exit(&self) -> bool {
+        match *self {
+            TradeType::MarketOutLong
+            | TradeType::MarketOutShort
+            | TradeType::OrderOutLong
+            | TradeType::OrderOutShort => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_long(&self) -> bool {
+        match *self {
+            TradeType::MarketInLong
+            | TradeType::MarketOutLong
+            | TradeType::OrderInLong
+            | TradeType::OrderOutLong => true,
             _ => false,
         }
     }
@@ -43,14 +81,24 @@ impl TradeType {
 
 pub fn type_from_str(trade_type: &str) -> TradeType {
     match trade_type {
-        "EntryLong" => TradeType::EntryLong,
-        "ExitLong" => TradeType::ExitLong,
-        "EntryShort" => TradeType::EntryShort,
-        "ExitShort" => TradeType::ExitShort,
+        "MarketInLong" => TradeType::MarketInLong,
+        "MarketOutLong" => TradeType::MarketOutLong,
+        "MarketInShort" => TradeType::MarketInShort,
+        "MarketOutShort" => TradeType::MarketOutShort,
+        "OrderInLong" => TradeType::OrderInLong,
+        "OrderOutLong" => TradeType::OrderOutLong,
+        "OrderInShort" => TradeType::OrderInShort,
+        "OrderOutShort" => TradeType::OrderOutShort,
         "StopLoss" => TradeType::StopLoss,
-        "TakeProfit" => TradeType::TakeProfit,
         _ => TradeType::None,
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TradeResult {
+    TradeIn(TradeIn),
+    TradeOut(TradeOut),
+    None,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -61,7 +109,7 @@ pub struct TradeIn {
     pub price_in: f64,
     pub ask: f64,
     pub spread: f64,
-    pub stop_loss: StopLoss,
+    //pub stop_loss: StopLoss,
     pub date_in: DbDateTime,
     pub trade_type: TradeType,
 }
@@ -88,13 +136,6 @@ pub struct TradeOut {
     pub draw_down_per: f64,
 }
 
-#[derive(Debug)]
-pub enum TradeResult {
-    TradeIn(TradeIn),
-    TradeOut(TradeOut),
-    None,
-}
-
 impl std::fmt::Display for TradeIn {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -113,9 +154,9 @@ pub fn resolve_trade_in(
     instrument: &Instrument,
     entry_type: TradeType,
     spread: f64,
-    stop_loss: &StopLoss,
+    //stop_loss: &StopLoss,
 ) -> TradeResult {
-    if entry_type == TradeType::EntryLong || entry_type == TradeType::EntryShort {
+    if entry_type.is_entry() {
         let nex_candle_index = index + 1;
         let next_day_candle = instrument.data.get(nex_candle_index);
         let next_day_price = match next_day_candle {
@@ -129,13 +170,12 @@ pub fn resolve_trade_in(
         let quantity = round(order_size / next_day_price, 3);
 
         TradeResult::TradeIn(TradeIn {
-            id: 0,
+            id: current_date.timestamp_millis() as usize,
             index_in: nex_candle_index,
             price_in: next_day_price,
             ask,
             spread,
             quantity,
-            stop_loss: create_stop_loss(&entry_type, instrument, nex_candle_index, stop_loss),
             date_in: to_dbtime(current_date),
             trade_type: entry_type,
         })
@@ -147,8 +187,8 @@ pub fn resolve_trade_in(
 pub fn resolve_trade_out(
     index: usize,
     instrument: &Instrument,
-    trade_in: TradeIn,
-    exit_type: TradeType,
+    trade_in: &TradeIn,
+    exit_type: &TradeType,
 ) -> TradeResult {
     let quantity = trade_in.quantity;
     let data = &instrument.data;
@@ -156,7 +196,7 @@ pub fn resolve_trade_out(
     let index_in = trade_in.index_in;
 
     let current_candle = data.get(nex_candle_index);
-
+    let current_date = current_candle.unwrap().date;
     let ask = trade_in.ask;
     let bid = match current_candle {
         Some(candle) => candle.open,
@@ -170,15 +210,9 @@ pub fn resolve_trade_out(
         _ => false,
     };
 
-    let stop_loss_activated = resolve_stop_loss(bid, &trade_in);
-
     if index > trade_in.index_in
-        && (is_profitable && exit_type == TradeType::ExitLong
-            || exit_type == TradeType::ExitShort
-            || stop_loss_activated)
+        && ((exit_type.is_exit() && is_profitable) || exit_type == &TradeType::StopLoss)
     {
-        log::info!("Executing tradeOut");
-
         let date_in = instrument.data.get(index_in).unwrap().date;
         let date_out = current_candle.unwrap().date;
         let profit = calculate_profit(quantity, ask, bid);
@@ -188,16 +222,15 @@ pub fn resolve_trade_out(
         let draw_down = calculate_drawdown(data, ask, index_in, nex_candle_index);
         let draw_down_per = calculate_drawdown_per(draw_down, ask);
 
-        let trade_type = match stop_loss_activated {
-            true => TradeType::StopLoss,
-            false => exit_type,
-        };
-
+        // let trade_type = match stop_loss_activated {
+        //     true => TradeType::StopLoss,
+        //     false => exit_type,
+        // };
         TradeResult::TradeOut(TradeOut {
-            id: 0,
+            id: current_date.timestamp_millis() as usize,
             index_in,
             price_in: ask,
-            trade_type,
+            trade_type: exit_type.clone(),
             date_in: to_dbtime(date_in),
             spread_in: trade_in.spread,
             ask: ask,
@@ -224,7 +257,7 @@ pub fn resolve_bot_trade_in(
     entry_type: TradeType,
     stop_loss: &StopLoss,
 ) -> TradeResult {
-    if entry_type == TradeType::EntryLong || entry_type == TradeType::EntryShort {
+    if entry_type.is_entry() {
         let candle = instrument.data.last().unwrap();
         let current_date = candle.date();
         let close_price = candle.close();
@@ -238,7 +271,7 @@ pub fn resolve_bot_trade_in(
             spread: close_price,
             ask: close_price,
             quantity,
-            stop_loss: create_bot_stop_loss(&entry_type, instrument, index, stop_loss),
+            //stop_loss: create_bot_stop_loss(&entry_type, instrument, index, stop_loss),
             date_in: to_dbtime(current_date),
             trade_type: entry_type,
         })
@@ -266,10 +299,9 @@ pub fn resolve_bot_trade_out(
     let bid = candle.close();
     let index = date_out.timestamp_millis() as usize;
 
-    let stop_loss_price = match &exit_type {
-        TradeType::ExitLong => candle.low,
-        TradeType::ExitShort => candle.high,
-        _ => candle.high,
+    let stop_loss_price = match exit_type.is_long() {
+        true => candle.low,
+        false => candle.high,
     };
 
     let profit = bid - ask;
@@ -279,20 +311,22 @@ pub fn resolve_bot_trade_out(
         _ => false,
     };
 
-    let stop_loss_activated = resolve_stop_loss(stop_loss_price, &trade_in);
+    //let stop_loss_activated = resolve_stop_loss(stop_loss_price, &trade_in);
 
-    if (is_profitable && exit_type == TradeType::ExitLong || exit_type == TradeType::ExitShort)
-        || stop_loss_activated
+    if is_profitable && exit_type.is_exit()
+    //|| stop_loss_activated
     {
         log::info!("Executing {:?}", exit_type);
 
-        let trade_type = match stop_loss_activated {
-            true => {
-                log::info!("Stop loss activated");
-                TradeType::StopLoss
-            }
-            false => exit_type,
-        };
+        // let trade_type = match stop_loss_activated {
+        //     true => {
+        //         log::info!("Stop loss activated");
+        //         TradeType::StopLoss
+        //     }
+        //     false => exit_type,
+        // };
+
+        let trade_type = exit_type;
 
         TradeResult::TradeOut(TradeOut {
             id: 0,
