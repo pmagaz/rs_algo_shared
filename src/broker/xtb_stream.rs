@@ -260,7 +260,7 @@ impl BrokerStream for Xtb {
 
         let entry_type = &data.trade_type;
         let stop_loss = data.stop_loss;
-        data.id = Local::now().timestamp_millis() as usize;
+        data.id = uuid::generate_ts_id(Local::now());
         data.price_in = bid;
         data.ask = ask;
         data.spread = spread;
@@ -298,7 +298,7 @@ impl BrokerStream for Xtb {
         );
 
         let mut data = trade.data;
-        data.id = Local::now().timestamp_millis() as usize;
+        data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
         data.bid = bid;
         data.ask = ask;

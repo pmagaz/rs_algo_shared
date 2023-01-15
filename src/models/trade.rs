@@ -1,6 +1,7 @@
 use super::order::{Order, OrderCondition, OrderType};
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
+use crate::helpers::uuid;
 use crate::models::stop_loss::*;
 use crate::scanner::instrument::*;
 
@@ -150,9 +151,9 @@ impl std::fmt::Display for TradeOut {
 
 pub fn resolve_trade_in(
     index: usize,
-    order_size: f64,
+    trade_size: f64,
     instrument: &Instrument,
-    entry_type: TradeType,
+    entry_type: &TradeType,
     spread: f64,
     //stop_loss: &StopLoss,
 ) -> TradeResult {
@@ -167,17 +168,17 @@ pub fn resolve_trade_in(
 
         let ask = next_day_price + spread;
 
-        let quantity = round(order_size / next_day_price, 3);
+        let quantity = round(trade_size / next_day_price, 3);
 
         TradeResult::TradeIn(TradeIn {
-            id: current_date.timestamp_millis() as usize,
+            id: uuid::generate_ts_id(current_date),
             index_in: nex_candle_index,
             price_in: next_day_price,
             ask,
             spread,
             quantity,
             date_in: to_dbtime(current_date),
-            trade_type: entry_type,
+            trade_type: entry_type.clone(),
         })
     } else {
         TradeResult::None
@@ -227,7 +228,7 @@ pub fn resolve_trade_out(
         //     false => exit_type,
         // };
         TradeResult::TradeOut(TradeOut {
-            id: current_date.timestamp_millis() as usize,
+            id: uuid::generate_ts_id(current_date),
             index_in,
             price_in: ask,
             trade_type: exit_type.clone(),
@@ -252,7 +253,7 @@ pub fn resolve_trade_out(
 }
 
 pub fn resolve_bot_trade_in(
-    order_size: f64,
+    trade_size: f64,
     instrument: &Instrument,
     entry_type: TradeType,
     stop_loss: &StopLoss,
@@ -261,12 +262,12 @@ pub fn resolve_bot_trade_in(
         let candle = instrument.data.last().unwrap();
         let current_date = candle.date();
         let close_price = candle.close();
-        let quantity = round(order_size / close_price, 3);
-        let index = current_date.timestamp_millis() as usize;
+        let quantity = round(trade_size / close_price, 3);
+        let id = uuid::generate_ts_id(current_date);
 
         TradeResult::TradeIn(TradeIn {
-            id: 0,
-            index_in: index,
+            id,
+            index_in: id,
             price_in: close_price,
             spread: close_price,
             ask: close_price,
@@ -297,7 +298,7 @@ pub fn resolve_bot_trade_out(
     let candle = data.last().unwrap();
     let date_out = candle.date();
     let bid = candle.close();
-    let index = date_out.timestamp_millis() as usize;
+    let id = uuid::generate_ts_id(date_out);
 
     let stop_loss_price = match exit_type.is_long() {
         true => candle.low,
@@ -329,14 +330,14 @@ pub fn resolve_bot_trade_out(
         let trade_type = exit_type;
 
         TradeResult::TradeOut(TradeOut {
-            id: 0,
+            id,
             index_in,
             price_in,
             ask,
             spread_in,
             trade_type,
             date_in,
-            index_out: index,
+            index_out: id,
             price_out: candle.close(),
             bid: stop_loss_price,
             spread_out: spread_in,

@@ -10,6 +10,11 @@ pub fn calculate_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
     size * (price_out - price_in)
 }
 
+pub fn to_pips(pips: &f64) -> f64 {
+    let pip_value = std::env::var("PIP_VALUE").unwrap().parse::<f64>().unwrap();
+    pip_value * pips
+}
+
 pub fn calculate_trade_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
     calculate_profit(size, price_in, price_out)
 }
@@ -138,7 +143,10 @@ pub fn total_drawdown(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
         .map(|(_i, x)| *x)
         .fold(f64::NAN, f64::min);
 
-    let min_equity_index = equity_curve.iter().position(|&r| r == min_equity_peak).unwrap_or(0);
+    let min_equity_index = equity_curve
+        .iter()
+        .position(|&r| r == min_equity_peak)
+        .unwrap_or(0);
 
     let mut max_equity_peak = equity_curve
         .iter()

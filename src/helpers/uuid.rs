@@ -1,4 +1,5 @@
 pub use bson::Uuid;
+use chrono::{DateTime, Local};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -20,4 +21,8 @@ pub fn generate(seed: [&String; 4]) -> Uuid {
 
 pub fn from_str(uuid: String) -> Uuid {
     Uuid::parse_str(uuid).unwrap()
+}
+
+pub fn generate_ts_id(date: DateTime<Local>) -> usize {
+    (date.timestamp_millis() / 1000) as usize
 }

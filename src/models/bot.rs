@@ -1,3 +1,4 @@
+use super::order::Order;
 use crate::helpers::date::*;
 use crate::helpers::uuid::Uuid;
 use crate::models::market::*;
@@ -5,6 +6,7 @@ use crate::models::strategy::*;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
 use crate::scanner::instrument::{HigherTMInstrument, Instrument};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -22,6 +24,7 @@ pub struct BotData {
     higher_tf_instrument: HigherTMInstrument,
     trades_in: Vec<TradeIn>,
     trades_out: Vec<TradeOut>,
+    orders: Vec<Order>,
     strategy_stats: StrategyStats,
 }
 
@@ -60,6 +63,9 @@ impl BotData {
     }
     pub fn trades_out(&self) -> &Vec<TradeOut> {
         &self.trades_out
+    }
+    pub fn orders(&self) -> &Vec<Order> {
+        &self.orders
     }
     pub fn strategy_stats(&self) -> &StrategyStats {
         &self.strategy_stats

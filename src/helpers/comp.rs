@@ -1,10 +1,8 @@
-
-
 pub fn percentage_change(x: f64, y: f64) -> f64 {
     let max = x.max(y);
     let min = y.min(x);
     let increase = max - min;
-    
+
     (increase / x) * 100.
 }
 
@@ -43,11 +41,11 @@ pub fn increase_equally(a: (f64, f64), b: (f64, f64), threshold: f64) -> bool {
 }
 
 pub fn max_number(data: &Vec<f64>) -> f64 {
-    let min = data
+    let max = data
         .iter()
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
-    *min
+    *max
 }
 
 pub fn min_number(data: &Vec<f64>) -> f64 {

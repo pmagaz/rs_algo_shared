@@ -49,6 +49,7 @@ pub struct BackTestSpread {
     pub spread: f64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum BackTestResult {
     BackTestInstrumentResult(BackTestInstrumentResult),
     None,
