@@ -13,10 +13,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrderType {
-    BuyOrder(f64, f64),
-    SellOrder(f64, f64),
-    TakeProfit(f64, f64),
-    StopLoss(StopLossType),
+    BuyOrder(OrderDirection, f64, f64),
+    SellOrder(OrderDirection, f64, f64),
+    TakeProfit(OrderDirection, f64, f64),
+    StopLoss(OrderDirection, StopLossType),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum OrderDirection {
+    Up,
+    Down,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -41,7 +47,6 @@ pub struct Order {
     pub index_fulfilled: usize,
     pub order_type: OrderType,
     pub status: OrderStatus,
-    pub condition: OrderCondition,
     pub origin_price: f64,
     pub target_price: f64,
     pub quantity: f64,
@@ -79,9 +84,9 @@ impl Order {
         self.set_full_filled_at(to_dbtime(date));
     }
 
-    pub fn cancel_order(&mut self, date: DateTime<Local>) {
+    pub fn cancel_order(&mut self, date: DbDateTime) {
         self.set_status(OrderStatus::Canceled);
-        self.set_updated_at(to_dbtime(date));
+        self.set_updated_at(date);
     }
 }
 
@@ -100,9 +105,9 @@ pub fn prepare_orders(
     let trade_id = uuid::generate_ts_id(instrument.data.get(index + 1).unwrap().date());
     for order_type in order_types {
         match order_type {
-            OrderType::BuyOrder(quantity, target_price)
-            | OrderType::SellOrder(quantity, target_price)
-            | OrderType::TakeProfit(quantity, target_price) => {
+            OrderType::BuyOrder(_, quantity, target_price)
+            | OrderType::SellOrder(_, quantity, target_price)
+            | OrderType::TakeProfit(_, quantity, target_price) => {
                 let order = create_order(
                     index,
                     trade_id,
@@ -114,7 +119,7 @@ pub fn prepare_orders(
                 );
                 orders.push(order);
             }
-            OrderType::StopLoss(stop_loss_stype) => {
+            OrderType::StopLoss(_, stop_loss_stype) => {
                 let stop_loss = create_stop_loss_order(
                     index,
                     trade_id,
@@ -170,7 +175,6 @@ pub fn create_order(
         trade_id,
         order_type: order_type.clone(),
         status: OrderStatus::Pending,
-        condition,
         origin_price,
         target_price: *target_price,
         quantity: *quantity,
@@ -194,8 +198,8 @@ pub fn resolve(index: usize, instrument: &Instrument, mut orders: Vec<Order>) ->
                 let candle = instrument.data.get(index).unwrap();
                 order.fulfill_order(index, candle.date());
                 match order.order_type {
-                    OrderType::BuyOrder(_, _) => {
-                      log::warn!(
+                    OrderType::BuyOrder(_, _, _) => {
+                        log::warn!(
                             "9999999 Order activated {} at {:?} {:?}",
                             index,
                             order.target_price,
@@ -203,7 +207,7 @@ pub fn resolve(index: usize, instrument: &Instrument, mut orders: Vec<Order>) ->
                         );
                         operations.push(Operation::MarketInOrder(order.clone()));
                     }
-                    OrderType::SellOrder(_, _) => {
+                    OrderType::SellOrder(_, _, _) => {
                         log::warn!(
                             "9999999 SellOrder activated {} at {:?} {:?}",
                             index,
@@ -213,7 +217,7 @@ pub fn resolve(index: usize, instrument: &Instrument, mut orders: Vec<Order>) ->
 
                         operations.push(Operation::MarketOutOrder(order.clone()));
                     }
-                    OrderType::StopLoss(_) => {
+                    OrderType::StopLoss(_, _) => {
                         log::warn!(
                             "9999999 StopLoss activated {} at {:?}",
                             index,
@@ -251,17 +255,30 @@ fn order_activated(mut order: &Order, instrument: &Instrument, index: usize) -> 
     let prev_candle = data.get(prev_index).unwrap();
 
     //Cross over
-    current_candle.high() >= order.target_price && prev_candle.high() < order.target_price
-    ||
+    //let cross_over = current_candle.high() >= order.target_price && prev_candle.high() < order.target_price
+    let cross_over =
+        current_candle.high() >= order.target_price && prev_candle.high() < order.target_price;
+    //||
     //Cross bellow
-    current_candle.low() <= order.target_price && prev_candle.low() > order.target_price
-    || 
+    //let cross_down = current_candle.low() <= order.target_price && prev_candle.low() > order.target_price
+    let cross_bellow =
+        current_candle.low() <= order.target_price && prev_candle.low() > order.target_price;
+    // ||
     // Price already activated
-    match order.condition{
-        OrderCondition::Greater => current_candle.close() >= order.target_price,
-        OrderCondition::Lower => current_candle.close() <= order.target_price,
-                OrderCondition::Equal => todo!(),
-
+    match &order.order_type {
+        OrderType::BuyOrder(direction, _, _) => match direction {
+            OrderDirection::Up => cross_over,
+            OrderDirection::Down => cross_bellow,
+        },
+        OrderType::SellOrder(direction, _, _) => match direction {
+            OrderDirection::Up => cross_over,
+            OrderDirection::Down => cross_bellow,
+        },
+        OrderType::StopLoss(direction, stop) => match direction {
+            OrderDirection::Up => cross_over,
+            OrderDirection::Down => cross_bellow,
+        },
+        OrderType::TakeProfit(_, _, _) => todo!(),
     }
 }
 
@@ -291,9 +308,9 @@ pub fn add_pending(orders: Vec<Order>, mut new_orders: Vec<Order>) -> Vec<Order>
         .filter(|x| x.status == OrderStatus::Pending)
     {
         match order.order_type {
-            OrderType::BuyOrder(_, _) => buy_orders += 1,
-            OrderType::SellOrder(_, _) | OrderType::TakeProfit(_, _) => sell_orders += 1,
-            OrderType::StopLoss(_) => stop_losses += 1,
+            OrderType::BuyOrder(_, _, _) => buy_orders += 1,
+            OrderType::SellOrder(_, _, _) | OrderType::TakeProfit(_, _, _) => sell_orders += 1,
+            OrderType::StopLoss(_, _) => stop_losses += 1,
         };
     }
 
@@ -301,11 +318,11 @@ pub fn add_pending(orders: Vec<Order>, mut new_orders: Vec<Order>) -> Vec<Order>
         .iter()
         .filter(|order| order.status == OrderStatus::Pending)
         .filter(|order| match order.order_type {
-            OrderType::BuyOrder(_, _) => buy_orders < max_buy_orders,
-            OrderType::SellOrder(_, _) | OrderType::TakeProfit(_, _) => {
+            OrderType::BuyOrder(_, _, _) => buy_orders < max_buy_orders,
+            OrderType::SellOrder(_, _, _) | OrderType::TakeProfit(_, _, _) => {
                 sell_orders < max_sell_orders
             }
-            OrderType::StopLoss(_) => stop_losses < max_stop_losses,
+            OrderType::StopLoss(_, _) => stop_losses < max_stop_losses,
         })
         .map(|order| order.clone())
         .collect();
@@ -327,12 +344,17 @@ pub fn add_pending(orders: Vec<Order>, mut new_orders: Vec<Order>) -> Vec<Order>
 }
 
 pub fn cancel_pending(trade_out: &TradeOut, mut orders: Vec<Order>) -> Vec<Order> {
-    let stop_loss_index = orders
-        .iter()
-        .position(|x| x.status == OrderStatus::Pending)
-        .unwrap();
-    orders.remove(stop_loss_index);
     orders
+        .iter_mut()
+        .map(|x| {
+            if x.status == OrderStatus::Pending {
+                x.cancel_order(trade_out.date_out);
+            }
+            x.clone()
+        })
+        .collect()
+    //orders.remove(stop_loss_index);
+    // orders
     // if pending_orders.len() <= 3 {
     //     [orders, new_orders].concat()
     // } else {

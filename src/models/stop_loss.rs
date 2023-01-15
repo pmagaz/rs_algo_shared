@@ -1,4 +1,4 @@
-use super::order::{Order, OrderCondition, OrderStatus, OrderType};
+use super::order::{self, Order, OrderCondition, OrderDirection, OrderStatus, OrderType};
 use super::trade::*;
 
 use crate::helpers::{calc, date::*, uuid};
@@ -40,7 +40,7 @@ pub fn create_stop_loss_order(
     index: usize,
     trade_id: usize,
     instrument: &Instrument,
-    entry_type: &TradeType,
+    trade_type: &TradeType,
     stop_loss_type: &StopLossType,
     spread: f64,
 ) -> Order {
@@ -50,22 +50,19 @@ pub fn create_stop_loss_order(
         .unwrap();
     let next_index = index + 1;
     let current_price = &instrument.data.get(next_index).unwrap().open();
-    let current_date = &instrument.data.get(next_index).unwrap().date();
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
 
-    let origin_price = instrument.data().get(index).unwrap().close();
-
     let target_price = match stop_loss_type {
-        StopLossType::Atr => match entry_type.is_long() {
+        StopLossType::Atr => match trade_type.is_long() {
             true => (current_price + spread) - current_atr_value,
             false => (current_price - spread) + current_atr_value,
         },
-        StopLossType::Price(target_price) => match entry_type.is_long() {
+        StopLossType::Price(target_price) => match trade_type.is_long() {
             true => target_price + spread,
             false => target_price - spread,
         },
-        StopLossType::Pips(pips) => match entry_type.is_long() {
+        StopLossType::Pips(pips) => match trade_type.is_long() {
             true => {
                 // log::warn!(
                 //     "STOOOOOP CALCULATION {} {}",
@@ -79,25 +76,18 @@ pub fn create_stop_loss_order(
         StopLossType::None => todo!(),
     };
 
-    let condition = match entry_type.is_long() {
-        true => OrderCondition::Lower,
-        false => OrderCondition::Greater,
+    let order_direction = match trade_type.is_long() {
+        true => OrderDirection::Down,
+        false => OrderDirection::Up,
     };
 
-    Order {
-        id: uuid::generate_ts_id(*current_date),
-        index_created: next_index,
-        index_fulfilled: 0,
+    order::create_order(
+        index,
         trade_id,
-        order_type: OrderType::StopLoss(stop_loss_type.clone()),
-        status: OrderStatus::Pending,
-        condition,
-        origin_price,
-        target_price,
-        quantity: 100.,
-        created_at: to_dbtime(Local::now()),
-        updated_at: None,
-        full_filled_at: None,
-        valid_until: None,
-    }
+        instrument,
+        trade_type,
+        &OrderType::StopLoss(order_direction, stop_loss_type.clone()),
+        &target_price,
+        &100.,
+    )
 }
