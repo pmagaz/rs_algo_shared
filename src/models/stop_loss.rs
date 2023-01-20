@@ -44,10 +44,21 @@ pub fn create_stop_loss_order(
     stop_loss_type: &StopLossType,
     spread: f64,
 ) -> Order {
+    let stop_loss_spread = std::env::var("STOP_LOSS_SPREAD")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
+
     let atr_multiplier = std::env::var("ATR_STOP_LOSS")
         .unwrap()
         .parse::<f64>()
         .unwrap();
+
+    let spread = match stop_loss_spread {
+        true => spread,
+        false => 0.,
+    };
+
     let next_index = index + 1;
     let current_price = &instrument.data.get(next_index).unwrap().open();
     let current_atr_value =
@@ -63,14 +74,7 @@ pub fn create_stop_loss_order(
             false => target_price - spread,
         },
         StopLossType::Pips(pips) => match trade_type.is_long() {
-            true => {
-                // log::warn!(
-                //     "STOOOOOP CALCULATION {} {}",
-                //     current_price,
-                //     (current_price + spread) - calc::to_pips(pips)
-                // );
-                (current_price + spread) - calc::to_pips(pips)
-            }
+            true => (current_price + spread) - calc::to_pips(pips),
             false => (current_price - spread) + calc::to_pips(pips),
         },
         StopLossType::None => todo!(),

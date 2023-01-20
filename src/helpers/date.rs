@@ -10,3 +10,7 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
     DbDateTime::from_chrono(date + Duration::hours(2))
 }
+
+pub fn fom_dbtime(date: DbDateTime) -> DateTime<Local> {
+    date.to_chrono().into()
+}
