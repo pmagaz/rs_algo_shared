@@ -1,4 +1,5 @@
 use super::order::{self, Order, OrderCondition, OrderDirection, OrderStatus, OrderType};
+use super::pricing::Pricing;
 use super::trade::*;
 
 use crate::helpers::{calc, date::*, uuid};
@@ -40,10 +41,14 @@ pub fn create_stop_loss_order(
     index: usize,
     trade_id: usize,
     instrument: &Instrument,
+    pricing: &Pricing,
     trade_type: &TradeType,
+    order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
-    spread: f64,
+    target_price: f64,
 ) -> Order {
+    let spread = pricing.spread();
+
     let stop_loss_spread = std::env::var("STOP_LOSS_SPREAD")
         .unwrap()
         .parse::<bool>()
@@ -59,30 +64,26 @@ pub fn create_stop_loss_order(
         false => 0.,
     };
 
+    log::info!("1111111111 {}", spread);
+
     let next_index = index + 1;
-    let current_price = &instrument.data.get(next_index).unwrap().open();
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
 
     let target_price = match stop_loss_type {
-        StopLossType::Atr => match trade_type.is_long() {
-            true => (current_price + spread) - current_atr_value,
-            false => (current_price - spread) + current_atr_value,
+        StopLossType::Atr => match order_direction {
+            OrderDirection::Up => (target_price - spread) - current_atr_value,
+            OrderDirection::Down => (target_price + spread) + current_atr_value,
         },
-        StopLossType::Price(target_price) => match trade_type.is_long() {
-            true => target_price + spread,
-            false => target_price - spread,
+        StopLossType::Price(target_price) => match order_direction {
+            OrderDirection::Up => target_price - spread,
+            OrderDirection::Down => target_price + spread,
         },
-        StopLossType::Pips(pips) => match trade_type.is_long() {
-            true => (current_price + spread) - calc::to_pips(pips),
-            false => (current_price - spread) + calc::to_pips(pips),
+        StopLossType::Pips(pips) => match order_direction {
+            OrderDirection::Up => (target_price - spread) + calc::to_pips(pips, pricing),
+            OrderDirection::Down => (target_price + spread) - calc::to_pips(pips, pricing),
         },
         StopLossType::None => todo!(),
-    };
-
-    let order_direction = match trade_type.is_long() {
-        true => OrderDirection::Down,
-        false => OrderDirection::Up,
     };
 
     order::create_order(
@@ -90,7 +91,7 @@ pub fn create_stop_loss_order(
         trade_id,
         instrument,
         trade_type,
-        &OrderType::StopLoss(order_direction, stop_loss_type.clone()),
+        &OrderType::StopLoss(order_direction.clone(), stop_loss_type.clone()),
         &target_price,
         &100.,
     )

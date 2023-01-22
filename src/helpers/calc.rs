@@ -1,18 +1,19 @@
 use crate::helpers::comp::*;
+use crate::models::pricing::Pricing;
 use crate::models::trade::*;
 use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
 use crate::scanner::pattern::*;
 
 use std::cmp::Ordering;
+use std::env;
 
 pub fn calculate_profit(size: f64, price_in: f64, price_out: f64) -> f64 {
     size * (price_out - price_in)
 }
 
-pub fn to_pips(pips: &f64) -> f64 {
-    let pip_value = std::env::var("PIP_VALUE").unwrap().parse::<f64>().unwrap();
-    pip_value * pips
+pub fn to_pips(pips: &f64, pricing: &Pricing) -> f64 {
+    pricing.pip_size() * pips
 }
 
 pub fn calculate_trade_profit(size: f64, price_in: f64, price_out: f64) -> f64 {

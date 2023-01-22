@@ -50,16 +50,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Currency"
     },
     {
-        "symbol": "CHFHUF",
-        "name": "CHFHUF",
-        "sector": "Currency"
-    },
-    {
-        "symbol": "CHFPLN",
-        "name": "CHFPLN",
-        "sector": "Currency"
-    },
-    {
         "symbol": "CHFJPY",
         "name": "CHFJPY",
         "sector": "Currency"

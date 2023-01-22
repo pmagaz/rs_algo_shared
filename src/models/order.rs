@@ -1,7 +1,8 @@
 use std::env;
 
+use super::pricing::Pricing;
 use super::strategy::StrategyType;
-use super::trade::{TradeDirection, TradeType};
+use super::trade::{Trade, TradeDirection, TradeType};
 use super::trade::{TradeIn, TradeOut};
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
@@ -99,6 +100,11 @@ impl Order {
         self.trade_id = val
     }
 
+    pub fn update_pricing(&mut self, origin_price: f64, target_price: f64) {
+        self.origin_price = origin_price;
+        self.target_price = target_price;
+    }
+
     pub fn fulfill_order(&mut self, index: usize, date: DateTime<Local>) {
         self.set_status(OrderStatus::Fulfilled);
         self.set_updated_at(to_dbtime(date));
@@ -115,10 +121,14 @@ impl Order {
 pub fn prepare_orders(
     index: usize,
     instrument: &Instrument,
+    pricing: &Pricing,
     trade_type: &TradeType,
     order_types: &Vec<OrderType>,
-    spread: f64,
 ) -> Vec<Order> {
+    let mut buy_order_target = 0.;
+    let mut sell_order_target = 0.;
+    let mut stop_order_target = 0.;
+
     let mut orders: Vec<Order> = vec![];
     let trade_id = uuid::generate_ts_id(instrument.data.get(index + 1).unwrap().date());
     for order_type in order_types {
@@ -138,21 +148,56 @@ pub fn prepare_orders(
                     target_price,
                     quantity,
                 );
+
+                match trade_type.is_entry() {
+                    true => buy_order_target = order.target_price,
+                    false => sell_order_target = order.target_price,
+                }
+
                 orders.push(order);
             }
-            OrderType::StopLoss(_, stop_loss_stype) => {
+            OrderType::StopLoss(order_direction, stop_loss_stype) => {
+                let target_price = match orders.first() {
+                    Some(order) => order.target_price,
+                    None => instrument.data.get(index + 1).unwrap().open(),
+                };
+
                 let stop_loss = create_stop_loss_order(
                     index,
                     trade_id,
                     instrument,
+                    pricing,
                     trade_type,
+                    order_direction,
                     stop_loss_stype,
-                    spread,
+                    target_price,
                 );
+                stop_order_target = stop_loss.target_price;
                 orders.push(stop_loss);
             }
         }
     }
+
+    //CHECK STOP LOSS VALUE
+
+    match trade_type.is_long() {
+        true => {
+            if stop_order_target >= buy_order_target {
+                panic!(
+                    "[ERROR!] Stop loss at {} can't be place higher than buy level at {}",
+                    stop_order_target, buy_order_target
+                )
+            }
+        }
+        false => {
+            if stop_order_target <= buy_order_target {
+                panic!(
+                    "[ERROR!] Stop loss at {} can't be place lower than buy level at {}",
+                    stop_order_target, buy_order_target
+                )
+            }
+        }
+    };
 
     log::info!("PREPARED {:?} {}", order_types, orders.len());
 
@@ -174,11 +219,12 @@ pub fn create_order(
     let origin_price = instrument.data().get(index).unwrap().close();
 
     log::info!(
-        "NEW ORDER CREATED {:?} @ {:?} {:?} {:?}",
-        (next_index, current_price, target_price),
-        (origin_price, current_price, target_price),
-        current_date,
-        order_type
+        "CREATING NEW ORDER{} @ {:?} origin {} target {} id {}",
+        index,
+        order_type,
+        origin_price,
+        target_price,
+        uuid::generate_ts_id(*current_date)
     );
     //let trade_id = uuid::generate_ts_id(*current_date);
     let condition = match trade_type {
@@ -296,23 +342,30 @@ fn order_activated(
             OrderDirection::Up => cross_over,
             OrderDirection::Down => cross_bellow,
         },
-        OrderType::StopLoss(direction, stop) => cross_over || cross_bellow,
+        OrderType::StopLoss(direction, stop) => match direction {
+            OrderDirection::Up => {
+                if cross_over {
+                    log::info!("STOP LOSS CROSS OVER");
+                }
+                cross_over
+            }
+            OrderDirection::Down => {
+                if cross_bellow {
+                    log::info!("STOP LOSS CROSS BELLOW");
+                }
+                cross_bellow
+            }
+        },
         _ => todo!(),
     };
 
-    if activated {
-        log::info!(
-            "ACTIVATING {} @@@ {:?} ",
-            index,
-            (
-                &order.order_type,
-                current_candle.date(),
-                current_candle.high(),
-                current_candle.close(),
-                order.target_price
-            ),
-        );
-    }
+    // if activated {
+    //     log::info!(
+    //         "ACTIVATING {} @@@ {:?} ",
+    //         index,
+    //         (&order.order_type, order.target_price, current_candle),
+    //     );
+    // }
     activated
 }
 
@@ -342,7 +395,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
 
     let (buy_orders, sell_orders, stop_losses) = get_num_pending_orders(&orders);
 
-    log::warn!("MAX PENDING {}", new_orders.len());
+    log::warn!("MAX PENDING {:?}", (buy_orders, sell_orders, stop_losses));
 
     let result: Vec<Order> = new_orders
         .iter()
@@ -373,49 +426,6 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
     } else {
         orders
     }
-}
-
-pub fn cancel_pending_trade_orders(trade_out: &TradeOut, mut orders: Vec<Order>) -> Vec<Order> {
-    orders
-        .iter_mut()
-        .map(|x| {
-            if x.status == OrderStatus::Pending {
-                x.cancel_order(trade_out.date_out);
-                log::info!("CANCELED {:?}", x.order_type);
-            }
-            x.clone()
-        })
-        .collect()
-}
-
-pub fn cancel_pending_trade_orders_in(
-    index: usize,
-    instrument: &Instrument,
-    mut orders: Vec<Order>,
-) -> Vec<Order> {
-    let data = &instrument.data;
-    let prev_index = get_prev_index(index);
-    let current_candle = data.get(index).unwrap();
-
-    // let mut long_pending_orders: Vec<Order> = orders
-    //     .iter()
-    //     .rev()
-    //     .take(5)
-    //     .filter(|x| x.status == OrderStatus::Pending)
-    //     .map(|x| x.clone())
-    //     .collect();
-
-    let long_pending_orders = orders
-        .iter_mut()
-        .map(|x| {
-            if x.status == OrderStatus::Pending {
-                x.cancel_order(to_dbtime(current_candle.date()));
-            }
-            x.clone()
-        })
-        .collect();
-    long_pending_orders
-    //[orders, long_pending_orders].concat()
 }
 
 pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
@@ -481,10 +491,44 @@ pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
     (buy_orders, sell_orders, stop_losses)
 }
 
-pub fn fulfill_order(index: usize, date: &DateTime<Local>, order: &Order, orders: &mut Vec<Order>) {
-    // let data = &instrument.data;
-    // let prev_index = get_prev_index(index);
-    // let candle = data.get(index).unwrap();
+pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) -> Vec<Order> {
+    orders
+        .iter_mut()
+        .map(|x| {
+            if x.status == OrderStatus::Pending {
+                x.cancel_order(*trade.get_date());
+                log::info!("CANCELED {:?}", x.order_type);
+            }
+            x.clone()
+        })
+        .collect()
+}
+
+pub fn update_pending_trade_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) -> Vec<Order> {
+    orders
+        .iter_mut()
+        .map(|x| {
+            if x.status == OrderStatus::Pending {
+                //x.cancel_order(*trade.get_date());
+                log::info!("UPDATING {:?}", x.order_type);
+            }
+            x.clone()
+        })
+        .collect()
+}
+
+pub fn fulfill_trade_order<T: Trade>(
+    index: usize,
+    trade: &T,
+    order: &Order,
+    orders: &mut Vec<Order>,
+) {
+    let date = trade.get_chrono_date();
+    log::info!(
+        "UPDATING PENDING {} @ {:?}",
+        index,
+        get_pending(orders).len()
+    );
 
     let order_position = orders
         .iter()
@@ -493,53 +537,78 @@ pub fn fulfill_order(index: usize, date: &DateTime<Local>, order: &Order, orders
     match order_position {
         Some(x) => {
             log::info!("FULFILLING {} @ {:?}", index, (order.order_type));
-            orders.get_mut(x).unwrap().fulfill_order(index, *date);
-
+            orders.get_mut(x).unwrap().fulfill_order(index, date);
             //UPDATE STOP LOSS AND SELL ORDER BASED ON PRICE_IN
         }
         None => {}
     }
 }
 
-pub fn fulfill_trade_in_order(
+pub fn fulfill_order_and_update_pricing<T: Trade>(
     index: usize,
-    trade_in: &TradeIn,
+    trade: &T,
+    pricing: &Pricing,
     order: &Order,
     mut orders: &mut Vec<Order>,
 ) {
-    // let data = &instrument.data;
-    // let prev_index = get_prev_index(index);
-    // let candle = data.get(index).unwrap();
-    let date = trade_in.date_in;
-    fulfill_order(index, &fom_dbtime(date), &order, &mut orders);
+    fulfill_trade_order(index, trade, &order, &mut orders);
+
+    let original_price_in = order.target_price;
+    let final_price_in = trade.get_price_in();
+    let diff = final_price_in - original_price_in;
 
     log::info!(
-        "UPDATING PENDING {} @ {:?}",
-        index,
-        get_pending(orders).len()
+        "NEW TARGET_PRICE from {:?} {} to {} -> {}",
+        order.order_type,
+        original_price_in,
+        final_price_in,
+        diff
     );
 
-    let target_price = order.target_price;
-    let price_in = trade_in.price_in;
-    // let order_position = orders
-    //     .iter()
-    //     .position(|x| x.status == OrderStatus::Pending && x.order_type == order.order_type);
+    for order in orders
+        .iter_mut()
+        .filter(|x| x.status == OrderStatus::Pending)
+    {
+        //let final_target = (order.target_price * final_price_in) / original_price_in;
+        let final_target = order.target_price + diff;
 
-    // match order_position {
-    //     Some(x) => {
-    //         orders
-    //             .get_mut(x)
-    //             .unwrap()
-    //             .fulfill_order(index, candle.date());
+        log::info!(
+            "UPDATING {:?} @@ from {} to {} -> {}",
+            &order.order_type,
+            order.target_price,
+            final_target,
+            order.target_price + diff
+        );
 
-    //         //UPDATE STOP LOSS AND SELL ORDER BASED ON PRICE_IN
-    //         log::info!("FULFILLING {} @ {:?}", index, (order.order_type));
-    //     }
-    //     None => {}
-    // }
-    // log::info!(
-    //     "UPDATING PENDING {} @ {:?}",
-    //     index,
-    //     get_pending(orders).len()
-    // );
+        order.update_pricing(*final_price_in, final_target);
+    }
+
+    //update_pending_trade_orders(trade, orders);
 }
+
+/*
+BUY 132.23209999999997 to 132.21899999999997 -> -0.01310000000000855
+STOp 132.35350000000003 to 132.34040000000002
+
+ACTIVATED 0.91759
+
+FINAL IN/OUT 0.91701 / 0.91706
+
+
+1671668700
+1671656400
+1671656400
+
+
+
+   current_candle.low() <= order.target_price && prev_candle.low() > order.target_price;
+
+132.34040000000002,
+open: 132.412,
+high: 132.41299999999995,
+low: 132.296,
+close: 132.32200000000006
+
+132.296 < 132.34040000000002
+
+*/

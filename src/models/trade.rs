@@ -1,4 +1,7 @@
+use std::env::current_exe;
+
 use super::order::{Order, OrderCondition, OrderType};
+use super::pricing::Pricing;
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
@@ -7,6 +10,13 @@ use crate::scanner::instrument::*;
 
 use round::round;
 use serde::{Deserialize, Serialize};
+
+pub trait Trade {
+    fn get_date(&self) -> &DbDateTime;
+    fn get_chrono_date(&self) -> DateTime<Local>;
+    fn get_price_in(&self) -> &f64;
+    fn get_price_out(&self) -> &f64;
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradeDirection {
@@ -115,6 +125,21 @@ pub struct TradeIn {
     pub trade_type: TradeType,
 }
 
+impl Trade for TradeIn {
+    fn get_date(&self) -> &DbDateTime {
+        &self.date_in
+    }
+    fn get_chrono_date(&self) -> DateTime<Local> {
+        fom_dbtime(&self.date_in)
+    }
+    fn get_price_in(&self) -> &f64 {
+        &self.price_in
+    }
+    fn get_price_out(&self) -> &f64 {
+        &self.price_in
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeOut {
     pub id: usize,
@@ -138,6 +163,21 @@ pub struct TradeOut {
     pub draw_down_per: f64,
 }
 
+impl Trade for TradeOut {
+    fn get_date(&self) -> &DbDateTime {
+        &self.date_out
+    }
+    fn get_chrono_date(&self) -> DateTime<Local> {
+        fom_dbtime(&self.date_out)
+    }
+    fn get_price_in(&self) -> &f64 {
+        &self.price_in
+    }
+    fn get_price_out(&self) -> &f64 {
+        &self.price_out
+    }
+}
+
 impl std::fmt::Display for TradeIn {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -154,10 +194,11 @@ pub fn resolve_trade_in(
     index: usize,
     trade_size: f64,
     instrument: &Instrument,
+    pricing: &Pricing,
     entry_type: &TradeType,
-    spread: f64,
-    //stop_loss: &StopLoss,
 ) -> TradeResult {
+    let spread = pricing.spread();
+
     if entry_type.is_entry() {
         let nex_candle_index = index + 1;
         let next_day_candle = instrument.data.get(nex_candle_index);
@@ -206,14 +247,15 @@ pub fn resolve_trade_in(
 pub fn resolve_trade_out(
     index: usize,
     instrument: &Instrument,
+    pricing: &Pricing,
     trade_in: &TradeIn,
     trade_type: &TradeType,
-    spread: f64,
 ) -> TradeResult {
     let quantity = trade_in.quantity;
     let data = &instrument.data;
     let nex_candle_index = index + 1;
     let index_in = trade_in.index_in;
+    let spread = pricing.spread();
 
     //Stop loss resolved same day
     let current_candle = match trade_type {
@@ -230,18 +272,17 @@ pub fn resolve_trade_out(
     };
 
     let current_date = current_candle.date();
-    let ask = trade_in.ask;
     let price_origin = close_price;
     let price_in = trade_in.price_in;
 
-    let bid = match trade_in.trade_type.is_long() {
-        true => close_price,
-        false => close_price - spread,
-    };
+    // let bid = match trade_in.trade_type.is_long() {
+    //     true => close_price,
+    //     false => close_price - spread,
+    // };
 
     let price_out = match trade_in.trade_type.is_long() {
-        true => bid,
-        false => close_price,
+        true => close_price,
+        false => close_price - spread,
     };
 
     let profit = price_out - price_in;
@@ -252,11 +293,9 @@ pub fn resolve_trade_out(
 
     if trade_type == &TradeType::StopLoss && profit > 0. {
         log::warn!(
-            "222222222222222222222 {} @@@ {:?} {:?} {:?} {}",
+            "222222222222222222222 {} @@@ {:?} {}",
             index,
-            (trade_in.index_in, trade_in.price_in, ask),
-            (close_price, bid),
-            current_candle,
+            (price_in, price_out),
             profit
         );
         panic!()
@@ -285,11 +324,11 @@ pub fn resolve_trade_out(
             trade_type: trade_type.clone(),
             date_in: to_dbtime(date_in),
             spread_in: trade_in.spread,
-            ask: ask,
+            ask: price_in,
             index_out: nex_candle_index,
             price_origin,
             price_out: price_out,
-            bid: bid,
+            bid: price_out,
             spread_out: trade_in.spread,
             date_out: to_dbtime(date_out),
             profit,

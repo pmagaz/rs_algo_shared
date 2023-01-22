@@ -5,6 +5,7 @@ pub mod bot;
 pub mod indicator;
 pub mod market;
 pub mod order;
+pub mod pricing;
 pub mod status;
 pub mod stop_loss;
 pub mod strategy;

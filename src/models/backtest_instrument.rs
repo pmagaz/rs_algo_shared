@@ -43,12 +43,6 @@ pub struct BackTestInstrument {
     pub orders: Vec<Order>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BackTestSpread {
-    pub symbol: String,
-    pub spread: f64,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub enum BackTestResult {
     BackTestInstrumentResult(BackTestInstrumentResult),
