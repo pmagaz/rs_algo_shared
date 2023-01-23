@@ -8,7 +8,7 @@ use crate::helpers::calc::*;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::models::stop_loss::*;
-use crate::models::trade::Operation;
+use crate::models::trade::Position;
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
@@ -178,28 +178,54 @@ pub fn prepare_orders(
         }
     }
 
-    //CHECK STOP LOSS VALUE
+    log::warn!(
+        "44444444444444 {:?}",
+        (
+            trade_type,
+            buy_order_target,
+            sell_order_target,
+            stop_order_target
+        )
+    );
+
+    //CHECK SELL ORDER VALUE
+    match trade_type.is_exit() && trade_type.is_long() {
+        true => {
+            if sell_order_target <= buy_order_target {
+                panic!(
+                    "[PANIC] Sell Order can't be placed lower than buy level {:?}",
+                    (buy_order_target, sell_order_target)
+                )
+            }
+        }
+        false => {
+            if sell_order_target >= buy_order_target {
+                panic!(
+                    "[PANIC] Sell Order can't be placed higher than buy level {:?}",
+                    (buy_order_target, sell_order_target)
+                )
+            }
+        }
+    };
 
     match trade_type.is_long() {
         true => {
             if stop_order_target >= buy_order_target {
                 panic!(
-                    "[ERROR!] Stop loss at {} can't be place higher than buy level at {}",
-                    stop_order_target, buy_order_target
+                    "[PANIC] Stop loss can't be placed higher than buy level {:?}",
+                    (buy_order_target, stop_order_target)
                 )
             }
         }
         false => {
             if stop_order_target <= buy_order_target {
                 panic!(
-                    "[ERROR!] Stop loss at {} can't be place lower than buy level at {}",
-                    stop_order_target, buy_order_target
+                    "[PANIC] Stop loss can't be placed lower than buy level {:?}",
+                    (buy_order_target, stop_order_target)
                 )
             }
         }
     };
-
-    log::info!("PREPARED {:?} {}", order_types, orders.len());
 
     orders
 }
@@ -267,8 +293,8 @@ pub fn resolve_active_orders(
     instrument: &Instrument,
     strategy_type: &StrategyType,
     orders: &Vec<Order>,
-) -> Operation {
-    let mut order_operation: Operation = Operation::None;
+) -> Position {
+    let mut order_operation: Position = Position::None;
 
     for (_id, order) in orders
         .iter()
@@ -279,16 +305,16 @@ pub fn resolve_active_orders(
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-                        order_operation = Operation::MarketInOrder(order.clone());
+                        order_operation = Position::MarketInOrder(order.clone());
                     }
                     OrderType::SellOrderLong(_, _, _)
                     | OrderType::SellOrderShort(_, _, _)
                     | OrderType::TakeProfitLong(_, _, _)
                     | OrderType::TakeProfitShort(_, _, _) => {
-                        order_operation = Operation::MarketOutOrder(order.clone());
+                        order_operation = Position::MarketOutOrder(order.clone());
                     }
                     OrderType::StopLoss(_, _) => {
-                        order_operation = Operation::MarketOutOrder(order.clone());
+                        order_operation = Position::MarketOutOrder(order.clone());
                     }
                     _ => todo!(),
                 };
@@ -299,11 +325,11 @@ pub fn resolve_active_orders(
 
     let resolved = match has_executed_buy_order(&orders, &order_operation) {
         true => order_operation,
-        false => Operation::None,
+        false => Position::None,
     };
 
     match resolved {
-        Operation::None => (),
+        Position::None => (),
         _ => log::info!("ORDER ACTIVATED {} @@@ {:?}", index, &resolved),
     };
 
@@ -321,12 +347,10 @@ fn order_activated(
     let current_candle = data.get(index).unwrap();
     let prev_candle = data.get(prev_index).unwrap();
 
-    let cross_over =
-        current_candle.high() >= order.target_price && prev_candle.high() < order.target_price;
-    //||
-    //Cross bellow
-    let cross_bellow =
-        current_candle.low() <= order.target_price && prev_candle.low() > order.target_price;
+    let cross_over = current_candle.high() >= order.target_price; // && prev_candle.high() < order.target_price;
+                                                                  //||
+                                                                  //Cross bellow
+    let cross_bellow = current_candle.low() <= order.target_price; //&& prev_candle.low() > order.target_price;
 
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
@@ -381,11 +405,6 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
     let max_stop_losses = env::var("MAX_STOP_LOSSES")
         .unwrap()
         .parse::<usize>()
-        .unwrap();
-
-    let overwrite_orders = env::var("OVERWRITE_ORDERS")
-        .unwrap()
-        .parse::<bool>()
         .unwrap();
 
     let max_pending_orders = env::var("MAX_PENDING_ORDERS")
@@ -443,7 +462,7 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
     pending_orders
 }
 
-pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Operation) -> bool {
+pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool {
     let max_buy_orders = env::var("MAX_BUY_ORDERS")
         .unwrap()
         .parse::<usize>()
@@ -452,7 +471,7 @@ pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Operation) -> boo
     let (pending_buy_orders, _sell_orders, _stop_losses) = get_num_pending_orders(&orders);
 
     let has_active_buy_order = match operation {
-        Operation::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
+        Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
             //No Active buy
             std::cmp::Ordering::Equal => false,
             //Aactive buy

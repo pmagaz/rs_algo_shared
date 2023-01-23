@@ -64,23 +64,21 @@ pub fn create_stop_loss_order(
         false => 0.,
     };
 
-    log::info!("1111111111 {}", spread);
-
     let next_index = index + 1;
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
 
     let target_price = match stop_loss_type {
         StopLossType::Atr => match order_direction {
-            OrderDirection::Up => (target_price - spread) - current_atr_value,
+            OrderDirection::Up => (target_price + spread) - current_atr_value,
             OrderDirection::Down => (target_price + spread) + current_atr_value,
         },
         StopLossType::Price(target_price) => match order_direction {
-            OrderDirection::Up => target_price - spread,
+            OrderDirection::Up => target_price + spread,
             OrderDirection::Down => target_price + spread,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (target_price - spread) + calc::to_pips(pips, pricing),
+            OrderDirection::Up => (target_price + spread) + calc::to_pips(pips, pricing),
             OrderDirection::Down => (target_price + spread) - calc::to_pips(pips, pricing),
         },
         StopLossType::None => todo!(),

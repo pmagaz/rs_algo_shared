@@ -39,7 +39,7 @@ pub enum TradeType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Operation {
+pub enum Position {
     MarketIn(Option<Vec<OrderType>>),
     MarketOut(Option<Vec<OrderType>>),
     MarketInOrder(Order),
@@ -49,7 +49,7 @@ pub enum Operation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum OperationResult {
+pub enum PositionResult {
     MarketIn(TradeResult, Option<Vec<Order>>),
     MarketOut(TradeResult),
     PendingOrder(Vec<Order>),
@@ -74,6 +74,7 @@ impl TradeType {
             TradeType::MarketOutLong
             | TradeType::MarketOutShort
             | TradeType::OrderOutLong
+            | TradeType::StopLoss
             | TradeType::OrderOutShort => true,
             _ => false,
         }
@@ -85,6 +86,13 @@ impl TradeType {
             | TradeType::MarketOutLong
             | TradeType::OrderInLong
             | TradeType::OrderOutLong => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_stop(&self) -> bool {
+        match *self {
+            TradeType::StopLoss => true,
             _ => false,
         }
     }
@@ -273,32 +281,39 @@ pub fn resolve_trade_out(
 
     let current_date = current_candle.date();
     let price_origin = close_price;
-    let price_in = trade_in.price_in;
-
-    // let bid = match trade_in.trade_type.is_long() {
-    //     true => close_price,
-    //     false => close_price - spread,
-    // };
-
-    let price_out = match trade_in.trade_type.is_long() {
-        true => close_price,
-        false => close_price - spread,
+    let (price_in, price_out) = match trade_in.trade_type.is_long() {
+        true => (trade_in.price_in, close_price),
+        false => (close_price + spread, trade_in.price_in),
     };
 
+    // let price_in = match trade_in.trade_type.is_long() {
+    //     true => trade_in.price_in,
+    //     false => close_price,
+    // };
+
+    // let price_out = match trade_in.trade_type.is_long() {
+    //     true => close_price,
+    //     false => close_price + spread,
+    // };
+
     let profit = price_out - price_in;
+
     let is_profitable = match profit {
         _ if profit > 0. => true,
         _ => false,
     };
 
+    log::info!(
+        "111111111111111111 {:?}",
+        (trade_type, is_profitable, profit)
+    );
     if trade_type == &TradeType::StopLoss && profit > 0. {
-        log::warn!(
-            "222222222222222222222 {} @@@ {:?} {}",
+        panic!(
+            "[PANIC] Profitable stop loss! {} @ {:?} {} ",
             index,
             (price_in, price_out),
             profit
-        );
-        panic!()
+        )
     }
 
     if index > trade_in.index_in
@@ -313,10 +328,6 @@ pub fn resolve_trade_out(
         let draw_down = calculate_drawdown(data, price_in, index_in, nex_candle_index);
         let draw_down_per = calculate_drawdown_per(draw_down, price_in);
 
-        // let trade_type = match stop_loss_activated {
-        //     true => TradeType::StopLoss,
-        //     false => exit_type,
-        // };
         TradeResult::TradeOut(TradeOut {
             id: uuid::generate_ts_id(current_date),
             index_in,
