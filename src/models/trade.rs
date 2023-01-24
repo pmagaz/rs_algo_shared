@@ -264,6 +264,7 @@ pub fn resolve_trade_out(
     let nex_candle_index = index + 1;
     let index_in = trade_in.index_in;
     let spread = pricing.spread();
+    let trade_in_type = &trade_in.trade_type;
 
     //Stop loss resolved same day
     let current_candle = match trade_type {
@@ -272,7 +273,7 @@ pub fn resolve_trade_out(
     };
 
     let close_price = match trade_type {
-        TradeType::StopLoss => match trade_in.trade_type.is_long() {
+        TradeType::StopLoss => match trade_in_type.is_long() {
             true => current_candle.low(),
             false => current_candle.high(),
         },
@@ -281,22 +282,15 @@ pub fn resolve_trade_out(
 
     let current_date = current_candle.date();
     let price_origin = close_price;
-    let (price_in, price_out) = match trade_in.trade_type.is_long() {
+    let (price_in, price_out) = match trade_in_type.is_long() {
         true => (trade_in.price_in, close_price),
-        false => (close_price + spread, trade_in.price_in),
+        false => (trade_in.price_in, close_price + spread),
     };
 
-    // let price_in = match trade_in.trade_type.is_long() {
-    //     true => trade_in.price_in,
-    //     false => close_price,
-    // };
-
-    // let price_out = match trade_in.trade_type.is_long() {
-    //     true => close_price,
-    //     false => close_price + spread,
-    // };
-
-    let profit = price_out - price_in;
+    let profit = match trade_in_type.is_long() {
+        true => price_out - price_in,
+        false => price_in - price_out,
+    };
 
     let is_profitable = match profit {
         _ if profit > 0. => true,
@@ -305,7 +299,14 @@ pub fn resolve_trade_out(
 
     log::info!(
         "111111111111111111 {:?}",
-        (trade_type, is_profitable, profit)
+        (
+            trade_type,
+            close_price,
+            price_in,
+            price_out,
+            profit,
+            is_profitable
+        )
     );
     if trade_type == &TradeType::StopLoss && profit > 0. {
         panic!(
@@ -321,12 +322,13 @@ pub fn resolve_trade_out(
     {
         let date_in = instrument.data.get(index_in).unwrap().date();
         let date_out = current_candle.date();
-        let profit = calculate_profit(quantity, price_in, price_out);
-        let profit_per = calculate_profit_per(price_in, price_out);
-        let run_up = calculate_runup(data, price_in, index_in, nex_candle_index);
-        let run_up_per = calculate_runup_per(run_up, price_in);
-        let draw_down = calculate_drawdown(data, price_in, index_in, nex_candle_index);
-        let draw_down_per = calculate_drawdown_per(draw_down, price_in);
+        let profit = calculate_profit(quantity, price_in, price_out, trade_in_type);
+        let profit_per = calculate_profit_per(price_in, price_out, trade_in_type);
+        let run_up = calculate_runup(data, price_in, index_in, nex_candle_index, trade_in_type);
+        let run_up_per = calculate_runup_per(run_up, price_in, trade_in_type);
+        let draw_down =
+            calculate_drawdown(data, price_in, index_in, nex_candle_index, trade_in_type);
+        let draw_down_per = calculate_drawdown_per(draw_down, price_in, trade_in_type);
 
         TradeResult::TradeOut(TradeOut {
             id: uuid::generate_ts_id(current_date),

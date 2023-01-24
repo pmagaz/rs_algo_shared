@@ -1,6 +1,7 @@
 use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
+use crate::helpers::uuid;
 use crate::models::stop_loss;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
@@ -259,13 +260,10 @@ impl BrokerStream for Xtb {
         let mut data = trade.data.clone();
 
         let entry_type = &data.trade_type;
-        let stop_loss = data.stop_loss;
         data.id = uuid::generate_ts_id(Local::now());
         data.price_in = bid;
         data.ask = ask;
         data.spread = spread;
-
-        data.stop_loss = stop_loss::update_bot_stop_loss(bid, &entry_type, &stop_loss);
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,

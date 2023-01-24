@@ -367,18 +367,8 @@ fn order_activated(
             OrderDirection::Down => cross_bellow,
         },
         OrderType::StopLoss(direction, stop) => match direction {
-            OrderDirection::Up => {
-                if cross_over {
-                    log::info!("STOP LOSS CROSS OVER");
-                }
-                cross_over
-            }
-            OrderDirection::Down => {
-                if cross_bellow {
-                    log::info!("STOP LOSS CROSS BELLOW");
-                }
-                cross_bellow
-            }
+            OrderDirection::Up => cross_over,
+            OrderDirection::Down => cross_bellow,
         },
         _ => todo!(),
     };
@@ -604,30 +594,3 @@ pub fn fulfill_order_and_update_pricing<T: Trade>(
 
     //update_pending_trade_orders(trade, orders);
 }
-
-/*
-BUY 132.23209999999997 to 132.21899999999997 -> -0.01310000000000855
-STOp 132.35350000000003 to 132.34040000000002
-
-ACTIVATED 0.91759
-
-FINAL IN/OUT 0.91701 / 0.91706
-
-
-1671668700
-1671656400
-1671656400
-
-
-
-   current_candle.low() <= order.target_price && prev_candle.low() > order.target_price;
-
-132.34040000000002,
-open: 132.412,
-high: 132.41299999999995,
-low: 132.296,
-close: 132.32200000000006
-
-132.296 < 132.34040000000002
-
-*/

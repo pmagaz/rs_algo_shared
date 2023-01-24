@@ -2,7 +2,7 @@ use crate::helpers::poly::poly_fit;
 use crate::helpers::slope_intercept::{add_next_bottom_points, add_next_top_points};
 use crate::patterns::*;
 use crate::scanner::candle::Candle;
-use crate::scanner::prices::{calculate_price_target};
+use crate::scanner::prices::calculate_price_target;
 
 use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
@@ -692,5 +692,13 @@ fn non_activated() -> PatternActive {
         price: 0.,
         break_direction: PatternDirection::None,
         target: 0.,
+    }
+}
+
+pub fn get_current_pattern(index: usize, patterns: &Vec<Pattern>) -> PatternType {
+    let last_pattern = patterns.iter().filter(|pat| pat.index < index).last();
+    match last_pattern {
+        Some(pattern) => pattern.pattern_type.clone(),
+        None => PatternType::None,
     }
 }

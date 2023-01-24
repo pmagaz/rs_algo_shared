@@ -1,4 +1,10 @@
-use crate::helpers::date::{DateTime, Duration, Local};
+use crate::{
+    helpers::{
+        calc::get_prev_index,
+        date::{DateTime, Duration, Local},
+    },
+    scanner::instrument::{HigherTMInstrument, Instrument},
+};
 
 use chrono::Timelike;
 use serde::{Deserialize, Serialize};
@@ -237,4 +243,71 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
     };
 
     adapted
+}
+
+pub fn get_htf_data<F>(
+    index: usize,
+    instrument: &Instrument,
+    upper_tf_instrument: &HigherTMInstrument,
+    mut callback: F,
+) -> bool
+where
+    F: Send + FnMut((usize, usize, &Instrument)) -> bool,
+{
+    let base_date = &instrument.data.get(index).unwrap().date;
+    let upper_tf_data = match upper_tf_instrument {
+        HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
+            let upper_indexes: Vec<usize> = upper_instrument
+                .data
+                .iter()
+                .enumerate()
+                .filter(|(_id, x)| &x.date <= base_date)
+                .map(|(id, _x)| id)
+                .collect();
+
+            let upper_tf_indx = match upper_indexes.last() {
+                Some(val) => *val,
+                _ => 0,
+            };
+
+            let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
+
+            (upper_tf_indx, prev_upper_tf_indx, upper_instrument)
+        }
+        _ => (0, 0, instrument),
+    };
+    callback(upper_tf_data)
+}
+
+pub fn get_bot_upper_timeframe<F>(
+    instrument: &Instrument,
+    upper_tf_instrument: &HigherTMInstrument,
+    mut callback: F,
+) -> bool
+where
+    F: Send + FnMut((usize, usize, &Instrument)) -> bool,
+{
+    let base_date = &instrument.data.last().unwrap().date;
+    let upper_tf_data = match upper_tf_instrument {
+        HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
+            let upper_indexes: Vec<usize> = upper_instrument
+                .data
+                .iter()
+                .enumerate()
+                .filter(|(_id, x)| &x.date <= base_date)
+                .map(|(id, _x)| id)
+                .collect();
+
+            let upper_tf_indx = match upper_indexes.last() {
+                Some(val) => *val,
+                _ => 0,
+            };
+
+            let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
+
+            (upper_tf_indx, prev_upper_tf_indx, upper_instrument)
+        }
+        _ => (0, 0, instrument),
+    };
+    callback(upper_tf_data)
 }
