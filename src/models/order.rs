@@ -178,16 +178,6 @@ pub fn prepare_orders(
         }
     }
 
-    log::warn!(
-        "44444444444444 {:?}",
-        (
-            trade_type,
-            buy_order_target,
-            sell_order_target,
-            stop_order_target
-        )
-    );
-
     //CHECK SELL ORDER VALUE
     match trade_type.is_exit() && trade_type.is_long() {
         true => {
@@ -245,31 +235,31 @@ pub fn create_order(
     let origin_price = instrument.data().get(index).unwrap().close();
 
     log::info!(
-        "CREATING NEW ORDER{} @ {:?} origin {} target {} id {}",
-        index,
+        "NEW ORDER PLACED {} @ {:?} origin {} target {} id {}",
+        next_index,
         order_type,
         origin_price,
         target_price,
         uuid::generate_ts_id(*current_date)
     );
     //let trade_id = uuid::generate_ts_id(*current_date);
-    let condition = match trade_type {
-        TradeType::MarketInLong => {
-            if current_price < target_price {
-                OrderCondition::Greater
-            } else {
-                OrderCondition::Lower
-            }
-        }
-        TradeType::MarketInShort => {
-            if current_price < target_price {
-                OrderCondition::Lower
-            } else {
-                OrderCondition::Greater
-            }
-        }
-        _ => OrderCondition::Equal,
-    };
+    // let condition = match trade_type {
+    //     TradeType::MarketInLong => {
+    //         if current_price < target_price {
+    //             OrderCondition::Greater
+    //         } else {
+    //             OrderCondition::Lower
+    //         }
+    //     }
+    //     TradeType::MarketInShort => {
+    //         if current_price < target_price {
+    //             OrderCondition::Lower
+    //         } else {
+    //             OrderCondition::Greater
+    //         }
+    //     }
+    //     _ => OrderCondition::Equal,
+    // };
 
     Order {
         id: uuid::generate_ts_id(*current_date),
@@ -294,8 +284,8 @@ pub fn resolve_active_orders(
     strategy_type: &StrategyType,
     orders: &Vec<Order>,
 ) -> Position {
-    let mut order_operation: Position = Position::None;
-
+    let mut order_position: Position = Position::None;
+    let mut leches = vec![];
     for (_id, order) in orders
         .iter()
         .enumerate()
@@ -305,32 +295,36 @@ pub fn resolve_active_orders(
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-                        order_operation = Position::MarketInOrder(order.clone());
+                        order_position = Position::MarketInOrder(order.clone());
+                        leches.push(order_position.clone());
                     }
                     OrderType::SellOrderLong(_, _, _)
                     | OrderType::SellOrderShort(_, _, _)
                     | OrderType::TakeProfitLong(_, _, _)
                     | OrderType::TakeProfitShort(_, _, _) => {
-                        order_operation = Position::MarketOutOrder(order.clone());
+                        order_position = Position::MarketOutOrder(order.clone());
+                        leches.push(order_position.clone());
                     }
                     OrderType::StopLoss(_, _) => {
-                        order_operation = Position::MarketOutOrder(order.clone());
+                        order_position = Position::MarketOutOrder(order.clone());
+                        leches.push(order_position.clone());
                     }
                     _ => todo!(),
                 };
+
+                log::info!(
+                    "ORDER ACTIVATED {} @@@ {:?}",
+                    index,
+                    (leches.len(), &order_position,)
+                );
             }
             false => (),
         }
     }
 
-    let resolved = match has_executed_buy_order(&orders, &order_operation) {
-        true => order_operation,
+    let resolved = match has_executed_buy_order(&orders, &order_position) {
+        true => order_position,
         false => Position::None,
-    };
-
-    match resolved {
-        Position::None => (),
-        _ => log::info!("ORDER ACTIVATED {} @@@ {:?}", index, &resolved),
     };
 
     resolved
@@ -347,10 +341,15 @@ fn order_activated(
     let current_candle = data.get(index).unwrap();
     let prev_candle = data.get(prev_index).unwrap();
 
-    let cross_over = current_candle.high() >= order.target_price; // && prev_candle.high() < order.target_price;
-                                                                  //||
-                                                                  //Cross bellow
-    let cross_bellow = current_candle.low() <= order.target_price; //&& prev_candle.low() > order.target_price;
+    let is_next_order = index > order.index_fulfilled;
+
+    let cross_over = current_candle.high() >= order.target_price
+        && prev_candle.high() < current_candle.high()
+        && is_next_order;
+
+    let cross_bellow = current_candle.low() <= order.target_price
+        && prev_candle.low() > current_candle.low()
+        && is_next_order;
 
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
@@ -373,13 +372,19 @@ fn order_activated(
         _ => todo!(),
     };
 
-    // if activated {
-    //     log::info!(
-    //         "ACTIVATING {} @@@ {:?} ",
-    //         index,
-    //         (&order.order_type, order.target_price, current_candle),
-    //     );
-    // }
+    if index < 50 {
+        log::info!(
+            "CHECKING ACTIVATION for {:?} --> {:?}",
+            (
+                order.target_price,
+                current_candle.high(),
+                prev_candle.high(),
+                current_candle.high() >= order.target_price,
+                activated
+            ),
+            (index, order.order_type.clone(),),
+        );
+    }
     activated
 }
 
