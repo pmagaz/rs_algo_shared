@@ -54,6 +54,23 @@ impl OrderType {
         }
     }
 
+    pub fn is_entry(&self) -> bool {
+        match *self {
+            OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_exit(&self) -> bool {
+        match *self {
+            OrderType::SellOrderLong(_, _, _)
+            | OrderType::SellOrderShort(_, _, _)
+            | OrderType::TakeProfitLong(_, _, _)
+            | OrderType::TakeProfitShort(_, _, _) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_stop(&self) -> bool {
         match self {
             OrderType::StopLoss(_, _) => true,
@@ -128,6 +145,8 @@ pub fn prepare_orders(
     let mut buy_order_target = 0.;
     let mut sell_order_target = 0.;
     let mut stop_order_target = 0.;
+    let mut is_stop_loss = false;
+    let mut stop_loss_direction = OrderDirection::Up;
 
     let mut orders: Vec<Order> = vec![];
     let trade_id = uuid::generate_ts_id(instrument.data.get(index + 1).unwrap().date());
@@ -149,14 +168,15 @@ pub fn prepare_orders(
                     quantity,
                 );
 
-                match trade_type.is_entry() {
+                match order_type.is_entry() {
                     true => buy_order_target = order.target_price,
                     false => sell_order_target = order.target_price,
                 }
 
                 orders.push(order);
             }
-            OrderType::StopLoss(order_direction, stop_loss_stype) => {
+            OrderType::StopLoss(order_direction, stop_loss_type) => {
+                is_stop_loss = true;
                 let target_price = match orders.first() {
                     Some(order) => order.target_price,
                     None => instrument.data.get(index + 1).unwrap().open(),
@@ -169,17 +189,40 @@ pub fn prepare_orders(
                     pricing,
                     trade_type,
                     order_direction,
-                    stop_loss_stype,
+                    stop_loss_type,
                     target_price,
                 );
                 stop_order_target = stop_loss.target_price;
+                stop_loss_direction = order_direction.clone();
                 orders.push(stop_loss);
             }
         }
     }
 
+    //CHECK STOP LOSS
+    if is_stop_loss {
+        match stop_loss_direction == OrderDirection::Down {
+            true => {
+                if stop_order_target >= buy_order_target {
+                    panic!(
+                        "[PANIC] Stop loss can't be placed higher than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    )
+                }
+            }
+            false => {
+                if stop_order_target <= buy_order_target {
+                    panic!(
+                        "[PANIC] Stop loss can't be placed lower than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    )
+                }
+            }
+        }
+    };
+
     //CHECK SELL ORDER VALUE
-    match trade_type.is_exit() && trade_type.is_long() {
+    match trade_type.is_long() {
         true => {
             if sell_order_target <= buy_order_target {
                 panic!(
@@ -193,25 +236,6 @@ pub fn prepare_orders(
                 panic!(
                     "[PANIC] Sell Order can't be placed higher than buy level {:?}",
                     (buy_order_target, sell_order_target)
-                )
-            }
-        }
-    };
-
-    match trade_type.is_long() {
-        true => {
-            if stop_order_target >= buy_order_target {
-                panic!(
-                    "[PANIC] Stop loss can't be placed higher than buy level {:?}",
-                    (buy_order_target, stop_order_target)
-                )
-            }
-        }
-        false => {
-            if stop_order_target <= buy_order_target {
-                panic!(
-                    "[PANIC] Stop loss can't be placed lower than buy level {:?}",
-                    (buy_order_target, stop_order_target)
                 )
             }
         }
@@ -311,12 +335,6 @@ pub fn resolve_active_orders(
                     }
                     _ => todo!(),
                 };
-
-                log::info!(
-                    "ORDER ACTIVATED {} @@@ {:?}",
-                    index,
-                    (leches.len(), &order_position,)
-                );
             }
             false => (),
         }

@@ -31,7 +31,7 @@ pub fn calculate_profit(size: f64, price_in: f64, price_out: f64, trade_type: &T
     }
 }
 
-pub fn to_pips(pips: &f64, pricing: &Pricing) -> f64 {
+pub fn to_pips(pips: f64, pricing: &Pricing) -> f64 {
     pricing.pip_size() * pips
 }
 
@@ -223,8 +223,8 @@ pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
 pub fn get_prev_index(index: usize) -> usize {
     match index.cmp(&0) {
         Ordering::Greater => index - 1,
-        Ordering::Equal => 0,
-        Ordering::Less => 0,
+        Ordering::Equal => index,
+        Ordering::Less => index,
     }
 }
 

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StopLossType {
-    Atr,
+    Atr(f64),
     Price(f64),
     Pips(f64),
     None,
@@ -69,17 +69,17 @@ pub fn create_stop_loss_order(
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
 
     let target_price = match stop_loss_type {
-        StopLossType::Atr => match order_direction {
-            OrderDirection::Up => (target_price + spread) - current_atr_value,
-            OrderDirection::Down => (target_price + spread) + current_atr_value,
+        StopLossType::Atr(atr_value) => match order_direction {
+            OrderDirection::Up => (target_price + spread) + (atr_value * current_atr_value),
+            OrderDirection::Down => (target_price + spread) - (atr_value * current_atr_value),
         },
         StopLossType::Price(target_price) => match order_direction {
-            OrderDirection::Up => target_price + spread,
-            OrderDirection::Down => target_price + spread,
+            OrderDirection::Up => *target_price,
+            OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (target_price + spread) + calc::to_pips(pips, pricing),
-            OrderDirection::Down => (target_price + spread) - calc::to_pips(pips, pricing),
+            OrderDirection::Up => (target_price + spread) + calc::to_pips(*pips, pricing),
+            OrderDirection::Down => (target_price + spread) - calc::to_pips(*pips, pricing),
         },
         StopLossType::None => todo!(),
     };

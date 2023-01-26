@@ -1,3 +1,4 @@
+use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
 use crate::scanner::candle::*;
 use crate::scanner::divergence::*;
@@ -208,9 +209,9 @@ pub fn get_profit_per_status(profit: f64) -> Status {
 
 pub fn get_profit_factor_status(profit_factor: f64) -> Status {
     match profit_factor {
-        _x if profit_factor < 1.2 => Status::Bearish,
-        _x if (1.2..1.74).contains(&profit_factor) => Status::Neutral,
-        _x if profit_factor >= 1.75 => Status::Bullish,
+        _x if profit_factor < 1. => Status::Bearish,
+        _x if (1.0..1.20).contains(&profit_factor) => Status::Neutral,
+        _x if profit_factor > 1.20 => Status::Bullish,
         _ => Status::Neutral,
     }
 }
@@ -290,4 +291,23 @@ pub fn get_divergence_status(divergence_type: &DivergenceType) -> Status {
         DivergenceType::Bearish => Status::Bearish,
         DivergenceType::None => Status::Default,
     }
+}
+
+pub fn get_avg_won_lost_status(won_per_trade: f64, lost_per_trade: f64) -> Status {
+
+if won_per_trade == 0. && lost_per_trade == 0. {
+    Status::Neutral
+} else if won_per_trade >= (lost_per_trade * -1.){
+    Status::Bullish
+} else {
+  let diff = won_per_trade - (lost_per_trade * -1.);
+  let diff = percentage_change(won_per_trade,(lost_per_trade * -1.));
+  log::info!("222222222 {:?}", diff);
+
+  if diff < 50.{
+    Status::Neutral 
+  } else {
+    Status::Bearish 
+  } 
+}
 }
