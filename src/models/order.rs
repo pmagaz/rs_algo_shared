@@ -2,11 +2,12 @@ use std::env;
 
 use super::pricing::Pricing;
 use super::strategy::StrategyType;
-use super::trade::{Trade, TradeDirection, TradeType};
-use super::trade::{TradeIn, TradeOut};
+use super::time_frame::TimeFrame;
+use super::trade::{Trade, TradeType};
+
 use crate::helpers::calc::*;
-use crate::helpers::date::*;
 use crate::helpers::uuid;
+use crate::helpers::{date, date::*};
 use crate::models::stop_loss::*;
 use crate::models::trade::Position;
 use crate::scanner::instrument::*;
@@ -162,7 +163,6 @@ pub fn prepare_orders(
                     index,
                     trade_id,
                     instrument,
-                    trade_type,
                     order_type,
                     target_price,
                     quantity,
@@ -248,42 +248,22 @@ pub fn create_order(
     index: usize,
     trade_id: usize,
     instrument: &Instrument,
-    trade_type: &TradeType,
     order_type: &OrderType,
     target_price: &f64,
     quantity: &f64,
 ) -> Order {
     let next_index = index + 1;
-    let current_price = &instrument.data.get(next_index).unwrap().open();
     let current_date = &instrument.data.get(next_index).unwrap().date();
     let origin_price = instrument.data().get(index).unwrap().close();
-
-    log::info!(
-        "NEW ORDER PLACED {} @ {:?} origin {} target {} id {}",
-        next_index,
-        order_type,
-        origin_price,
-        target_price,
-        uuid::generate_ts_id(*current_date)
-    );
-    //let trade_id = uuid::generate_ts_id(*current_date);
-    // let condition = match trade_type {
-    //     TradeType::MarketInLong => {
-    //         if current_price < target_price {
-    //             OrderCondition::Greater
-    //         } else {
-    //             OrderCondition::Lower
-    //         }
-    //     }
-    //     TradeType::MarketInShort => {
-    //         if current_price < target_price {
-    //             OrderCondition::Lower
-    //         } else {
-    //             OrderCondition::Greater
-    //         }
-    //     }
-    //     _ => OrderCondition::Equal,
-    // };
+    let base_time_frame = &env::var("BASE_TIME_FRAME").unwrap();
+    let bars_to_overwrite = &env::var("BARS_TO_OVERWRITE")
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+    let time_frame = TimeFrame::new(base_time_frame);
+    let bar_value = time_frame.to_number();
+    let minutes_add = bar_value * bars_to_overwrite;
+    let valid_until = *current_date + date::Duration::minutes(minutes_add);
 
     Order {
         id: uuid::generate_ts_id(*current_date),
@@ -298,7 +278,7 @@ pub fn create_order(
         created_at: to_dbtime(*current_date),
         updated_at: None,
         full_filled_at: None,
-        valid_until: None,
+        valid_until: Some(to_dbtime(valid_until)),
     }
 }
 
@@ -315,7 +295,7 @@ pub fn resolve_active_orders(
         .enumerate()
         .filter(|(_id, order)| order.status == OrderStatus::Pending)
     {
-        match order_activated(index, order, instrument, strategy_type) {
+        match order_activated(index, order, instrument) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
@@ -348,12 +328,7 @@ pub fn resolve_active_orders(
     resolved
 }
 
-fn order_activated(
-    index: usize,
-    order: &Order,
-    instrument: &Instrument,
-    strategy_type: &StrategyType,
-) -> bool {
+fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
@@ -425,9 +400,12 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .parse::<usize>()
         .unwrap();
 
-    let (buy_orders, sell_orders, stop_losses) = get_num_pending_orders(&orders);
+    let overwrite_orders = env::var("OVERWRITE_ORDERS")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
 
-    log::warn!("MAX PENDING {:?}", (buy_orders, sell_orders, stop_losses));
+    let (buy_orders, sell_orders, stop_losses) = get_num_pending_orders(&orders);
 
     let result: Vec<Order> = new_orders
         .iter()
@@ -445,14 +423,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .map(|order| order.clone())
         .collect();
 
-    // log::warn!(
-    //     "11111111 {} {} {} {}",
-    //     buy_orders,
-    //     sell_orders,
-    //     stop_losses,
-    //     result.len()
-    // );
-
+    //if (overwrite_orders && buy_orders > 0) || result.len() <= max_pending_orders {
     if result.len() <= max_pending_orders {
         [orders, result].concat()
     } else {
@@ -523,6 +494,37 @@ pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
     (buy_orders, sell_orders, stop_losses)
 }
 
+pub fn cancel_all_pending_orders(
+    index: usize,
+    instrument: &Instrument,
+    mut orders: Vec<Order>,
+) -> Vec<Order> {
+    let current_date = &instrument.data.get(index).unwrap().date();
+
+    orders
+        .iter_mut()
+        .map(|x| {
+            let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+            if current_date >= valid_until && x.status == OrderStatus::Pending {
+                x.cancel_order(to_dbtime(Local::now()));
+                log::info!("CANCELED {:?}", (valid_until));
+            }
+            x.clone()
+        })
+        // .filter(|x| {
+        //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+        //     current_date < valid_until && x.status != OrderStatus::Pending
+        // })
+        .map(|x| x.clone())
+        .collect()
+
+    // orders.retain(|x| {
+    //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+    //     current_date <= valid_until && x.status != OrderStatus::Pending
+    // });
+    // orders
+}
+
 pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) -> Vec<Order> {
     orders
         .iter_mut()
@@ -534,6 +536,9 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) 
             x.clone()
         })
         .collect()
+
+    // orders.retain(|x| x.status != OrderStatus::Pending);
+    // orders
 }
 
 pub fn update_pending_trade_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) -> Vec<Order> {
@@ -556,12 +561,6 @@ pub fn fulfill_trade_order<T: Trade>(
     orders: &mut Vec<Order>,
 ) {
     let date = trade.get_chrono_date();
-    log::info!(
-        "UPDATING PENDING {} @ {:?}",
-        index,
-        get_pending(orders).len()
-    );
-
     let order_position = orders
         .iter()
         .position(|x| x.status == OrderStatus::Pending && x.order_type == order.order_type);
@@ -570,7 +569,6 @@ pub fn fulfill_trade_order<T: Trade>(
         Some(x) => {
             log::info!("FULFILLING {} @ {:?}", index, (order.order_type));
             orders.get_mut(x).unwrap().fulfill_order(index, date);
-            //UPDATE STOP LOSS AND SELL ORDER BASED ON PRICE_IN
         }
         None => {}
     }

@@ -64,7 +64,6 @@ pub fn create_stop_loss_order(
         false => 0.,
     };
 
-    let next_index = index + 1;
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
 
@@ -88,7 +87,6 @@ pub fn create_stop_loss_order(
         index,
         trade_id,
         instrument,
-        trade_type,
         &OrderType::StopLoss(order_direction.clone(), stop_loss_type.clone()),
         &target_price,
         &100.,
