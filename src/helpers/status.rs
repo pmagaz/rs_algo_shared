@@ -295,16 +295,13 @@ pub fn get_divergence_status(divergence_type: &DivergenceType) -> Status {
 
 pub fn get_avg_won_lost_status(won_per_trade: f64, lost_per_trade: f64) -> Status {
 
-if won_per_trade == 0. && lost_per_trade == 0. {
+if won_per_trade == lost_per_trade {
     Status::Neutral
-} else if won_per_trade >= (lost_per_trade * -1.){
+} else if won_per_trade > (lost_per_trade * -1.){
     Status::Bullish
 } else {
-  let diff = won_per_trade - (lost_per_trade * -1.);
   let diff = percentage_change(won_per_trade,(lost_per_trade * -1.));
-  log::info!("222222222 {:?}", diff);
-
-  if diff < 50.{
+  if diff < 10.{
     Status::Neutral 
   } else {
     Status::Bearish 

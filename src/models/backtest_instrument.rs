@@ -7,6 +7,7 @@ use crate::models::trade::*;
 use serde::{Deserialize, Serialize};
 
 use super::order::Order;
+use super::time_frame::TimeFrameType;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestInstrumentResult {
@@ -14,6 +15,7 @@ pub struct BackTestInstrumentResult {
     pub strategy: String,
     pub market: Market,
     pub strategy_type: StrategyType,
+    pub time_frame: TimeFrameType,
     pub date_start: DbDateTime,
     pub date_end: DbDateTime,
     pub sessions: usize,

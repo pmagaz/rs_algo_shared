@@ -1,6 +1,6 @@
 use std::env::current_exe;
 
-use super::order::{Order, OrderCondition, OrderType};
+use super::order::{Order, OrderType};
 use super::pricing::Pricing;
 use crate::helpers::calc::*;
 use crate::helpers::date::*;

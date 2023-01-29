@@ -27,7 +27,7 @@ pub enum TimeFrameType {
     ERR,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TimeFrame {}
 
 impl TimeFrame {

@@ -4,6 +4,8 @@ use crate::models::strategy::*;
 
 use serde::{Deserialize, Serialize};
 
+use super::time_frame::TimeFrameType;
+
 impl std::fmt::Display for StrategyType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -14,6 +16,7 @@ impl std::fmt::Display for StrategyType {
 pub struct BackTestStrategyResult {
     pub strategy: String,
     pub strategy_type: StrategyType,
+    pub time_frame: TimeFrameType,
     pub market: Market,
     pub date: DbDateTime,
     pub avg_sessions: usize,

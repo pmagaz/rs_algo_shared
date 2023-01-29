@@ -203,17 +203,19 @@ pub fn prepare_orders(
     if is_stop_loss {
         match stop_loss_direction == OrderDirection::Down {
             true => {
-                if stop_order_target >= buy_order_target {
-                    panic!(
-                        "[PANIC] Stop loss can't be placed higher than buy level {:?}",
+                if stop_order_target >= buy_order_target && buy_order_target > 0. {
+                    orders = vec![];
+                    log::error!(
+                        "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     )
                 }
             }
             false => {
-                if stop_order_target <= buy_order_target {
-                    panic!(
-                        "[PANIC] Stop loss can't be placed lower than buy level {:?}",
+                if stop_order_target <= buy_order_target && buy_order_target > 0. {
+                    orders = vec![];
+                    log::error!(
+                        "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     )
                 }
@@ -224,17 +226,19 @@ pub fn prepare_orders(
     //CHECK SELL ORDER VALUE
     match trade_type.is_long() {
         true => {
-            if sell_order_target <= buy_order_target {
-                panic!(
-                    "[PANIC] Sell Order can't be placed lower than buy level {:?}",
+            if sell_order_target <= buy_order_target && sell_order_target > 0. {
+                orders = vec![];
+                log::error!(
+                    "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 )
             }
         }
         false => {
-            if sell_order_target >= buy_order_target {
-                panic!(
-                    "[PANIC] Sell Order can't be placed higher than buy level {:?}",
+            if sell_order_target >= buy_order_target && sell_order_target > 0. {
+                orders = vec![];
+                log::error!(
+                    "Sell Order can't be placed higher than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 )
             }
@@ -365,19 +369,6 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         _ => todo!(),
     };
 
-    if index < 50 {
-        log::info!(
-            "CHECKING ACTIVATION for {:?} --> {:?}",
-            (
-                order.target_price,
-                current_candle.high(),
-                prev_candle.high(),
-                current_candle.high() >= order.target_price,
-                activated
-            ),
-            (index, order.order_type.clone(),),
-        );
-    }
     activated
 }
 
@@ -567,7 +558,7 @@ pub fn fulfill_trade_order<T: Trade>(
 
     match order_position {
         Some(x) => {
-            log::info!("FULFILLING {} @ {:?}", index, (order.order_type));
+            //log::info!("FULFILLING {} @ {:?}", index, (order.order_type));
             orders.get_mut(x).unwrap().fulfill_order(index, date);
         }
         None => {}
