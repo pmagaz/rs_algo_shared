@@ -245,11 +245,11 @@ pub fn resolve_trade_in(
 
         let quantity = round(trade_size / price, 3);
 
-        log::info!(
-            "PREPARING TRADEIN {} @@@ {:?} ",
-            index,
-            (price, instrument.data.get(index).unwrap().close())
-        );
+        // log::info!(
+        //     "PREPARING TRADEIN {} @@@ {:?} ",
+        //     index,
+        //     (price, instrument.data.get(index).unwrap().close())
+        // );
         TradeResult::TradeIn(TradeIn {
             id: uuid::generate_ts_id(current_date),
             index_in: index,

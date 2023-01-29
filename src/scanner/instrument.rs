@@ -142,6 +142,7 @@ impl Instrument {
                 open = x.1.ln();
                 high = x.2.ln();
                 close = x.4.ln();
+
                 low = match x.3 {
                     _x if x.3 > 0. => x.3.ln(),
                     _x if x.3 <= 0. => 0.01,
@@ -182,14 +183,14 @@ impl Instrument {
     pub fn process_candle(
         &mut self,
         id: usize,
-        data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
-        candles: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
+        data: &Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>,
+        adapted: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
         logarithmic_scanner: bool,
     ) -> Candle {
-        let date = data.0;
-        let volume = data.5;
-        let is_closed = data.6;
-        let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
+        let date = adapted.0;
+        let volume = adapted.5;
+        let is_closed = adapted.6;
+        let (open, high, low, close) = self.get_scale_ohlc(adapted, logarithmic_scanner);
 
         let pre_0 = match id {
             0 => id,
@@ -209,7 +210,7 @@ impl Instrument {
             .close(close)
             .volume(volume)
             .is_closed(is_closed)
-            .previous_candles(vec![candles[pre_0], candles[prev_1]])
+            .previous_candles(vec![data[pre_0], data[prev_1]])
             .logarithmic(logarithmic_scanner)
             .build()
             .unwrap()
@@ -303,7 +304,32 @@ impl Instrument {
             .enumerate()
             .map(|(id, x)| {
                 let adapted_DOHLCC = adapt_to_time_frame(*x, &self.time_frame, false);
-                let candle = self.process_candle(id, adapted_DOHLCC, &data, logarithmic_scanner);
+
+                let candle = self.process_candle(id, &data, adapted_DOHLCC, logarithmic_scanner);
+
+                // let data = match logarithmic_scanner {
+                //     true => candle.from_logarithmic_values(),
+                //     false => candle.clone(),
+                // };
+
+                // let low = data.low();
+                // let high = data.high();
+                // let _open = data.open();
+                // let _close = data.close();
+                // let volume = data.volume();
+
+                // if self.min_price == -100. {
+                //     self.min_price = data.low();
+                // }
+                // if low < self.min_price {
+                //     self.min_price = data.low();
+                // }
+                // if self.max_price == -100. {
+                //     self.max_price = data.high();
+                // }
+                // if high > self.max_price {
+                //     self.max_price = data.high();
+                // }
 
                 let low = candle.low();
                 let high = candle.high();
@@ -335,8 +361,8 @@ impl Instrument {
                         self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
                     self.indicators.next(ohlc_indicators).unwrap();
                 }
-
                 candle
+                //data
             })
             .collect();
 
@@ -400,7 +426,7 @@ impl Instrument {
                         self.min_price = data.low();
                     }
                     if self.max_price == -100. {
-                        self.max_price = data.low();
+                        self.max_price = data.high();
                     }
                     if data.high() > self.max_price {
                         self.max_price = data.high();
@@ -408,6 +434,8 @@ impl Instrument {
                     data
                 })
                 .collect();
+
+            //self.data = candles;
 
             self.set_current_price(self.data.last().unwrap().close());
 

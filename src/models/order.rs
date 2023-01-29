@@ -498,7 +498,7 @@ pub fn cancel_all_pending_orders(
             let valid_until = &fom_dbtime(&x.valid_until.unwrap());
             if current_date >= valid_until && x.status == OrderStatus::Pending {
                 x.cancel_order(to_dbtime(Local::now()));
-                log::info!("CANCELED {:?}", (valid_until));
+                //log::info!("CANCELED {:?}", (valid_until));
             }
             x.clone()
         })
@@ -522,7 +522,7 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) 
         .map(|x| {
             if x.status == OrderStatus::Pending {
                 x.cancel_order(*trade.get_date());
-                log::info!("CANCELED {:?}", x.order_type);
+                //log::info!("CANCELED {:?}", x.order_type);
             }
             x.clone()
         })

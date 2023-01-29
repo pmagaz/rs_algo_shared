@@ -25,8 +25,8 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Currency"
     },
     {
-        "symbol": "AUDJPY",
-        "name": "AUDJPY",
+        "symbol": "EURUSD",
+        "name": "EURUSD",
         "sector": "Currency"
     },
     {

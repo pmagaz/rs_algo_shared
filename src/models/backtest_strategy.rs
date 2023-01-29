@@ -1,7 +1,7 @@
-use crate::helpers::date::*;
+use crate::helpers::{date::*, uuid};
 use crate::models::market::*;
 use crate::models::strategy::*;
-
+pub use bson::Uuid;
 use serde::{Deserialize, Serialize};
 
 use super::time_frame::TimeFrameType;
@@ -14,6 +14,8 @@ impl std::fmt::Display for StrategyType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BackTestStrategyResult {
+    #[serde(rename = "_id")]
+    pub uuid: Uuid,
     pub strategy: String,
     pub strategy_type: StrategyType,
     pub time_frame: TimeFrameType,
