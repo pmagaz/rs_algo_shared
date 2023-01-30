@@ -5,25 +5,25 @@ pub enum StrategyType {
     OnlyLong,
     OnlyShort,
     LongShort,
-    LongShortMultiTF,
-    OnlyLongMultiTF,
-    OnlyShortMultiTF,
+    LongShortMTF,
+    OnlyLongMTF,
+    OnlyShortMTF,
 }
 
 impl StrategyType {
     pub fn is_long_only(&self) -> bool {
         match *self {
             StrategyType::OnlyLong => true,
-            StrategyType::OnlyLongMultiTF => true,
+            StrategyType::OnlyLongMTF => true,
             _ => false,
         }
     }
 
     pub fn is_multi_timeframe(&self) -> bool {
         match *self {
-            StrategyType::OnlyLongMultiTF => true,
-            StrategyType::LongShortMultiTF => true,
-            StrategyType::OnlyShortMultiTF => true,
+            StrategyType::OnlyLongMTF => true,
+            StrategyType::LongShortMTF => true,
+            StrategyType::OnlyShortMTF => true,
             _ => false,
         }
     }
@@ -34,18 +34,18 @@ pub fn from_str(strategy: &str) -> StrategyType {
         "OnlyLong" => StrategyType::OnlyLong,
         "OnlyShort" => StrategyType::OnlyShort,
         "LongShort" => StrategyType::LongShort,
-        "LongShortMultiTF" => StrategyType::LongShortMultiTF,
-        "OnlyLongMultiTF" => StrategyType::OnlyLongMultiTF,
-        "OnlyShortMultiTF" => StrategyType::OnlyShortMultiTF,
+        "LongShortMTF" => StrategyType::LongShortMTF,
+        "OnlyLongMTF" => StrategyType::OnlyLongMTF,
+        "OnlyShortMTF" => StrategyType::OnlyShortMTF,
         _ => StrategyType::OnlyLong,
     }
 }
 
 pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
     match strategy_type {
-        StrategyType::OnlyLongMultiTF => true,
-        StrategyType::LongShortMultiTF => true,
-        StrategyType::OnlyShortMultiTF => true,
+        StrategyType::OnlyLongMTF => true,
+        StrategyType::LongShortMTF => true,
+        StrategyType::OnlyShortMTF => true,
         _ => false,
     }
 }
@@ -53,7 +53,7 @@ pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
 pub fn is_long_only(strategy_type: &StrategyType) -> bool {
     match strategy_type {
         StrategyType::OnlyLong => true,
-        StrategyType::OnlyLongMultiTF => true,
+        StrategyType::OnlyLongMTF => true,
         _ => false,
     }
 }

@@ -248,14 +248,14 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
 pub fn get_htf_data<F>(
     index: usize,
     instrument: &Instrument,
-    upper_tf_instrument: &HigherTMInstrument,
+    htf_instrument: &HigherTMInstrument,
     mut callback: F,
 ) -> bool
 where
     F: Send + FnMut((usize, usize, &Instrument)) -> bool,
 {
     let base_date = &instrument.data.get(index).unwrap().date;
-    let upper_tf_data = match upper_tf_instrument {
+    let upper_tf_data = match htf_instrument {
         HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
             let upper_indexes: Vec<usize> = upper_instrument
                 .data
@@ -281,14 +281,14 @@ where
 
 pub fn get_bot_upper_timeframe<F>(
     instrument: &Instrument,
-    upper_tf_instrument: &HigherTMInstrument,
+    htf_instrument: &HigherTMInstrument,
     mut callback: F,
 ) -> bool
 where
     F: Send + FnMut((usize, usize, &Instrument)) -> bool,
 {
     let base_date = &instrument.data.last().unwrap().date;
-    let upper_tf_data = match upper_tf_instrument {
+    let upper_tf_data = match htf_instrument {
         HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
             let upper_indexes: Vec<usize> = upper_instrument
                 .data

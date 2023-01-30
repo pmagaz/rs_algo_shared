@@ -16,6 +16,7 @@ pub struct BackTestInstrumentResult {
     pub market: Market,
     pub strategy_type: StrategyType,
     pub time_frame: TimeFrameType,
+    pub higher_time_frame: Option<TimeFrameType>,
     pub date_start: DbDateTime,
     pub date_end: DbDateTime,
     pub sessions: usize,

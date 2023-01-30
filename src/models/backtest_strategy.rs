@@ -19,6 +19,7 @@ pub struct BackTestStrategyResult {
     pub strategy: String,
     pub strategy_type: StrategyType,
     pub time_frame: TimeFrameType,
+    pub higher_time_frame: Option<TimeFrameType>,
     pub market: Market,
     pub date: DbDateTime,
     pub avg_sessions: usize,
