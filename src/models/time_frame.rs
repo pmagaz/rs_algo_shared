@@ -256,8 +256,8 @@ where
 {
     let base_date = &instrument.data.get(index).unwrap().date;
     let upper_tf_data = match htf_instrument {
-        HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
-            let upper_indexes: Vec<usize> = upper_instrument
+        HigherTMInstrument::HigherTMInstrument(htf_instrument) => {
+            let upper_indexes: Vec<usize> = htf_instrument
                 .data
                 .iter()
                 .enumerate()
@@ -272,7 +272,7 @@ where
 
             let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
 
-            (upper_tf_indx, prev_upper_tf_indx, upper_instrument)
+            (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
         }
         _ => (0, 0, instrument),
     };
@@ -289,8 +289,8 @@ where
 {
     let base_date = &instrument.data.last().unwrap().date;
     let upper_tf_data = match htf_instrument {
-        HigherTMInstrument::HigherTMInstrument(upper_instrument) => {
-            let upper_indexes: Vec<usize> = upper_instrument
+        HigherTMInstrument::HigherTMInstrument(htf_instrument) => {
+            let upper_indexes: Vec<usize> = htf_instrument
                 .data
                 .iter()
                 .enumerate()
@@ -305,7 +305,7 @@ where
 
             let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
 
-            (upper_tf_indx, prev_upper_tf_indx, upper_instrument)
+            (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
         }
         _ => (0, 0, instrument),
     };

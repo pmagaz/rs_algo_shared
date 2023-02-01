@@ -167,7 +167,10 @@ pub fn prepare_orders(
                     target_price,
                     quantity,
                 );
-
+                // log::info!(
+                //     "5555555555 {:?}",
+                //     (&order.order_type, &trade_type, &order.target_price)
+                // );
                 match order_type.is_entry() {
                     true => buy_order_target = order.target_price,
                     false => sell_order_target = order.target_price,
