@@ -195,6 +195,7 @@ pub fn prepare_orders(
                     stop_loss_type,
                     target_price,
                 );
+
                 stop_order_target = stop_loss.target_price;
                 stop_loss_direction = order_direction.clone();
                 orders.push(stop_loss);
@@ -292,33 +293,33 @@ pub fn create_order(
 pub fn resolve_active_orders(
     index: usize,
     instrument: &Instrument,
-    strategy_type: &StrategyType,
     orders: &Vec<Order>,
+    pricing: &Pricing,
 ) -> Position {
     let mut order_position: Position = Position::None;
-    let mut leches = vec![];
+    let mut orders_activated = vec![];
     for (_id, order) in orders
         .iter()
         .enumerate()
         .filter(|(_id, order)| order.status == OrderStatus::Pending)
     {
-        match order_activated(index, order, instrument) {
+        match order_activated(index, order, instrument, pricing) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
                         order_position = Position::MarketInOrder(order.clone());
-                        leches.push(order_position.clone());
+                        orders_activated.push(order_position.clone());
                     }
                     OrderType::SellOrderLong(_, _, _)
                     | OrderType::SellOrderShort(_, _, _)
                     | OrderType::TakeProfitLong(_, _, _)
                     | OrderType::TakeProfitShort(_, _, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
-                        leches.push(order_position.clone());
+                        orders_activated.push(order_position.clone());
                     }
                     OrderType::StopLoss(_, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
-                        leches.push(order_position.clone());
+                        orders_activated.push(order_position.clone());
                     }
                     _ => todo!(),
                 };
@@ -335,15 +336,24 @@ pub fn resolve_active_orders(
     resolved
 }
 
-fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
+fn order_activated(
+    index: usize,
+    order: &Order,
+    instrument: &Instrument,
+    pricing: &Pricing,
+) -> bool {
     let data = &instrument.data;
+    let spread = pricing.spread();
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
     let prev_candle = data.get(prev_index).unwrap();
-
     let is_next_order = index > order.index_fulfilled;
 
     let cross_over = current_candle.high() >= order.target_price
+        && prev_candle.high() < current_candle.high()
+        && is_next_order;
+
+    let cross_over_short = spread + current_candle.high() >= order.target_price
         && prev_candle.high() < current_candle.high()
         && is_next_order;
 
