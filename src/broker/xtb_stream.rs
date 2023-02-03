@@ -2,7 +2,7 @@ use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
 use crate::helpers::uuid;
-use crate::models::stop_loss;
+use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
 use crate::ws::message::{InstrumentData, Message, ResponseBody, ResponseType, TradeData};
@@ -46,8 +46,7 @@ pub trait BrokerStream {
         &mut self,
         trade_out: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>>;
-    async fn get_instrument_pricing(&mut self, symbol: &str)
-        -> Result<ResponseBody<SymbolPricing>>;
+    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn get_tick_prices(
@@ -169,26 +168,42 @@ impl BrokerStream for Xtb {
         Ok(res)
     }
 
-    async fn get_instrument_pricing(
-        &mut self,
-        symbol: &str,
-    ) -> Result<ResponseBody<SymbolPricing>> {
-        let symbol_command = Command {
+    async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>> {
+        // let tick_command = Command {
+        //     command: "getSymbol".to_owned(),
+        //     arguments: TickParams {
+        //         timestamp: Local::now().timestamp_millis(),
+        //         symbols: vec![symbol.to_string()],
+        //         level: 2,
+        //     },
+        // };
+
+        let tick_command = Command {
             command: "getSymbol".to_owned(),
             arguments: SymbolArg {
                 symbol: symbol.to_owned(),
             },
         };
 
-        self.send(&symbol_command).await.unwrap();
+        self.send(&tick_command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => {
-                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
-                let symbol_detail: SymbolPricing = parsed.returnData;
+                let data = self.parse_message(&txt).await.unwrap();
+                let ask = data["returnData"]["ask"].as_f64().unwrap();
+                let bid = data["returnData"]["bid"].as_f64().unwrap();
+                let pip_size = data["returnData"]["spreadTable"].as_f64().unwrap();
+                let spread = ask - bid;
+
+                let pip_size = match symbol.contains("JPY") {
+                    true => 0.01,
+                    false => 0.0001,
+                };
+
+                let pricing = Pricing::new(symbol.to_string(), ask, bid, spread, pip_size);
                 ResponseBody {
-                    response: ResponseType::ExecuteTradeIn,
-                    payload: Some(symbol_detail),
+                    response: ResponseType::GetInstrumentPricing,
+                    payload: Some(pricing),
                 }
             }
             _ => panic!(),
@@ -246,9 +261,16 @@ impl BrokerStream for Xtb {
         let symbol = &trade.symbol;
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
-        let ask = pricing.ask;
-        let bid = pricing.bid;
-        let spread = pricing.spreadRaw;
+        let ask = pricing.ask();
+        let bid = pricing.bid();
+        let spread = pricing.spread();
+        let mut data = trade.data;
+        let trade_type = data.trade_type.clone();
+
+        let price_in = match trade_type.is_long() {
+            true => ask,
+            false => bid,
+        };
 
         log::info!(
             "Ask pricing {} for {}_{}",
@@ -257,11 +279,8 @@ impl BrokerStream for Xtb {
             trade.time_frame
         );
 
-        let mut data = trade.data.clone();
-
-        let entry_type = &data.trade_type;
         data.id = uuid::generate_ts_id(Local::now());
-        data.price_in = bid;
+        data.price_in = price_in;
         data.ask = ask;
         data.spread = spread;
 
@@ -283,19 +302,19 @@ impl BrokerStream for Xtb {
         let symbol = &trade.symbol;
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
-        let price_out = trade.data.price_out;
-        let bid = pricing.bid;
-        let ask = trade.data.ask;
-        let spread = pricing.spreadRaw;
-
-        log::info!(
-            "Bid pricing {} for {}_{:?}",
-            bid,
-            trade.symbol,
-            trade.time_frame
-        );
-
+        let ask = pricing.ask();
+        let bid = pricing.bid();
+        let spread = pricing.spread();
         let mut data = trade.data;
+        let trade_type = data.trade_type.clone();
+
+        let price_out = match trade_type.is_long() {
+            true => bid,
+            false => ask,
+        };
+
+        log::info!("Bid pricing {:?} for {} {}", trade_type, bid, trade.symbol,);
+
         data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
         data.bid = bid;

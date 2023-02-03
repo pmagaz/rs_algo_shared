@@ -10,6 +10,15 @@ pub struct Pricing {
 }
 
 impl Pricing {
+    pub fn new(symbol: String, ask: f64, bid: f64, spread: f64, pip_size: f64) -> Self {
+        Pricing {
+            symbol,
+            ask,
+            bid,
+            spread,
+            pip_size,
+        }
+    }
     pub fn symbol(&self) -> String {
         self.symbol.to_string()
     }

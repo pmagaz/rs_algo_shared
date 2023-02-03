@@ -263,7 +263,7 @@ pub fn create_order(
     let next_index = index + 1;
     let current_date = &instrument.data.get(next_index).unwrap().date();
     let origin_price = instrument.data().get(index).unwrap().close();
-    let base_time_frame = &env::var("BASE_TIME_FRAME").unwrap();
+    let base_time_frame = &env::var("TIME_FRAME").unwrap();
     let bars_to_overwrite = &env::var("BARS_TO_OVERWRITE")
         .unwrap()
         .parse::<i64>()
