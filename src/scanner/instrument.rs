@@ -58,8 +58,8 @@ pub enum MainInstrument {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HigherTMInstrument {
-    HigherTMInstrument(Instrument),
+pub enum HTFInstrument {
+    HTFInstrument(Instrument),
     None,
 }
 

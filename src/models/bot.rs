@@ -5,7 +5,7 @@ use crate::models::market::*;
 use crate::models::strategy::*;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
-use crate::scanner::instrument::{HigherTMInstrument, Instrument};
+use crate::scanner::instrument::{HTFInstrument, Instrument};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ pub struct BotData {
     date_start: DbDateTime,
     last_update: DbDateTime,
     instrument: Instrument,
-    higher_tf_instrument: HigherTMInstrument,
+    htf_instrument: HTFInstrument,
     trades_in: Vec<TradeIn>,
     trades_out: Vec<TradeOut>,
     orders: Vec<Order>,
@@ -52,8 +52,8 @@ impl BotData {
     pub fn instrument(&self) -> &Instrument {
         &self.instrument
     }
-    pub fn higher_tf_instrument(&self) -> &HigherTMInstrument {
-        &self.higher_tf_instrument
+    pub fn htf_instrument(&self) -> &HTFInstrument {
+        &self.htf_instrument
     }
     pub fn date_start(&self) -> &DbDateTime {
         &self.date_start

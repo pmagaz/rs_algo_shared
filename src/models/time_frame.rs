@@ -3,7 +3,7 @@ use crate::{
         calc::get_prev_index,
         date::{DateTime, Duration, Local},
     },
-    scanner::instrument::{HigherTMInstrument, Instrument},
+    scanner::instrument::{HTFInstrument, Instrument},
 };
 
 use chrono::Timelike;
@@ -248,7 +248,7 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
 pub fn get_htf_data<F>(
     index: usize,
     instrument: &Instrument,
-    htf_instrument: &HigherTMInstrument,
+    htf_instrument: &HTFInstrument,
     mut callback: F,
 ) -> bool
 where
@@ -256,7 +256,7 @@ where
 {
     let base_date = &instrument.data.get(index).unwrap().date;
     let upper_tf_data = match htf_instrument {
-        HigherTMInstrument::HigherTMInstrument(htf_instrument) => {
+        HTFInstrument::HTFInstrument(htf_instrument) => {
             let upper_indexes: Vec<usize> = htf_instrument
                 .data
                 .iter()
@@ -281,7 +281,7 @@ where
 
 pub fn get_bot_upper_timeframe<F>(
     instrument: &Instrument,
-    htf_instrument: &HigherTMInstrument,
+    htf_instrument: &HTFInstrument,
     mut callback: F,
 ) -> bool
 where
@@ -289,7 +289,7 @@ where
 {
     let base_date = &instrument.data.last().unwrap().date;
     let upper_tf_data = match htf_instrument {
-        HigherTMInstrument::HigherTMInstrument(htf_instrument) => {
+        HTFInstrument::HTFInstrument(htf_instrument) => {
             let upper_indexes: Vec<usize> = htf_instrument
                 .data
                 .iter()

@@ -16,7 +16,7 @@ pub enum CommandType {
     GetInstrumentData,
     UpdateBotData,
     ExecuteTrade,
-    //GetHigherTMInstrumentData,
+    //GetHTFInstrumentData,
     SubscribeStream,
 }
 
@@ -34,7 +34,7 @@ pub enum ResponseType {
     ExecuteTradeIn,
     ExecuteTradeOut,
     InitSession,
-    //GetHigherTMInstrumentData,
+    //GetHTFInstrumentData,
     SubscribeStream,
 }
 
@@ -90,7 +90,7 @@ pub enum MessageType {
     InitSession(ResponseBody<BotData>),
     ExecuteTradeIn(ResponseBody<TradeData<TradeIn>>),
     ExecuteTradeOut(ResponseBody<TradeData<TradeOut>>),
-    //HigherTMInstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
+    //HTFInstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     Connected(ResponseBody<Uuid>),
     Error(ResponseBody<bool>),
 }
