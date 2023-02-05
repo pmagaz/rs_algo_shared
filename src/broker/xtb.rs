@@ -114,6 +114,7 @@ impl Broker for Xtb {
         from_date: i64,
     ) -> Result<Response<VEC_DOHLC>> {
         self.symbol = symbol.to_owned();
+        self.time_frame = time_frame;
         self.send(&Command {
             command: "getChartLastRequest".to_owned(),
             arguments: Instrument {
@@ -305,6 +306,7 @@ impl Xtb {
 
     pub async fn handle_response<'a, T>(&mut self, msg: &str) -> Result<Response<VEC_DOHLC>> {
         let data = self.parse_message(&msg).await.unwrap();
+
         let response: Response<VEC_DOHLC> = match &data {
             // Login
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
@@ -317,14 +319,6 @@ impl Xtb {
                     symbols: vec![],
                 }
             }
-            // GetSymbols
-            _x if matches!(&data["returnData"], Value::Array(_x)) => Response::<VEC_DOHLC> {
-                msg_type: MessageType::GetInstrumentPrice,
-                symbol: self.symbol.to_owned(),
-                time_frame: TimeFrameType::from_number(self.time_frame),
-                data: vec![],
-                symbols: self.parse_symbols_data(&data).await.unwrap(),
-            },
             // GetInstrumentPrice
             _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => {
                 Response::<VEC_DOHLC> {
@@ -335,6 +329,15 @@ impl Xtb {
                     data: self.parse_price_data(&data).await.unwrap(),
                 }
             }
+            // GetSymbols
+            _x if matches!(&data["returnData"], Value::Array(_x)) => Response::<VEC_DOHLC> {
+                msg_type: MessageType::GetInstrumentPrice,
+                symbol: self.symbol.to_owned(),
+                time_frame: TimeFrameType::from_number(self.time_frame),
+                data: vec![],
+                symbols: self.parse_symbols_data(&data).await.unwrap(),
+            },
+
             _ => {
                 println!("[Error] {:?}", msg);
                 Response {
@@ -398,5 +401,14 @@ impl Xtb {
             });
         }
         Ok(result)
+    }
+}
+pub fn parse_symbol(symbol: &String) -> Result<String> {
+    if symbol.contains('_') {
+        let symbol_str: Vec<&str> = symbol.split('_').collect();
+        Ok(symbol_str[0].to_owned())
+    } else {
+        log::error!("Change fucking xtb");
+        Ok(symbol.to_owned())
     }
 }

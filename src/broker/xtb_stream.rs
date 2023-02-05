@@ -46,6 +46,7 @@ pub trait BrokerStream {
         &mut self,
         trade_out: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>>;
+    //fn parse_symbol(&mut self, symbol: String) -> Result<String>;
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
@@ -573,5 +574,15 @@ impl Xtb {
             });
         }
         Ok(result)
+    }
+
+    pub fn parse_symbol(symbol: String) -> Result<String> {
+        if symbol.contains('_') {
+            let symbol_str: Vec<&str> = symbol.split('_').collect();
+            Ok(symbol_str[0].to_owned())
+        } else {
+            log::error!("Change fucking xtb");
+            Ok(symbol)
+        }
     }
 }
