@@ -170,15 +170,6 @@ impl BrokerStream for Xtb {
     }
 
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>> {
-        // let tick_command = Command {
-        //     command: "getSymbol".to_owned(),
-        //     arguments: TickParams {
-        //         timestamp: Local::now().timestamp_millis(),
-        //         symbols: vec![symbol.to_string()],
-        //         level: 2,
-        //     },
-        // };
-
         let tick_command = Command {
             command: "getSymbol".to_owned(),
             arguments: SymbolArg {
@@ -193,15 +184,15 @@ impl BrokerStream for Xtb {
                 let data = self.parse_message(&txt).await.unwrap();
                 let ask = data["returnData"]["ask"].as_f64().unwrap();
                 let bid = data["returnData"]["bid"].as_f64().unwrap();
-                let pip_size = data["returnData"]["spreadTable"].as_f64().unwrap();
+                let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
                 let spread = ask - bid;
 
-                let pip_size = match symbol.contains("JPY") {
-                    true => 0.01,
-                    false => 0.0001,
-                };
+                // let pip_size = match symbol.contains("JPY") {
+                //     true => 0.01,
+                //     false => 0.0001,
+                // };
 
-                let pricing = Pricing::new(symbol.to_string(), ask, bid, spread, pip_size);
+                let pricing = Pricing::new(symbol.to_owned(), ask, bid, spread, pip_size);
                 ResponseBody {
                     response: ResponseType::GetInstrumentPricing,
                     payload: Some(pricing),
@@ -274,10 +265,10 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "Ask pricing {} for {}_{}",
-            ask,
+            "{} TradeIn accepted at ask: {} bid: {} pricing",
             trade.symbol,
-            trade.time_frame
+            ask,
+            bid
         );
 
         data.id = uuid::generate_ts_id(Local::now());
@@ -289,7 +280,7 @@ impl BrokerStream for Xtb {
             response: ResponseType::ExecuteTradeIn,
             payload: Some(TradeData {
                 symbol: trade.symbol,
-                time_frame: trade.time_frame,
+                //time_frame: trade.time_frame,
                 data: data,
             }),
         };
@@ -301,6 +292,7 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>> {
         let symbol = &trade.symbol;
+        log::info!("88888888 {}", symbol);
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
         let ask = pricing.ask();
@@ -314,7 +306,13 @@ impl BrokerStream for Xtb {
             false => ask,
         };
 
-        log::info!("Bid pricing {:?} for {} {}", trade_type, bid, trade.symbol,);
+        log::info!(
+            "{:?} {} accepted at ask: {} bid: {} pricing",
+            trade_type,
+            trade.symbol,
+            ask,
+            bid
+        );
 
         data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
@@ -326,7 +324,7 @@ impl BrokerStream for Xtb {
             response: ResponseType::ExecuteTradeOut,
             payload: Some(TradeData {
                 symbol: trade.symbol,
-                time_frame: trade.time_frame,
+                //time_frame: trade.time_frame,
                 data: data,
             }),
         };

@@ -130,6 +130,13 @@ impl Order {
         self.set_full_filled_at(to_dbtime(date));
     }
 
+    pub fn fulfill_bot_order(&mut self, date: DateTime<Local>) {
+        self.set_status(OrderStatus::Fulfilled);
+        self.set_updated_at(to_dbtime(date));
+        //self.set_full_filled_index(index);
+        self.set_full_filled_at(to_dbtime(date));
+    }
+
     pub fn cancel_order(&mut self, date: DbDateTime) {
         self.set_status(OrderStatus::Canceled);
         self.set_updated_at(date);
@@ -182,7 +189,7 @@ pub fn prepare_orders(
                 is_stop_loss = true;
                 let target_price = match orders.first() {
                     Some(order) => order.target_price,
-                    None => instrument.data.get(index + 1).unwrap().open(),
+                    None => instrument.data.last().unwrap().open(),
                 };
 
                 let stop_loss = create_stop_loss_order(
@@ -410,13 +417,12 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .unwrap();
 
     let (buy_orders, sell_orders, stop_losses) = get_num_pending_orders(&orders);
-
     let result: Vec<Order> = new_orders
         .iter()
         .filter(|order| order.status == OrderStatus::Pending)
         .filter(|order| match order.order_type {
             OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-                buy_orders < max_buy_orders
+                buy_orders < max_buy_orders && stop_losses < max_stop_losses
             }
             OrderType::SellOrderLong(_, _, _)
             | OrderType::SellOrderShort(_, _, _)
@@ -427,7 +433,6 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .map(|order| order.clone())
         .collect();
 
-    //if (overwrite_orders && buy_orders > 0) || result.len() <= max_pending_orders {
     if result.len() <= max_pending_orders {
         [orders, result].concat()
     } else {
@@ -535,6 +540,7 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) 
         .map(|x| {
             if x.status == OrderStatus::Pending {
                 x.cancel_order(*trade.get_date());
+                log::info!("Order {} canceled", x.id);
                 //log::info!("CANCELED {:?}", x.order_type);
             }
             x.clone()
@@ -618,4 +624,290 @@ pub fn fulfill_order_and_update_pricing<T: Trade>(
     }
 
     //update_pending_trade_orders(trade, orders);
+}
+
+pub fn fulfill_bot_order<T: Trade>(trade: &T, order: &Order, orders: &mut Vec<Order>) {
+    let date = trade.get_chrono_date();
+    let order_position = orders
+        .iter()
+        .position(|x| x.status == OrderStatus::Pending && x.order_type == order.order_type);
+
+    match order_position {
+        Some(x) => {
+            log::info!("Fulfilling {:?}", (order.id, &order.order_type));
+            orders.get_mut(x).unwrap().fulfill_bot_order(date);
+        }
+        None => {}
+    }
+}
+
+pub fn cancel_all_bot_pending_orders(mut orders: Vec<Order>) -> Vec<Order> {
+    let current_date = &Local::now();
+
+    orders
+        .iter_mut()
+        .map(|x| {
+            let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+            if current_date >= valid_until && x.status == OrderStatus::Pending {
+                x.cancel_order(to_dbtime(Local::now()));
+                log::info!("Order {} canceled", x.id);
+            }
+            x.clone()
+        })
+        // .filter(|x| {
+        //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+        //     current_date < valid_until && x.status != OrderStatus::Pending
+        // })
+        .map(|x| x.clone())
+        .collect()
+
+    // orders.retain(|x| {
+    //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+    //     current_date <= valid_until && x.status != OrderStatus::Pending
+    // });
+    // orders
+}
+
+pub fn prepare_bot_orders(
+    index: usize,
+    instrument: &Instrument,
+    pricing: &Pricing,
+    trade_type: &TradeType,
+    order_types: &Vec<OrderType>,
+) -> Vec<Order> {
+    let mut buy_order_target = 0.;
+    let mut sell_order_target = 0.;
+    let mut stop_order_target = 0.;
+    let mut is_stop_loss = false;
+    let mut stop_loss_direction = OrderDirection::Up;
+
+    let mut orders: Vec<Order> = vec![];
+    let trade_id = uuid::generate_ts_id(instrument.data.last().unwrap().date());
+    for order_type in order_types {
+        match order_type {
+            OrderType::BuyOrderLong(_, quantity, target_price)
+            | OrderType::BuyOrderShort(_, quantity, target_price)
+            | OrderType::SellOrderLong(_, quantity, target_price)
+            | OrderType::SellOrderShort(_, quantity, target_price)
+            | OrderType::TakeProfitLong(_, quantity, target_price)
+            | OrderType::TakeProfitShort(_, quantity, target_price) => {
+                let order = create_bot_order(
+                    index,
+                    trade_id,
+                    instrument,
+                    order_type,
+                    target_price,
+                    quantity,
+                );
+                // log::info!(
+                //     "5555555555 {:?}",
+                //     (&order.order_type, &trade_type, &order.target_price)
+                // );
+                match order_type.is_entry() {
+                    true => buy_order_target = order.target_price,
+                    false => sell_order_target = order.target_price,
+                }
+
+                orders.push(order);
+            }
+            OrderType::StopLoss(order_direction, stop_loss_type) => {
+                is_stop_loss = true;
+                let target_price = match orders.first() {
+                    Some(order) => order.target_price,
+                    None => instrument.data.last().unwrap().open(),
+                };
+
+                let stop_loss = create_bot_stop_loss_order(
+                    index,
+                    trade_id,
+                    instrument,
+                    pricing,
+                    trade_type,
+                    order_direction,
+                    stop_loss_type,
+                    target_price,
+                );
+
+                stop_order_target = stop_loss.target_price;
+                stop_loss_direction = order_direction.clone();
+                orders.push(stop_loss);
+            }
+        }
+    }
+
+    //CHECK STOP LOSS
+    if is_stop_loss {
+        match stop_loss_direction == OrderDirection::Down {
+            true => {
+                if stop_order_target >= buy_order_target && buy_order_target > 0. {
+                    orders = vec![];
+                    log::error!(
+                        "Stop loss can't be placed higher than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    )
+                }
+            }
+            false => {
+                if stop_order_target <= buy_order_target && buy_order_target > 0. {
+                    orders = vec![];
+                    log::error!(
+                        "Stop loss can't be placed lower than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    )
+                }
+            }
+        }
+    };
+
+    //CHECK SELL ORDER VALUE
+    match trade_type.is_long() {
+        true => {
+            if sell_order_target <= buy_order_target && sell_order_target > 0. {
+                orders = vec![];
+                log::error!(
+                    "Sell Order can't be placed lower than buy level {:?}",
+                    (buy_order_target, sell_order_target)
+                )
+            }
+        }
+        false => {
+            if sell_order_target >= buy_order_target && sell_order_target > 0. {
+                orders = vec![];
+                log::error!(
+                    "Sell Order can't be placed higher than buy level {:?}",
+                    (buy_order_target, sell_order_target)
+                )
+            }
+        }
+    };
+
+    orders
+}
+
+pub fn create_bot_order(
+    index: usize,
+    trade_id: usize,
+    instrument: &Instrument,
+    order_type: &OrderType,
+    target_price: &f64,
+    quantity: &f64,
+) -> Order {
+    let current_date = &instrument.data().last().unwrap().date();
+    let origin_price = instrument.data().last().unwrap().close();
+    let base_time_frame = &env::var("TIME_FRAME").unwrap();
+    let bars_to_overwrite = &env::var("BARS_TO_OVERWRITE")
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+    let time_frame = TimeFrame::new(base_time_frame);
+    let bar_value = time_frame.to_number();
+    let minutes_add = bar_value * bars_to_overwrite;
+    let valid_until = *current_date + date::Duration::minutes(minutes_add);
+
+    Order {
+        id: uuid::generate_ts_id(*current_date),
+        index_created: index,
+        index_fulfilled: 0,
+        trade_id,
+        order_type: order_type.clone(),
+        status: OrderStatus::Pending,
+        origin_price,
+        target_price: *target_price,
+        quantity: *quantity,
+        created_at: to_dbtime(*current_date),
+        updated_at: None,
+        full_filled_at: None,
+        valid_until: Some(to_dbtime(valid_until)),
+    }
+}
+
+pub fn resolve_bot_active_orders(
+    index: usize,
+    instrument: &Instrument,
+    orders: &Vec<Order>,
+    pricing: &Pricing,
+) -> Position {
+    let mut order_position: Position = Position::None;
+    let mut orders_activated = vec![];
+    for (_id, order) in orders
+        .iter()
+        .enumerate()
+        .filter(|(_id, order)| order.status == OrderStatus::Pending)
+    {
+        match bot_order_activated(index, order, instrument, pricing) {
+            true => {
+                match order.order_type {
+                    OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
+                        order_position = Position::MarketInOrder(order.clone());
+                        orders_activated.push(order_position.clone());
+                    }
+                    OrderType::SellOrderLong(_, _, _)
+                    | OrderType::SellOrderShort(_, _, _)
+                    | OrderType::TakeProfitLong(_, _, _)
+                    | OrderType::TakeProfitShort(_, _, _) => {
+                        order_position = Position::MarketOutOrder(order.clone());
+                        orders_activated.push(order_position.clone());
+                    }
+                    OrderType::StopLoss(_, _) => {
+                        order_position = Position::MarketOutOrder(order.clone());
+                        orders_activated.push(order_position.clone());
+                    }
+                    _ => todo!(),
+                };
+            }
+            false => (),
+        }
+    }
+
+    let resolved = match has_executed_buy_order(&orders, &order_position) {
+        true => order_position,
+        false => Position::None,
+    };
+
+    resolved
+}
+
+fn bot_order_activated(
+    index: usize,
+    order: &Order,
+    instrument: &Instrument,
+    pricing: &Pricing,
+) -> bool {
+    let data = &instrument.data;
+    let spread = pricing.spread();
+    let prev_index = get_prev_index(index);
+    let current_candle = data.get(index).unwrap();
+    let prev_candle = data.get(prev_index).unwrap();
+    let is_next_order = index > order.index_fulfilled;
+
+    let cross_over = current_candle.high() >= order.target_price
+        && prev_candle.high() < current_candle.high()
+        && is_next_order;
+
+    let cross_over_short = spread + current_candle.high() >= order.target_price
+        && prev_candle.high() < current_candle.high()
+        && is_next_order;
+
+    let cross_bellow = current_candle.low() <= order.target_price
+        && prev_candle.low() > current_candle.low()
+        && is_next_order;
+
+    // let activated = match &order.order_type {
+    //     OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) =>   cross_over || cross_bellow
+    //     OrderType::SellOrderLong(direction, _, _)
+    //     | OrderType::SellOrderShort(direction, _, _)
+    //     | OrderType::TakeProfitLong(direction, _, _)
+    //     | OrderType::TakeProfitShort(direction, _, _) => match direction {
+    //         OrderDirection::Up => cross_over,
+    //         OrderDirection::Down => cross_bellow,
+    //     },
+    //     OrderType::StopLoss(direction, stop) => match direction {
+    //         OrderDirection::Up => cross_over,
+    //         OrderDirection::Down => cross_bellow,
+    //     },
+    //     _ => todo!(),
+    // };
+
+    let activated = cross_over || cross_bellow;
+    activated
 }
