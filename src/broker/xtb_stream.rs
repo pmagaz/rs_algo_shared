@@ -1,7 +1,9 @@
 use super::*;
 use crate::error::Result;
 use crate::helpers::date::parse_time;
+use crate::helpers::date::*;
 use crate::helpers::uuid;
+use crate::models::order::*;
 use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
@@ -46,7 +48,14 @@ pub trait BrokerStream {
         &mut self,
         trade_out: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>>;
-    //fn parse_symbol(&mut self, symbol: String) -> Result<String>;
+    async fn order_in(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeData<TradeIn>>>;
+    async fn order_out(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeData<TradeOut>>>;
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
@@ -292,7 +301,7 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>> {
         let symbol = &trade.symbol;
-        log::info!("88888888 {}", symbol);
+
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
         let ask = pricing.ask();
@@ -328,6 +337,140 @@ impl BrokerStream for Xtb {
                 data: data,
             }),
         };
+        Ok(txt_msg)
+    }
+
+    async fn order_in(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeData<TradeIn>>> {
+        let trade_command = Command {
+            command: "tradeTransaction".to_owned(),
+            arguments: Transaction {
+                cmd: "".to_owned(),
+                symbol: "".to_owned(),
+                customComment: "".to_owned(),
+                expiration: 0,
+                order: 0,
+                price: 0.,
+                sl: 0.,
+                tp: 0.,
+                volume: 0.,
+                trans_type: 0,
+            },
+        };
+
+        let symbol = &order.symbol;
+        let order = order.data;
+        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
+        let pricing = pricing.payload.unwrap();
+        let spread = pricing.spread();
+
+        let trade_type = match order.order_type.is_long() {
+            true => TradeType::OrderInLong,
+            false => TradeType::OrderInShort,
+        };
+
+        let price_in = match trade_type.is_long() {
+            true => order.target_price + spread,
+            false => order.target_price,
+        };
+
+        log::info!("{:?} accepted at {}", order.order_type, price_in);
+
+        let trade_in = TradeIn {
+            id: uuid::generate_ts_id(Local::now()),
+            index_in: order.index_created,
+            quantity: order.quantity,
+            origin_price: order.origin_price,
+            price_in,
+            ask: order.target_price,
+            spread,
+            trade_type,
+            date_in: to_dbtime(Local::now()),
+        };
+
+        let txt_msg = ResponseBody {
+            response: ResponseType::ExecuteTradeIn,
+            payload: Some(TradeData {
+                symbol: symbol.clone(),
+                data: trade_in,
+            }),
+        };
+
+        Ok(txt_msg)
+    }
+
+    async fn order_out(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeData<TradeOut>>> {
+        let trade_command = Command {
+            command: "tradeTransaction".to_owned(),
+            arguments: Transaction {
+                cmd: "".to_owned(),
+                symbol: "".to_owned(),
+                customComment: "".to_owned(),
+                expiration: 0,
+                order: 0,
+                price: 0.,
+                sl: 0.,
+                tp: 0.,
+                volume: 0.,
+                trans_type: 0,
+            },
+        };
+
+        let symbol = &order.symbol;
+        let order = order.data;
+        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
+        let pricing = pricing.payload.unwrap();
+        let spread = pricing.spread();
+
+        let trade_type = match order.order_type.is_long() {
+            true => TradeType::OrderOutLong,
+            false => TradeType::OrderOutShort,
+        };
+
+        let price_out = match trade_type.is_long() {
+            true => order.target_price,
+            false => order.target_price + spread,
+        };
+
+        let now = Local::now();
+
+        log::info!("{:?} accepted at {}", order.order_type, price_out);
+
+        let trade_out = TradeOut {
+            id: uuid::generate_ts_id(now),
+            trade_type,
+            index_in: order.index_created,
+            price_in: order.origin_price,
+            ask: order.target_price,
+            spread_in: spread,
+            date_in: order.full_filled_at.unwrap(),
+            index_out: order.index_fulfilled,
+            price_origin: order.origin_price,
+            price_out,
+            bid: price_out,
+            spread_out: spread,
+            date_out: to_dbtime(now),
+            profit: 0.,
+            profit_per: 0.,
+            run_up: 0.,
+            run_up_per: 0.,
+            draw_down: 0.,
+            draw_down_per: 0.,
+        };
+
+        let txt_msg = ResponseBody {
+            response: ResponseType::ExecuteTradeIn,
+            payload: Some(TradeData {
+                symbol: symbol.clone(),
+                data: trade_out,
+            }),
+        };
+
         Ok(txt_msg)
     }
 

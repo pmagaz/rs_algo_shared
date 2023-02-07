@@ -139,7 +139,6 @@ pub fn create_bot_stop_loss_order(
     };
 
     order::create_bot_order(
-        index,
         trade_id,
         instrument,
         &OrderType::StopLoss(order_direction.clone(), stop_loss_type.clone()),
