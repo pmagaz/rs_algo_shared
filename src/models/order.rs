@@ -942,6 +942,5 @@ fn bot_order_activated(
         },
         _ => todo!(),
     };
-    true
-    //activated
+    activated
 }
