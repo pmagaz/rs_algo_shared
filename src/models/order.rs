@@ -1,7 +1,6 @@
 use std::env;
 
 use super::pricing::Pricing;
-use super::strategy::StrategyType;
 use super::time_frame::TimeFrame;
 use super::trade::{Trade, TradeType};
 
@@ -943,5 +942,6 @@ fn bot_order_activated(
         },
         _ => todo!(),
     };
-    activated
+    true
+    //activated
 }

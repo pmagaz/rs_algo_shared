@@ -4,6 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::Indicators;
 use crate::models::indicator::CompactIndicators;
 use crate::models::market::*;
+use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
@@ -585,6 +586,7 @@ impl Instrument {
 
         candle.set_is_closed(false);
         candle.set_date(open_from);
+        //candle.set_open();
 
         //self.next_indicators(candle.clone());
 
