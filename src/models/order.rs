@@ -9,6 +9,7 @@ use crate::helpers::uuid;
 use crate::helpers::{date, date::*};
 use crate::models::stop_loss::*;
 use crate::models::trade::Position;
+use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
@@ -272,7 +273,7 @@ pub fn validate_target_price(
                     "Current Price is higher than target price {:?}",
                     (close_price, target_price)
                 );
-                panic!();
+                //panic!();
                 false
             } else {
                 true
@@ -284,7 +285,7 @@ pub fn validate_target_price(
                     "Current Price is lower than target price {:?}",
                     (close_price, target_price)
                 );
-                panic!();
+                //panic!();
                 false
             } else {
                 true
@@ -384,17 +385,26 @@ fn order_activated(
     pricing: &Pricing,
 ) -> bool {
     let data = &instrument.data;
-    let spread = pricing.spread();
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
     let prev_candle = data.get(prev_index).unwrap();
     let is_next_order = index > order.index_fulfilled;
+    let (current_price_over, current_price_bellow, previous_price_over, previous_price_bellow) =
+        get_order_activation_price(current_candle, prev_candle);
 
-    let cross_over = current_candle.high() >= order.target_price
+    let cross_over = current_price_over >= order.target_price
+        && previous_price_over < current_price_over
+        && is_next_order;
+
+    let cross_bellow = current_price_bellow <= order.target_price
+        && previous_price_bellow > current_price_bellow
+        && is_next_order;
+
+    let stop_cross_over = current_candle.high() >= order.target_price
         && prev_candle.high() < current_candle.high()
         && is_next_order;
 
-    let cross_bellow = current_candle.low() <= order.target_price
+    let stop_cross_bellow = current_candle.low() <= order.target_price
         && prev_candle.low() > current_candle.low()
         && is_next_order;
 
@@ -412,9 +422,9 @@ fn order_activated(
             OrderDirection::Up => cross_over,
             OrderDirection::Down => cross_bellow,
         },
-        OrderType::StopLoss(direction, stop) => match direction {
-            OrderDirection::Up => cross_over,
-            OrderDirection::Down => cross_bellow,
+        OrderType::StopLoss(direction, _) => match direction {
+            OrderDirection::Up => stop_cross_over,
+            OrderDirection::Down => stop_cross_bellow,
         },
         _ => todo!(),
     };
@@ -451,7 +461,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .filter(|order| order.status == OrderStatus::Pending)
         .filter(|order| match order.order_type {
             OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-                buy_orders < max_buy_orders
+                buy_orders < max_buy_orders && stop_losses < max_stop_losses
             }
             OrderType::SellOrderLong(_, _, _)
             | OrderType::SellOrderShort(_, _, _)
@@ -569,7 +579,7 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) 
         .map(|x| {
             if x.status == OrderStatus::Pending {
                 x.cancel_order(*trade.get_date());
-                log::info!("Order {} canceled", x.id);
+                // log::info!("Order {} canceled", x.id);
                 //log::info!("CANCELED {:?}", x.order_type);
             }
             x.clone()
@@ -679,7 +689,7 @@ pub fn cancel_all_bot_pending_orders(mut orders: Vec<Order>) -> Vec<Order> {
             let valid_until = &fom_dbtime(&x.valid_until.unwrap());
             if current_date >= valid_until && x.status == OrderStatus::Pending {
                 x.cancel_order(to_dbtime(Local::now()));
-                log::info!("Order {} canceled", x.id);
+                // log::info!("Order {} canceled", x.id);
             }
             x.clone()
         })
@@ -868,7 +878,7 @@ pub fn resolve_bot_active_orders(
         .enumerate()
         .filter(|(_id, order)| order.status == OrderStatus::Pending)
     {
-        match bot_order_activated(index, order, instrument, pricing) {
+        match order_activated(index, order, instrument, pricing) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
@@ -901,46 +911,88 @@ pub fn resolve_bot_active_orders(
     resolved
 }
 
-fn bot_order_activated(
-    index: usize,
-    order: &Order,
-    instrument: &Instrument,
-    pricing: &Pricing,
-) -> bool {
-    let data = &instrument.data;
-    let spread = pricing.spread();
-    let prev_index = get_prev_index(index);
-    let current_candle = data.get(index).unwrap();
-    let prev_candle = data.get(prev_index).unwrap();
-    let is_next_order = index > order.index_fulfilled;
-
-    let cross_over = current_candle.high() >= order.target_price
-        && prev_candle.high() < current_candle.high()
-        && is_next_order;
-
-    let cross_bellow = current_candle.low() <= order.target_price
-        && prev_candle.low() > current_candle.low()
-        && is_next_order;
-
-    let activated = match &order.order_type {
-        OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
-            match direction {
-                OrderDirection::Up => cross_over,
-                OrderDirection::Down => cross_bellow,
-            }
-        }
-        OrderType::SellOrderLong(direction, _, _)
-        | OrderType::SellOrderShort(direction, _, _)
-        | OrderType::TakeProfitLong(direction, _, _)
-        | OrderType::TakeProfitShort(direction, _, _) => match direction {
-            OrderDirection::Up => cross_over,
-            OrderDirection::Down => cross_bellow,
-        },
-        OrderType::StopLoss(direction, stop) => match direction {
-            OrderDirection::Up => cross_over,
-            OrderDirection::Down => cross_bellow,
-        },
-        _ => todo!(),
-    };
-    activated
+fn get_order_activation_price(candle: &Candle, prev_candle: &Candle) -> (f64, f64, f64, f64) {
+    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+    match activation_source.as_ref() {
+        "highs_lows" => (
+            candle.high(),
+            candle.low(),
+            prev_candle.high(),
+            prev_candle.low(),
+        ),
+        "close" => (
+            candle.close(),
+            candle.close(),
+            prev_candle.close(),
+            prev_candle.close(),
+        ),
+        _ => (
+            candle.close(),
+            candle.close(),
+            prev_candle.close(),
+            prev_candle.close(),
+        ),
+    }
 }
+
+// fn bot_order_activated(
+//     index: usize,
+//     order: &Order,
+//     instrument: &Instrument,
+//     pricing: &Pricing,
+// ) -> bool {
+//     let data = &instrument.data;
+//     let prev_index = get_prev_index(index);
+//     let current_candle = data.get(index).unwrap();
+//     let prev_candle = data.get(prev_index).unwrap();
+//     let is_next_order = index > order.index_fulfilled;
+//     is_activated(current_candle, prev_candle, order, is_next_order)
+// }
+
+// pub fn is_activated(
+//     current_candle: &Candle,
+//     prev_candle: &Candle,
+//     order: &Order,
+//     is_next_order: bool,
+// ) -> bool {
+//     let (current_price_over, current_price_bellow, previous_price_over, previous_price_bellow) =
+//         get_order_activation_price(current_candle, prev_candle);
+
+//     let cross_over = current_price_over >= order.target_price
+//         && previous_price_over < current_price_over
+//         && is_next_order;
+
+//     let cross_bellow = current_price_bellow <= order.target_price
+//         && previous_price_bellow > current_price_bellow
+//         && is_next_order;
+
+//     let stop_cross_over = current_candle.high() >= order.target_price
+//         && prev_candle.high() < current_candle.high()
+//         && is_next_order;
+
+//     let stop_cross_bellow = current_candle.low() <= order.target_price
+//         && prev_candle.low() > current_candle.low()
+//         && is_next_order;
+
+//     let activated = match &order.order_type {
+//         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
+//             match direction {
+//                 OrderDirection::Up => cross_over,
+//                 OrderDirection::Down => cross_bellow,
+//             }
+//         }
+//         OrderType::SellOrderLong(direction, _, _)
+//         | OrderType::SellOrderShort(direction, _, _)
+//         | OrderType::TakeProfitLong(direction, _, _)
+//         | OrderType::TakeProfitShort(direction, _, _) => match direction {
+//             OrderDirection::Up => cross_over,
+//             OrderDirection::Down => cross_bellow,
+//         },
+//         OrderType::StopLoss(direction, _) => match direction {
+//             OrderDirection::Up => stop_cross_over,
+//             OrderDirection::Down => stop_cross_bellow,
+//         },
+//         _ => todo!(),
+//     };
+//     activated
+// }
