@@ -153,11 +153,14 @@ pub fn prepare_orders(
     let mut sell_order_target = 0.;
     let mut stop_order_target = 0.;
     let mut is_stop_loss = false;
+    let mut is_valid_buy_sell_order = true;
     let mut stop_loss_direction = OrderDirection::Up;
     let current_candle = instrument.data().get(index).unwrap();
+    let next_candle = instrument.data().get(index + 1).unwrap();
     let close_price = current_candle.close();
     let mut orders: Vec<Order> = vec![];
-    let trade_id = uuid::generate_ts_id(instrument.data.get(index + 1).unwrap().date());
+    let trade_id = uuid::generate_ts_id(next_candle.date());
+
     for order_type in order_types {
         match order_type {
             OrderType::BuyOrderLong(direction, quantity, target_price)
@@ -166,7 +169,8 @@ pub fn prepare_orders(
             | OrderType::SellOrderShort(direction, quantity, target_price)
             | OrderType::TakeProfitLong(direction, quantity, target_price)
             | OrderType::TakeProfitShort(direction, quantity, target_price) => {
-                if validate_target_price(direction, &close_price, target_price) {
+                if validate_target_price(order_type, direction, &close_price, target_price) {
+                    //log::info!("{:?} validated", &order_type,);
                     let order = create_order(
                         index,
                         trade_id,
@@ -177,11 +181,24 @@ pub fn prepare_orders(
                     );
 
                     match order_type.is_entry() {
-                        true => buy_order_target = order.target_price,
-                        false => sell_order_target = order.target_price,
-                    }
+                        true => {
+                            buy_order_target = match order_type.is_long() {
+                                true => order.target_price + pricing.spread(),
+                                false => order.target_price,
+                            }
+                        }
+                        false => {
+                            sell_order_target = match order_type.is_long() {
+                                true => order.target_price,
+                                false => order.target_price + pricing.spread(),
+                            }
+                        }
+                    };
 
                     orders.push(order);
+                } else {
+                    is_valid_buy_sell_order = false;
+                    log::error!("{:?} not valid", &order_type,);
                 }
             }
             OrderType::StopLoss(direction, stop_loss_type) => {
@@ -189,21 +206,20 @@ pub fn prepare_orders(
 
                 let target_price = match orders.first() {
                     Some(order) => order.target_price,
-                    None => instrument.data.last().unwrap().open(),
+                    None => next_candle.open(),
                 };
 
-                let stop_loss = create_stop_loss_order(
-                    index,
-                    trade_id,
-                    instrument,
-                    pricing,
-                    trade_type,
-                    direction,
-                    stop_loss_type,
-                    target_price,
-                );
-
-                if validate_target_price(direction, &close_price, &stop_loss.target_price) {
+                if is_valid_buy_sell_order {
+                    let stop_loss = create_stop_loss_order(
+                        index,
+                        trade_id,
+                        instrument,
+                        pricing,
+                        trade_type,
+                        direction,
+                        stop_loss_type,
+                        target_price,
+                    );
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
                     orders.push(stop_loss);
@@ -217,20 +233,20 @@ pub fn prepare_orders(
         match stop_loss_direction == OrderDirection::Down {
             true => {
                 if stop_order_target >= buy_order_target && buy_order_target > 0. {
-                    orders = vec![];
                     log::error!(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
-                    )
+                    );
+                    panic!();
                 }
             }
             false => {
                 if stop_order_target <= buy_order_target && buy_order_target > 0. {
-                    orders = vec![];
                     log::error!(
                         "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
-                    )
+                    );
+                    panic!();
                 }
             }
         }
@@ -262,6 +278,7 @@ pub fn prepare_orders(
 }
 
 pub fn validate_target_price(
+    order_type: &OrderType,
     direction: &OrderDirection,
     close_price: &f64,
     target_price: &f64,
@@ -270,10 +287,12 @@ pub fn validate_target_price(
         OrderDirection::Up => {
             if close_price >= target_price {
                 log::error!(
-                    "Current Price is higher than target price {:?}",
-                    (close_price, target_price)
+                    "{:?} not valid. Target price {} is higher than {}",
+                    order_type,
+                    target_price,
+                    close_price,
                 );
-                //panic!();
+                panic!();
                 false
             } else {
                 true
@@ -282,10 +301,12 @@ pub fn validate_target_price(
         OrderDirection::Down => {
             if close_price <= target_price {
                 log::error!(
-                    "Current Price is lower than target price {:?}",
-                    (close_price, target_price)
+                    "{:?} not valid. Target price {} is lower than {}",
+                    order_type,
+                    target_price,
+                    close_price,
                 );
-                //panic!();
+                panic!();
                 false
             } else {
                 true
@@ -718,6 +739,7 @@ pub fn prepare_bot_orders(
     let mut sell_order_target = 0.;
     let mut stop_order_target = 0.;
     let mut is_stop_loss = false;
+    let mut is_valid_buy_sell_order = true;
     let mut stop_loss_direction = OrderDirection::Up;
     let current_candle = instrument.data().get(index).unwrap();
     let close_price = current_candle.close();
@@ -732,45 +754,54 @@ pub fn prepare_bot_orders(
             | OrderType::SellOrderShort(direction, quantity, target_price)
             | OrderType::TakeProfitLong(direction, quantity, target_price)
             | OrderType::TakeProfitShort(direction, quantity, target_price) => {
-                if validate_target_price(direction, &close_price, target_price) {
+                if validate_target_price(order_type, direction, &close_price, target_price) {
+                    log::info!(
+                        "Validating stop loss {:?} target_price {}",
+                        &order_type,
+                        &target_price
+                    );
                     let order =
                         create_bot_order(trade_id, instrument, order_type, target_price, quantity);
 
                     match order_type.is_entry() {
-                        true => buy_order_target = order.target_price,
-                        false => sell_order_target = order.target_price,
-                    }
+                        true => {
+                            buy_order_target = match order_type.is_long() {
+                                true => order.target_price + pricing.spread(),
+                                false => order.target_price,
+                            }
+                        }
+                        false => {
+                            sell_order_target = match order_type.is_long() {
+                                true => order.target_price,
+                                false => order.target_price + pricing.spread(),
+                            }
+                        }
+                    };
 
                     orders.push(order);
+                } else {
+                    is_valid_buy_sell_order = false;
+                    log::error!("{:?} not valid", &order_type,);
                 }
             }
             OrderType::StopLoss(direction, stop_loss_type) => {
                 is_stop_loss = true;
                 let target_price = match orders.first() {
-                    Some(order) => {
-                        log::info!("Target price from {:?}", order.order_type);
-                        order.target_price
-                    }
-                    None => {
-                        log::info!("Target price current Candle {:?}", close_price);
-                        close_price
-                    }
+                    Some(order) => order.target_price,
+                    None => current_candle.close(),
                 };
 
-                //validate_target_price(direction, &close_price, &target_price);
-
-                let stop_loss = create_bot_stop_loss_order(
-                    index,
-                    trade_id,
-                    instrument,
-                    pricing,
-                    trade_type,
-                    direction,
-                    stop_loss_type,
-                    target_price,
-                );
-
-                if validate_target_price(direction, &close_price, &stop_loss.target_price) {
+                if is_valid_buy_sell_order {
+                    let stop_loss = create_stop_loss_order(
+                        index,
+                        trade_id,
+                        instrument,
+                        pricing,
+                        trade_type,
+                        direction,
+                        stop_loss_type,
+                        target_price,
+                    );
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
                     orders.push(stop_loss);
@@ -934,65 +965,3 @@ fn get_order_activation_price(candle: &Candle, prev_candle: &Candle) -> (f64, f6
         ),
     }
 }
-
-// fn bot_order_activated(
-//     index: usize,
-//     order: &Order,
-//     instrument: &Instrument,
-//     pricing: &Pricing,
-// ) -> bool {
-//     let data = &instrument.data;
-//     let prev_index = get_prev_index(index);
-//     let current_candle = data.get(index).unwrap();
-//     let prev_candle = data.get(prev_index).unwrap();
-//     let is_next_order = index > order.index_fulfilled;
-//     is_activated(current_candle, prev_candle, order, is_next_order)
-// }
-
-// pub fn is_activated(
-//     current_candle: &Candle,
-//     prev_candle: &Candle,
-//     order: &Order,
-//     is_next_order: bool,
-// ) -> bool {
-//     let (current_price_over, current_price_bellow, previous_price_over, previous_price_bellow) =
-//         get_order_activation_price(current_candle, prev_candle);
-
-//     let cross_over = current_price_over >= order.target_price
-//         && previous_price_over < current_price_over
-//         && is_next_order;
-
-//     let cross_bellow = current_price_bellow <= order.target_price
-//         && previous_price_bellow > current_price_bellow
-//         && is_next_order;
-
-//     let stop_cross_over = current_candle.high() >= order.target_price
-//         && prev_candle.high() < current_candle.high()
-//         && is_next_order;
-
-//     let stop_cross_bellow = current_candle.low() <= order.target_price
-//         && prev_candle.low() > current_candle.low()
-//         && is_next_order;
-
-//     let activated = match &order.order_type {
-//         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
-//             match direction {
-//                 OrderDirection::Up => cross_over,
-//                 OrderDirection::Down => cross_bellow,
-//             }
-//         }
-//         OrderType::SellOrderLong(direction, _, _)
-//         | OrderType::SellOrderShort(direction, _, _)
-//         | OrderType::TakeProfitLong(direction, _, _)
-//         | OrderType::TakeProfitShort(direction, _, _) => match direction {
-//             OrderDirection::Up => cross_over,
-//             OrderDirection::Down => cross_bellow,
-//         },
-//         OrderType::StopLoss(direction, _) => match direction {
-//             OrderDirection::Up => stop_cross_over,
-//             OrderDirection::Down => stop_cross_bellow,
-//         },
-//         _ => todo!(),
-//     };
-//     activated
-// }
