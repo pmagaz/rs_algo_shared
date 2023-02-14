@@ -283,6 +283,7 @@ pub fn resolve_trade_out(
     let spread = pricing.spread();
     let trade_in_type = &trade_in.trade_type;
     let index_in = trade_in.index_in;
+    let spread_in = trade_in.spread;
 
     //ORDERS resolved same day
     let index = match execution_mode.is_back_test() {
@@ -341,8 +342,13 @@ pub fn resolve_trade_out(
     }
 
     if is_profitable || trade_type == &TradeType::StopLoss {
-        let date_in = instrument.data.get(index_in).unwrap().date();
-        let date_out = current_candle.date();
+        let date_out = to_dbtime(current_candle.date());
+
+        let date_in = match execution_mode.is_back_test() {
+            true => to_dbtime(instrument.data.get(index_in).unwrap().date()),
+            false => to_dbtime(current_date),
+        };
+
         let profit = match execution_mode.is_back_test() {
             true => calculate_profit(quantity, price_in, price_out, trade_in_type),
             false => 0.,
@@ -378,15 +384,15 @@ pub fn resolve_trade_out(
             index_in,
             price_in,
             trade_type: trade_type.clone(),
-            date_in: to_dbtime(date_in),
-            spread_in: trade_in.spread,
+            date_in,
+            spread_in,
             ask: price_in,
             index_out,
             price_origin,
             price_out: price_out,
             bid: price_out,
-            spread_out: trade_in.spread,
-            date_out: to_dbtime(date_out),
+            spread_out: spread_in,
+            date_out,
             profit,
             profit_per,
             run_up,
