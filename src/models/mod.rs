@@ -4,6 +4,7 @@ pub mod backtest_strategy;
 pub mod bot;
 pub mod indicator;
 pub mod market;
+pub mod mode;
 pub mod order;
 pub mod pricing;
 pub mod status;

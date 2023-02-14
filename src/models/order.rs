@@ -1,5 +1,6 @@
 use std::env;
 
+use super::mode;
 use super::pricing::Pricing;
 use super::time_frame::TimeFrame;
 use super::trade::{Trade, TradeType};
@@ -124,13 +125,20 @@ impl Order {
     }
 
     pub fn fulfill_order(&mut self, index: usize, date: DateTime<Local>) {
+        // let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        // let trade_id = match execution_mode.is_back_test() {
+        //     true => {
+        //         self.set_full_filled_index(index);
+        //     }
+        //     false => {}
+        // };
+        self.set_full_filled_index(index);
         self.set_status(OrderStatus::Fulfilled);
         self.set_updated_at(to_dbtime(date));
-        self.set_full_filled_index(index);
         self.set_full_filled_at(to_dbtime(date));
     }
 
-    pub fn fulfill_bot_order(&mut self, date: DateTime<Local>) {
+    pub fn fulfill_bot2_order(&mut self, date: DateTime<Local>) {
         self.set_status(OrderStatus::Fulfilled);
         self.set_updated_at(to_dbtime(date));
         self.set_full_filled_at(to_dbtime(date));
@@ -149,17 +157,22 @@ pub fn prepare_orders(
     trade_type: &TradeType,
     order_types: &Vec<OrderType>,
 ) -> Vec<Order> {
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     let mut buy_order_target = 0.;
     let mut sell_order_target = 0.;
     let mut stop_order_target = 0.;
     let mut is_stop_loss = false;
     let mut is_valid_buy_sell_order = true;
     let mut stop_loss_direction = OrderDirection::Up;
+
     let current_candle = instrument.data().get(index).unwrap();
     let next_candle = instrument.data().get(index + 1).unwrap();
     let close_price = current_candle.close();
     let mut orders: Vec<Order> = vec![];
-    let trade_id = uuid::generate_ts_id(next_candle.date());
+    let trade_id = match execution_mode.is_back_test() {
+        true => uuid::generate_ts_id(next_candle.date()),
+        false => uuid::generate_ts_id(instrument.data.last().unwrap().date()),
+    };
 
     for order_type in order_types {
         match order_type {
@@ -292,7 +305,7 @@ pub fn validate_target_price(
                     target_price,
                     close_price,
                 );
-                panic!();
+                //panic!();
                 false
             } else {
                 true
@@ -306,7 +319,7 @@ pub fn validate_target_price(
                     target_price,
                     close_price,
                 );
-                panic!();
+                //panic!();
                 false
             } else {
                 true
@@ -323,9 +336,16 @@ pub fn create_order(
     target_price: &f64,
     quantity: &f64,
 ) -> Order {
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+    let current_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index).unwrap(),
+        false => instrument.data().last().unwrap(),
+    };
+
     let next_index = index + 1;
-    let current_date = &instrument.data.get(next_index).unwrap().date();
-    let origin_price = instrument.data().get(index).unwrap().close();
+    let current_date = &current_candle.date();
+    let origin_price = current_candle.close();
     let base_time_frame = &env::var("TIME_FRAME").unwrap();
     let valid_until_bars = &env::var("VALID_UNTIL_BARS")
         .unwrap()
@@ -568,12 +588,16 @@ pub fn cancel_all_pending_orders(
     instrument: &Instrument,
     mut orders: Vec<Order>,
 ) -> Vec<Order> {
-    let current_date = &instrument.data.get(index).unwrap().date();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let current_date = match execution_mode.is_back_test() {
+        true => instrument.data.get(index).unwrap().date().clone(),
+        false => Local::now(),
+    };
 
     orders
         .iter_mut()
         .map(|x| {
-            let valid_until = &fom_dbtime(&x.valid_until.unwrap());
+            let valid_until = fom_dbtime(&x.valid_until.unwrap());
             if current_date >= valid_until && x.status == OrderStatus::Pending {
                 x.cancel_order(to_dbtime(Local::now()));
                 //log::info!("CANCELED {:?}", (valid_until));
@@ -686,260 +710,14 @@ pub fn fulfill_order_and_update_pricing<T: Trade>(
     //update_pending_trade_orders(trade, orders);
 }
 
-pub fn fulfill_bot_order<T: Trade>(trade: &T, order: &Order, orders: &mut Vec<Order>) {
-    let date = trade.get_chrono_date();
-    let order_position = orders
-        .iter()
-        .position(|x| x.status == OrderStatus::Pending && x.order_type == order.order_type);
-
-    match order_position {
-        Some(x) => {
-            log::info!("Fulfilling {:?}", (order.id, &order.order_type));
-            orders.get_mut(x).unwrap().fulfill_bot_order(date);
-        }
-        None => {}
-    }
-}
-
-pub fn cancel_all_bot_pending_orders(mut orders: Vec<Order>) -> Vec<Order> {
-    let current_date = &Local::now();
-
-    orders
-        .iter_mut()
-        .map(|x| {
-            let valid_until = &fom_dbtime(&x.valid_until.unwrap());
-            if current_date >= valid_until && x.status == OrderStatus::Pending {
-                x.cancel_order(to_dbtime(Local::now()));
-                // log::info!("Order {} canceled", x.id);
-            }
-            x.clone()
-        })
-        // .filter(|x| {
-        //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
-        //     current_date < valid_until && x.status != OrderStatus::Pending
-        // })
-        .map(|x| x.clone())
-        .collect()
-
-    // orders.retain(|x| {
-    //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
-    //     current_date <= valid_until && x.status != OrderStatus::Pending
-    // });
-    // orders
-}
-
-pub fn prepare_bot_orders(
-    index: usize,
+pub fn fulfill_bot_order<T: Trade>(
+    trade: &T,
+    order: &Order,
+    orders: &mut Vec<Order>,
     instrument: &Instrument,
-    pricing: &Pricing,
-    trade_type: &TradeType,
-    order_types: &Vec<OrderType>,
-) -> Vec<Order> {
-    let mut buy_order_target = 0.;
-    let mut sell_order_target = 0.;
-    let mut stop_order_target = 0.;
-    let mut is_stop_loss = false;
-    let mut is_valid_buy_sell_order = true;
-    let mut stop_loss_direction = OrderDirection::Up;
-    let current_candle = instrument.data().get(index).unwrap();
-    let close_price = current_candle.close();
-
-    let mut orders: Vec<Order> = vec![];
-    let trade_id = uuid::generate_ts_id(instrument.data.last().unwrap().date());
-    for order_type in order_types {
-        match order_type {
-            OrderType::BuyOrderLong(direction, quantity, target_price)
-            | OrderType::BuyOrderShort(direction, quantity, target_price)
-            | OrderType::SellOrderLong(direction, quantity, target_price)
-            | OrderType::SellOrderShort(direction, quantity, target_price)
-            | OrderType::TakeProfitLong(direction, quantity, target_price)
-            | OrderType::TakeProfitShort(direction, quantity, target_price) => {
-                if validate_target_price(order_type, direction, &close_price, target_price) {
-                    log::info!(
-                        "Validating stop loss {:?} target_price {}",
-                        &order_type,
-                        &target_price
-                    );
-                    let order =
-                        create_bot_order(trade_id, instrument, order_type, target_price, quantity);
-
-                    match order_type.is_entry() {
-                        true => {
-                            buy_order_target = match order_type.is_long() {
-                                true => order.target_price + pricing.spread(),
-                                false => order.target_price,
-                            }
-                        }
-                        false => {
-                            sell_order_target = match order_type.is_long() {
-                                true => order.target_price,
-                                false => order.target_price + pricing.spread(),
-                            }
-                        }
-                    };
-
-                    orders.push(order);
-                } else {
-                    is_valid_buy_sell_order = false;
-                    log::error!("{:?} not valid", &order_type,);
-                }
-            }
-            OrderType::StopLoss(direction, stop_loss_type) => {
-                is_stop_loss = true;
-                let target_price = match orders.first() {
-                    Some(order) => order.target_price,
-                    None => current_candle.close(),
-                };
-
-                if is_valid_buy_sell_order {
-                    let stop_loss = create_stop_loss_order(
-                        index,
-                        trade_id,
-                        instrument,
-                        pricing,
-                        trade_type,
-                        direction,
-                        stop_loss_type,
-                        target_price,
-                    );
-                    stop_order_target = stop_loss.target_price;
-                    stop_loss_direction = direction.clone();
-                    orders.push(stop_loss);
-                }
-            }
-        }
-    }
-
-    //CHECK STOP LOSS
-    if is_stop_loss {
-        match stop_loss_direction == OrderDirection::Down {
-            true => {
-                if stop_order_target >= buy_order_target && buy_order_target > 0. {
-                    orders = vec![];
-                    log::error!(
-                        "Stop loss can't be placed higher than buy level {:?}",
-                        (buy_order_target, stop_order_target)
-                    )
-                }
-            }
-            false => {
-                if stop_order_target <= buy_order_target && buy_order_target > 0. {
-                    orders = vec![];
-                    log::error!(
-                        "Stop loss can't be placed lower than buy level {:?}",
-                        (buy_order_target, stop_order_target)
-                    )
-                }
-            }
-        }
-    };
-
-    //CHECK SELL ORDER VALUE
-    match trade_type.is_long() {
-        true => {
-            if sell_order_target <= buy_order_target && sell_order_target > 0. {
-                orders = vec![];
-                log::error!(
-                    "Sell Order can't be placed lower than buy level {:?}",
-                    (buy_order_target, sell_order_target)
-                )
-            }
-        }
-        false => {
-            if sell_order_target >= buy_order_target && sell_order_target > 0. {
-                orders = vec![];
-                log::error!(
-                    "Sell Order can't be placed higher than buy level {:?}",
-                    (buy_order_target, sell_order_target)
-                )
-            }
-        }
-    };
-
-    orders
-}
-
-pub fn create_bot_order(
-    trade_id: usize,
-    instrument: &Instrument,
-    order_type: &OrderType,
-    target_price: &f64,
-    quantity: &f64,
-) -> Order {
+) {
     let index = instrument.data().len() - 1;
-    let current_date = &instrument.data().last().unwrap().date();
-    let origin_price = instrument.data().last().unwrap().close();
-    let base_time_frame = &env::var("TIME_FRAME").unwrap();
-    let valid_until_bars = &env::var("VALID_UNTIL_BARS")
-        .unwrap()
-        .parse::<i64>()
-        .unwrap();
-    let time_frame = TimeFrame::new(base_time_frame);
-    let bar_value = time_frame.to_number();
-    let minutes_add = bar_value * valid_until_bars;
-    let valid_until = *current_date + date::Duration::minutes(minutes_add);
-
-    Order {
-        id: uuid::generate_ts_id(*current_date),
-        index_created: index,
-        index_fulfilled: 0,
-        trade_id,
-        order_type: order_type.clone(),
-        status: OrderStatus::Pending,
-        origin_price,
-        target_price: *target_price,
-        quantity: *quantity,
-        created_at: to_dbtime(*current_date),
-        updated_at: None,
-        full_filled_at: None,
-        valid_until: Some(to_dbtime(valid_until)),
-    }
-}
-
-pub fn resolve_bot_active_orders(
-    index: usize,
-    instrument: &Instrument,
-    orders: &Vec<Order>,
-    pricing: &Pricing,
-) -> Position {
-    let mut order_position: Position = Position::None;
-    let mut orders_activated = vec![];
-    for (_id, order) in orders
-        .iter()
-        .enumerate()
-        .filter(|(_id, order)| order.status == OrderStatus::Pending)
-    {
-        match order_activated(index, order, instrument, pricing) {
-            true => {
-                match order.order_type {
-                    OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-                        order_position = Position::MarketInOrder(order.clone());
-                        orders_activated.push(order_position.clone());
-                    }
-                    OrderType::SellOrderLong(_, _, _)
-                    | OrderType::SellOrderShort(_, _, _)
-                    | OrderType::TakeProfitLong(_, _, _)
-                    | OrderType::TakeProfitShort(_, _, _) => {
-                        order_position = Position::MarketOutOrder(order.clone());
-                        orders_activated.push(order_position.clone());
-                    }
-                    OrderType::StopLoss(_, _) => {
-                        order_position = Position::MarketOutOrder(order.clone());
-                        orders_activated.push(order_position.clone());
-                    }
-                    _ => todo!(),
-                };
-            }
-            false => (),
-        }
-    }
-
-    let resolved = match has_executed_buy_order(&orders, &order_position) {
-        true => order_position,
-        false => Position::None,
-    };
-
-    resolved
+    fulfill_trade_order(index, trade, &order, orders)
 }
 
 fn get_order_activation_price(candle: &Candle, prev_candle: &Candle) -> (f64, f64, f64, f64) {

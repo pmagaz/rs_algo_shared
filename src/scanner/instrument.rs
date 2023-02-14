@@ -516,7 +516,6 @@ impl Instrument {
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
             if candle.is_closed() {
-                print!("Processing indicators");
                 self.indicators.next_delete(ohlc_indicators).unwrap();
             }
             // match delete {

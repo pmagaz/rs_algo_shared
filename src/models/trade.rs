@@ -1,11 +1,11 @@
-use std::env::current_exe;
+use std::env;
 
+use super::mode;
 use super::order::{Order, OrderType};
 use super::pricing::Pricing;
 use crate::helpers::calc::*;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
-use crate::models::stop_loss::*;
 use crate::scanner::instrument::*;
 
 use round::round;
@@ -245,11 +245,6 @@ pub fn resolve_trade_in(
 
         let quantity = round(trade_size / price, 3);
 
-        // log::info!(
-        //     "PREPARING TRADEIN {} @@@ {:?} ",
-        //     index,
-        //     (price, instrument.data.get(index).unwrap().close())
-        // );
         TradeResult::TradeIn(TradeIn {
             id: uuid::generate_ts_id(current_date),
             index_in: index,
@@ -274,6 +269,8 @@ pub fn resolve_trade_out(
     trade_type: &TradeType,
     order: Option<&Order>,
 ) -> TradeResult {
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
     let quantity = trade_in.quantity;
     let data = &instrument.data;
     let spread = pricing.spread();
@@ -281,157 +278,14 @@ pub fn resolve_trade_out(
     let index_in = trade_in.index_in;
 
     //ORDERS resolved same day
-    let index = match order {
-        Some(_order) => index,
-        None => index + 1,
-    };
-
-    let current_candle = instrument.data.get(index).unwrap();
-    let current_date = current_candle.date();
-
-    let close_price = match trade_type {
-        TradeType::StopLoss => match trade_in_type.is_long() {
-            true => current_candle.low(),
-            false => current_candle.high(),
+    let index = match execution_mode.is_back_test() {
+        true => match order {
+            Some(_order) => index,
+            None => index + 1,
         },
-        _ => current_candle.open(),
+        false => index,
     };
 
-    //IF there is order use order_target price
-    let price = match order {
-        Some(order) => order.target_price,
-        None => close_price,
-    };
-
-    let price_origin = *trade_in.get_price_in();
-    let (price_in, price_out) = match trade_in_type.is_long() {
-        true => (trade_in.price_in, price),
-        false => (trade_in.price_in, price + spread),
-    };
-
-    let profit = match trade_in_type.is_long() {
-        true => price_out - price_in,
-        false => price_in - price_out,
-    };
-
-    let is_profitable = match profit {
-        _ if profit > 0. => true,
-        _ => false,
-    };
-
-    if trade_type == &TradeType::StopLoss && profit > 0. {
-        panic!(
-            "[PANIC] Profitable stop loss! {} @ {:?} {} ",
-            index,
-            (price_in, price_out),
-            profit
-        )
-    }
-
-    if is_profitable || trade_type == &TradeType::StopLoss {
-        let date_in = instrument.data.get(index_in).unwrap().date();
-        let date_out = current_candle.date();
-        let profit = calculate_profit(quantity, price_in, price_out, trade_in_type);
-        let profit_per = calculate_profit_per(price_in, price_out, trade_in_type);
-        let run_up = calculate_runup(data, price_in, index_in, index, trade_in_type);
-        let run_up_per = calculate_runup_per(run_up, price_in, trade_in_type);
-        let draw_down = calculate_drawdown(data, price_in, index_in, index, trade_in_type);
-        let draw_down_per = calculate_drawdown_per(draw_down, price_in, trade_in_type);
-
-        TradeResult::TradeOut(TradeOut {
-            id: uuid::generate_ts_id(current_date),
-            index_in,
-            price_in,
-            trade_type: trade_type.clone(),
-            date_in: to_dbtime(date_in),
-            spread_in: trade_in.spread,
-            ask: price_in,
-            index_out: index,
-            price_origin,
-            price_out: price_out,
-            bid: price_out,
-            spread_out: trade_in.spread,
-            date_out: to_dbtime(date_out),
-            profit,
-            profit_per,
-            run_up,
-            run_up_per,
-            draw_down,
-            draw_down_per,
-        })
-    } else {
-        TradeResult::None
-    }
-}
-
-pub fn resolve_bot_trade_in(
-    trade_size: f64,
-    instrument: &Instrument,
-    pricing: &Pricing,
-    trade_type: &TradeType,
-    order: Option<&Order>,
-) -> TradeResult {
-    let spread = pricing.spread();
-    if trade_type.is_entry() {
-        let index = instrument.data().len() - 1;
-
-        let current_candle = instrument.data.get(index).unwrap();
-        let current_date = current_candle.date();
-
-        let price = match order {
-            Some(order) => order.target_price,
-            None => current_candle.open(),
-        };
-
-        let ask = match trade_type.is_long() {
-            true => price + spread,
-            false => price,
-        };
-
-        let price_in = match trade_type.is_long() {
-            true => ask,
-            false => price,
-        };
-
-        let quantity = round(trade_size / price, 3);
-
-        // log::info!(
-        //     "PREPARING TRADEIN {} @@@ {:?} ",
-        //     index,
-        //     (price, instrument.data.get(index).unwrap().close())
-        // );
-        TradeResult::TradeIn(TradeIn {
-            id: uuid::generate_ts_id(current_date),
-            index_in: index,
-            origin_price: price,
-            price_in,
-            ask,
-            spread,
-            quantity,
-            date_in: to_dbtime(current_date),
-            trade_type: trade_type.clone(),
-        })
-    } else {
-        TradeResult::None
-    }
-}
-
-pub fn resolve_bot_trade_out(
-    instrument: &Instrument,
-    pricing: &Pricing,
-    trade_in: &TradeIn,
-    trade_type: &TradeType,
-    order: Option<&Order>,
-) -> TradeResult {
-    
-    let quantity = trade_in.quantity;
-    let data = &instrument.data;
-    let spread = pricing.spread();
-    let trade_in_type = &trade_in.trade_type;
-    let index_in = trade_in.index_in;
-
-    //ORDERS resolved same day
-    let index = instrument.data().len() - 1;
     let current_candle = instrument.data.get(index).unwrap();
     let current_date = current_candle.date();
 
