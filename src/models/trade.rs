@@ -296,6 +296,11 @@ pub fn resolve_trade_out(
     let current_candle = instrument.data.get(index).unwrap();
     let current_date = current_candle.date();
 
+    let index_out = match execution_mode.is_back_test() {
+        true => index,
+        false => uuid::generate_ts_id(current_date),
+    };
+
     let close_price = match trade_type {
         TradeType::StopLoss => match trade_in_type.is_long() {
             true => current_candle.low(),
@@ -376,7 +381,7 @@ pub fn resolve_trade_out(
             date_in: to_dbtime(date_in),
             spread_in: trade_in.spread,
             ask: price_in,
-            index_out: index,
+            index_out,
             price_origin,
             price_out: price_out,
             bid: price_out,
