@@ -164,15 +164,17 @@ pub fn prepare_orders(
     let mut is_stop_loss = false;
     let mut is_valid_buy_sell_order = true;
     let mut stop_loss_direction = OrderDirection::Up;
+    let mut orders: Vec<Order> = vec![];
 
     let current_candle = instrument.data().get(index).unwrap();
-    let next_candle = instrument.data().get(index + 1).unwrap();
     let close_price = current_candle.close();
-    let mut orders: Vec<Order> = vec![];
-    let trade_id = match execution_mode.is_back_test() {
-        true => uuid::generate_ts_id(next_candle.date()),
-        false => uuid::generate_ts_id(instrument.data.last().unwrap().date()),
+
+    let next_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index + 1).unwrap(),
+        false => instrument.data.last().unwrap(),
     };
+
+    let trade_id = uuid::generate_ts_id(next_candle.date());
 
     for order_type in order_types {
         match order_type {
