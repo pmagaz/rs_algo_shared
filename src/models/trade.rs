@@ -218,6 +218,7 @@ pub fn resolve_trade_in(
     order: Option<&Order>,
 ) -> TradeResult {
     let spread = pricing.spread();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     if trade_type.is_entry() {
         //ORDERS resolved same day
         let index = match order {
@@ -245,9 +246,15 @@ pub fn resolve_trade_in(
 
         let quantity = round(trade_size / price, 3);
 
+        let id = uuid::generate_ts_id(current_date);
+        let index_in = match execution_mode.is_back_test() {
+            true => index,
+            false => id,
+        };
+
         TradeResult::TradeIn(TradeIn {
-            id: uuid::generate_ts_id(current_date),
-            index_in: index,
+            id,
+            index_in,
             origin_price: price,
             price_in,
             ask,
