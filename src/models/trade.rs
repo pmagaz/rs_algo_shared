@@ -228,6 +228,7 @@ pub fn resolve_trade_in(
 
         let current_candle = instrument.data.get(index).unwrap();
         let current_date = current_candle.date();
+        let id = uuid::generate_ts_id(current_date);
 
         let price = match order {
             Some(order) => order.target_price,
@@ -246,7 +247,6 @@ pub fn resolve_trade_in(
 
         let quantity = round(trade_size / price, 3);
 
-        let id = uuid::generate_ts_id(current_date);
         let index_in = match execution_mode.is_back_test() {
             true => index,
             false => id,
@@ -338,12 +338,35 @@ pub fn resolve_trade_out(
     if is_profitable || trade_type == &TradeType::StopLoss {
         let date_in = instrument.data.get(index_in).unwrap().date();
         let date_out = current_candle.date();
-        let profit = calculate_profit(quantity, price_in, price_out, trade_in_type);
-        let profit_per = calculate_profit_per(price_in, price_out, trade_in_type);
-        let run_up = calculate_runup(data, price_in, index_in, index, trade_in_type);
-        let run_up_per = calculate_runup_per(run_up, price_in, trade_in_type);
-        let draw_down = calculate_drawdown(data, price_in, index_in, index, trade_in_type);
-        let draw_down_per = calculate_drawdown_per(draw_down, price_in, trade_in_type);
+        let profit = match execution_mode.is_back_test() {
+            true => calculate_profit(quantity, price_in, price_out, trade_in_type),
+            false => 0.,
+        };
+
+        let profit_per = match execution_mode.is_back_test() {
+            true => calculate_profit_per(price_in, price_out, trade_in_type),
+            false => 0.,
+        };
+
+        let run_up = match execution_mode.is_back_test() {
+            true => calculate_runup(data, price_in, index_in, index, trade_in_type),
+            false => 0.,
+        };
+
+        let run_up_per = match execution_mode.is_back_test() {
+            true => calculate_runup_per(run_up, price_in, trade_in_type),
+            false => 0.,
+        };
+
+        let draw_down = match execution_mode.is_back_test() {
+            true => calculate_drawdown(data, price_in, index_in, index, trade_in_type),
+            false => 0.,
+        };
+
+        let draw_down_per = match execution_mode.is_back_test() {
+            true => calculate_drawdown_per(draw_down, price_in, trade_in_type),
+            false => 0.,
+        };
 
         TradeResult::TradeOut(TradeOut {
             id: uuid::generate_ts_id(current_date),
