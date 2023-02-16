@@ -279,39 +279,6 @@ where
     callback(upper_tf_data)
 }
 
-// pub fn get_bot_htf_data<F>(
-//     instrument: &Instrument,
-//     htf_instrument: &HTFInstrument,
-//     mut callback: F,
-// ) -> bool
-// where
-//     F: Send + FnMut((usize, usize, &Instrument)) -> bool,
-// {
-//     let base_date = &instrument.data.last().unwrap().date();
-//     let upper_tf_data = match htf_instrument {
-//         HTFInstrument::HTFInstrument(htf_instrument) => {
-//             let upper_indexes: Vec<usize> = htf_instrument
-//                 .data
-//                 .iter()
-//                 .enumerate()
-//                 .filter(|(_id, x)| &x.date <= base_date)
-//                 .map(|(id, _x)| id)
-//                 .collect();
-
-//             let upper_tf_indx = match upper_indexes.last() {
-//                 Some(val) => *val,
-//                 _ => 0,
-//             };
-
-//             let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
-
-//             (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
-//         }
-//         _ => (0, 0, instrument),
-//     };
-//     callback(upper_tf_data)
-// }
-
 pub fn get_bot_htf_data<F>(
     instrument: &Instrument,
     htf_instrument: &HTFInstrument,
