@@ -57,6 +57,15 @@ pub struct Payload<'a> {
     pub time_frame: TimeFrameType,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstrumentDataPayload<'a> {
+    pub symbol: &'a str,
+    pub strategy: &'a str,
+    pub num_bars: i64,
+    pub strategy_type: StrategyType,
+    pub time_frame: TimeFrameType,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstrumentData<T> {
     pub symbol: String,
