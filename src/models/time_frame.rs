@@ -45,6 +45,19 @@ impl TimeFrame {
             &_ => TimeFrameType::ERR,
         }
     }
+
+    pub fn get_starting_bar(num_bars: i64, time_frame: &TimeFrameType) -> DateTime<Local> {
+        match time_frame {
+            TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(num_bars),
+            TimeFrameType::H4 => Local::now() - Duration::minutes(num_bars),
+            TimeFrameType::H1 => Local::now() - Duration::minutes(num_bars),
+            TimeFrameType::M30 => Local::now() - Duration::minutes(num_bars),
+            TimeFrameType::M15 => Local::now() - Duration::minutes(num_bars),
+            TimeFrameType::M5 => Local::now() - Duration::minutes(num_bars),
+            TimeFrameType::M1 => Local::now() - Duration::minutes(num_bars),
+            _ => Local::now() - Duration::days(num_bars),
+        }
+    }
 }
 
 impl TimeFrameType {

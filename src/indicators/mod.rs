@@ -254,12 +254,7 @@ impl Indicators {
     pub fn next_delete(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
-
-        let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
+        let max_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {

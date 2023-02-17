@@ -41,7 +41,7 @@ pub fn from_str(strategy: &str) -> StrategyType {
     }
 }
 
-pub fn is_multi_timeframe_strategy(strategy_type: &StrategyType) -> bool {
+pub fn is_mtf_strategy(strategy_type: &StrategyType) -> bool {
     match strategy_type {
         StrategyType::OnlyLongMTF => true,
         StrategyType::LongShortMTF => true,

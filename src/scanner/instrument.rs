@@ -432,24 +432,21 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        let last_candle = self.data().last().unwrap().clone();
-
-        let adapted_dohlcc = adapt_to_time_frame(data, &self.time_frame, true);
-
         let next_id = self.data.len();
+        let last_candle = self.data().last().unwrap().clone();
+        let adapted_dohlcc = adapt_to_time_frame(data, &self.time_frame, true);
         let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
-
         let time_frame = &self.time_frame.clone();
-
         match candle.is_closed() {
             true => {
-                log::info!("Candle closed {}", candle.date());
-                self.init_candle(data);
+                log::info!("Closing Candle {:?}", &candle);
+                self.close_last_candle();
                 self.next_indicators(candle.clone());
             }
             false => {
-                log::info!("Updating candle {}", last_candle.date());
-                let updated_candle = self.update_candle(candle.clone(), &last_candle, &time_frame);
+                log::info!("Updating candle {:?}", &candle);
+                let updated_candle =
+                    self.update_last_candle(candle.clone(), &last_candle, &time_frame);
                 self.next_indicators(updated_candle.clone());
             }
         };
@@ -488,28 +485,21 @@ impl Instrument {
             if candle.is_closed() {
                 self.indicators.next_delete(ohlc_indicators).unwrap();
             }
-            // match delete {
-            //     true => self.indicators.next_delete(ohlc_indicators).unwrap(),
-            //     false => self.indicators.next_update(ohlc_indicators).unwrap(),
-            // };
         }
     }
 
-    pub fn update_candle(
+    pub fn close_last_candle(&mut self) {
+        let last_candle = self.data.last_mut().unwrap();
+        log::info!("Closing candle {:?}", &last_candle.date());
+        last_candle.set_is_closed(true);
+    }
+
+    pub fn update_last_candle(
         &mut self,
         mut candle: Candle,
         last_candle: &Candle,
         time_frame: &TimeFrameType,
     ) -> Candle {
-        // println!(
-        //     "Candle open {} high {} low {} close {} date {} is_closed {}",
-        //     candle.open(),
-        //     candle.high(),
-        //     candle.low(),
-        //     candle.close(),
-        //     candle.date(),
-        //     candle.is_closed()
-        // );
         let current_high = candle.high();
         let previous_open = last_candle.open();
         let previous_high = last_candle.high();
@@ -533,20 +523,12 @@ impl Instrument {
             candle.set_open(previous_open);
             candle.set_high(higher_value);
             candle.set_low(lower_value);
-            if candle.is_closed() {
-                candle.set_close(previous_close);
-            }
+            // if candle.is_closed() {
+            //     log::info!("5555555555555");
+            //     //candle.set_close(previous_close);
+            // }
         }
 
-        // println!(
-        //     "Adapted open {} high {} low {} close {} date {} is_closed {}",
-        //     candle.open(),
-        //     candle.high(),
-        //     candle.low(),
-        //     candle.close(),
-        //     candle.date(),
-        //     candle.is_closed()
-        // );
         *self.data.last_mut().unwrap() = candle.clone();
 
         candle
@@ -560,7 +542,7 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        let max_bars = env::var("MAX_BARS").unwrap().parse::<usize>().unwrap();
+        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
 
         let adapted = adapt_to_time_frame(data, &self.time_frame, true);
@@ -574,9 +556,13 @@ impl Instrument {
         candle.set_date(open_from);
 
         let len = self.data.len();
-        if len >= max_bars + next_delete {
+        log::info!("Current data size {:?}", (len, num_bars));
+
+        if len >= num_bars + next_delete {
+            log::info!("Cleaning {:?}", (self.data.get(0)));
             self.data.remove(0);
         }
+
         self.data.push(candle);
     }
 
