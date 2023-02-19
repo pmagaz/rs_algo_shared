@@ -1,8 +1,8 @@
-use super::order::{self, Order, OrderCondition, OrderDirection, OrderStatus, OrderType};
+use super::order::{self, Order, OrderDirection, OrderType};
 use super::pricing::Pricing;
 use super::trade::*;
 
-use crate::helpers::{calc, date::*, uuid};
+use crate::helpers::{calc, date::*};
 use crate::indicators::Indicator;
 use crate::scanner::instrument::Instrument;
 
@@ -103,57 +103,3 @@ pub fn create_stop_loss_order(
         &100.,
     )
 }
-
-// pub fn create_bot2_stop_loss_order(
-//     index: usize,
-//     trade_id: usize,
-//     instrument: &Instrument,
-//     pricing: &Pricing,
-//     trade_type: &TradeType,
-//     order_direction: &OrderDirection,
-//     stop_loss_type: &StopLossType,
-//     target_price: f64,
-// ) -> Order {
-//     let spread = pricing.spread();
-
-//     let stop_loss_spread = std::env::var("STOP_LOSS_SPREAD")
-//         .unwrap()
-//         .parse::<bool>()
-//         .unwrap();
-
-//     let atr_multiplier = std::env::var("ATR_STOP_LOSS")
-//         .unwrap()
-//         .parse::<f64>()
-//         .unwrap();
-
-//     let spread = match stop_loss_spread {
-//         true => spread,
-//         false => 0.,
-//     };
-
-//     let current_atr_value = instrument.indicators.atr.get_data_a().last().unwrap() * atr_multiplier;
-
-//     let target_price = match stop_loss_type {
-//         StopLossType::Atr(atr_value) => match order_direction {
-//             OrderDirection::Up => (target_price + spread) + (atr_value * current_atr_value),
-//             OrderDirection::Down => (target_price + spread) - (atr_value * current_atr_value),
-//         },
-//         StopLossType::Price(target_price) => match order_direction {
-//             OrderDirection::Up => *target_price,
-//             OrderDirection::Down => *target_price,
-//         },
-//         StopLossType::Pips(pips) => match order_direction {
-//             OrderDirection::Up => (target_price + spread) + calc::to_pips(*pips, pricing),
-//             OrderDirection::Down => (target_price + spread) - calc::to_pips(*pips, pricing),
-//         },
-//         StopLossType::None => todo!(),
-//     };
-
-//     order::create_order(
-//         trade_id,
-//         instrument,
-//         &OrderType::StopLoss(order_direction.clone(), stop_loss_type.clone()),
-//         &target_price,
-//         &100.,
-//     )
-// }

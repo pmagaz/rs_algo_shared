@@ -309,10 +309,33 @@ impl BrokerStream for Xtb {
         let spread = pricing.spread();
         let mut data = trade.data;
         let trade_type = data.trade_type.clone();
+        let price_in = data.price_in;
 
         let price_out = match trade_type.is_long() {
             true => bid,
             false => ask,
+        };
+
+        log::info!("1111111{:?}", data);
+
+        let price_out = match trade_type.is_stop() {
+            true => match trade_type {
+                TradeType::StopLoss => {
+                    //LONG
+                    //CONTINUE HERE
+                    if price_in >= pricing.bid() {
+                        bid
+                    } else {
+                        //SHORT
+                        ask
+                    }
+                }
+                _ => todo!(),
+            },
+            false => match trade_type.is_long() {
+                true => bid,
+                false => ask,
+            },
         };
 
         log::info!(
@@ -325,6 +348,7 @@ impl BrokerStream for Xtb {
 
         data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
+        data.date_out = to_dbtime(Local::now());
         data.bid = bid;
         data.ask = ask;
         data.spread_out = spread;
@@ -333,7 +357,6 @@ impl BrokerStream for Xtb {
             response: ResponseType::ExecuteTradeOut,
             payload: Some(TradeData {
                 symbol: trade.symbol,
-                //time_frame: trade.time_frame,
                 data: data,
             }),
         };
@@ -371,12 +394,11 @@ impl BrokerStream for Xtb {
             false => TradeType::OrderInShort,
         };
 
+        let ask = pricing.ask();
         let price_in = match trade_type.is_long() {
-            true => order.target_price + spread,
-            false => order.target_price,
+            true => pricing.ask(),
+            false => pricing.bid(),
         };
-
-        log::info!("{:?} accepted at {}", order.order_type, price_in);
 
         let trade_in = TradeIn {
             id: uuid::generate_ts_id(Local::now()),
@@ -384,7 +406,7 @@ impl BrokerStream for Xtb {
             quantity: order.quantity,
             origin_price: order.origin_price,
             price_in,
-            ask: order.target_price,
+            ask: pricing.ask(),
             spread,
             trade_type,
             date_in: to_dbtime(Local::now()),
@@ -433,8 +455,8 @@ impl BrokerStream for Xtb {
         };
 
         let price_out = match trade_type.is_long() {
-            true => order.target_price,
-            false => order.target_price + spread,
+            true => pricing.bid(),
+            false => pricing.ask(),
         };
 
         let now = Local::now();
@@ -446,13 +468,13 @@ impl BrokerStream for Xtb {
             trade_type,
             index_in: order.index_created,
             price_in: order.origin_price,
-            ask: order.target_price,
+            ask: pricing.ask(),
             spread_in: spread,
             date_in: order.full_filled_at.unwrap(),
             index_out: order.index_fulfilled,
             price_origin: order.origin_price,
             price_out,
-            bid: price_out,
+            bid: pricing.bid(),
             spread_out: spread,
             date_out: to_dbtime(now),
             profit: 0.,

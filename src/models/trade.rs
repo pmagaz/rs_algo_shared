@@ -1,6 +1,6 @@
 use std::env;
 
-use super::mode;
+use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
 use super::pricing::Pricing;
 use crate::helpers::calc::*;
@@ -217,22 +217,18 @@ pub fn resolve_trade_in(
     trade_type: &TradeType,
     order: Option<&Order>,
 ) -> TradeResult {
-    let spread = pricing.spread();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    if trade_type.is_entry() {
-        //ORDERS resolved same day
-        let index = match order {
-            Some(_order) => index,
-            None => index + 1,
-        };
+    let index = calculate_trade_index(index, order, &execution_mode);
 
+    if trade_type.is_entry() {
+        let spread = pricing.spread();
         let current_candle = instrument.data.get(index).unwrap();
         let current_date = current_candle.date();
         let id = uuid::generate_ts_id(current_date);
 
         let price = match order {
             Some(order) => order.target_price,
-            None => current_candle.open(),
+            None => current_candle.close(),
         };
 
         let ask = match trade_type.is_long() {
@@ -246,7 +242,6 @@ pub fn resolve_trade_in(
         };
 
         let quantity = round(trade_size / price, 3);
-
         let index_in = match execution_mode.is_back_test() {
             true => index,
             false => id,
@@ -276,52 +271,45 @@ pub fn resolve_trade_out(
     trade_type: &TradeType,
     order: Option<&Order>,
 ) -> TradeResult {
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
     let quantity = trade_in.quantity;
     let data = &instrument.data;
     let spread = pricing.spread();
     let trade_in_type = &trade_in.trade_type;
     let index_in = trade_in.index_in;
     let spread_in = trade_in.spread;
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
-    //ORDERS resolved same day
-    let index = match execution_mode.is_back_test() {
-        true => match order {
-            Some(_order) => index,
-            None => index + 1,
-        },
-        false => index,
-    };
-
+    let index = calculate_trade_index(index, order, &execution_mode);
     let current_candle = instrument.data.get(index).unwrap();
     let current_date = current_candle.date();
+    let price_origin = *trade_in.get_price_in();
 
-    let index_out = match execution_mode.is_back_test() {
-        true => index,
-        false => uuid::generate_ts_id(current_date),
-    };
-
-    let close_price = match trade_type {
+    let close_trade_price = match trade_type {
         TradeType::StopLoss => match trade_in_type.is_long() {
             true => current_candle.low(),
             false => current_candle.high(),
         },
-        _ => current_candle.open(),
+        _ => current_candle.close(),
     };
 
-    //IF there is order use order_target price
     let price = match order {
         Some(order) => order.target_price,
-        None => close_price,
+        None => close_trade_price,
     };
 
-    let price_origin = *trade_in.get_price_in();
     let (price_in, price_out) = match trade_in_type.is_long() {
         true => (trade_in.price_in, price),
         false => (trade_in.price_in, price + spread),
     };
 
+    let bid = match trade_type.is_long() {
+        true => price_out + spread,
+        false => price_out,
+    };
+    let index_out = index;
+
+    // match execution_mode.is_back_test() {
+    //     true => {
     let profit = match trade_in_type.is_long() {
         true => price_out - price_in,
         false => price_in - price_out,
@@ -390,8 +378,8 @@ pub fn resolve_trade_out(
             index_out,
             price_origin,
             price_out: price_out,
-            bid: price_out,
-            spread_out: spread_in,
+            bid,
+            spread_out: pricing.spread(),
             date_out,
             profit,
             profit_per,
@@ -402,5 +390,19 @@ pub fn resolve_trade_out(
         })
     } else {
         TradeResult::None
+    }
+}
+
+pub fn calculate_trade_index(
+    index: usize,
+    order: Option<&Order>,
+    execution_mode: &ExecutionMode,
+) -> usize {
+    match execution_mode.is_back_test() {
+        true => match order {
+            Some(_order) => index,
+            None => index + 1,
+        },
+        false => index,
     }
 }

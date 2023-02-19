@@ -76,7 +76,6 @@ pub struct InstrumentData<T> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TradeData<T> {
     pub symbol: String,
-    //pub time_frame: TimeFrameType,
     pub data: T,
 }
 

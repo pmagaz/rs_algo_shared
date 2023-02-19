@@ -247,6 +247,31 @@ pub fn prepare_orders(
     if is_stop_loss {
         match stop_loss_direction == OrderDirection::Down {
             true => {
+                if stop_order_target >= buy_order_target + pricing.spread() && buy_order_target > 0.
+                {
+                    log::error!(
+                        "Stop loss can't be placed higher than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    );
+                    panic!();
+                }
+            }
+            false => {
+                if stop_order_target <= buy_order_target && buy_order_target > 0. {
+                    log::error!(
+                        "Stop loss can't be placed lower than buy level {:?}",
+                        (buy_order_target, stop_order_target)
+                    );
+                    panic!();
+                }
+            }
+        }
+    };
+
+    //CHECK STOP LOSS
+    if is_stop_loss {
+        match stop_loss_direction == OrderDirection::Down {
+            true => {
                 if stop_order_target >= buy_order_target && buy_order_target > 0. {
                     log::error!(
                         "Stop loss can't be placed higher than buy level {:?}",
