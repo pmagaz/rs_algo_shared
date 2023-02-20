@@ -1,5 +1,6 @@
 use super::*;
 use crate::error::Result;
+use crate::helpers::calc;
 use crate::helpers::date::parse_time;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
@@ -311,25 +312,10 @@ impl BrokerStream for Xtb {
         let trade_type = data.trade_type.clone();
         let price_in = data.price_in;
 
-        let price_out = match trade_type.is_long() {
-            true => bid,
-            false => ask,
-        };
-
-        log::info!("1111111{:?}", data);
-
         let price_out = match trade_type.is_stop() {
             true => match trade_type {
-                TradeType::StopLoss => {
-                    //LONG
-                    //CONTINUE HERE
-                    if price_in >= pricing.bid() {
-                        bid
-                    } else {
-                        //SHORT
-                        ask
-                    }
-                }
+                TradeType::StopLossLong => bid,
+                TradeType::StopLossShort => ask,
                 _ => todo!(),
             },
             false => match trade_type.is_long() {
@@ -400,10 +386,12 @@ impl BrokerStream for Xtb {
             false => pricing.bid(),
         };
 
+        let quantity = calc::calculate_quantity(order.size(), price_in);
+
         let trade_in = TradeIn {
             id: uuid::generate_ts_id(Local::now()),
             index_in: order.index_created,
-            quantity: order.quantity,
+            quantity,
             origin_price: order.origin_price,
             price_in,
             ask: pricing.ask(),

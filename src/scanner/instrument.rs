@@ -439,12 +439,12 @@ impl Instrument {
         let time_frame = &self.time_frame.clone();
         match candle.is_closed() {
             true => {
-                log::info!("Closing Candle {:?}", &candle);
+                log::info!("Closing Candle {:?}", &candle.date());
                 self.close_last_candle();
                 self.next_indicators(candle.clone());
             }
             false => {
-                log::info!("Updating candle {:?}", &candle);
+                log::info!("Updating candle {:?}", &candle.date());
                 let updated_candle =
                     self.update_last_candle(candle.clone(), &last_candle, &time_frame);
                 self.next_indicators(updated_candle.clone());

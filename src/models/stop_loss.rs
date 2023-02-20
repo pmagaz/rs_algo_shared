@@ -42,10 +42,10 @@ pub fn create_stop_loss_order(
     trade_id: usize,
     instrument: &Instrument,
     pricing: &Pricing,
-    trade_type: &TradeType,
     order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
     target_price: f64,
+    order_size: f64,
 ) -> Order {
     let spread = pricing.spread();
 
@@ -94,12 +94,21 @@ pub fn create_stop_loss_order(
         StopLossType::None => todo!(),
     };
 
+    let stop_loss = match order_direction {
+        OrderDirection::Up => {
+            OrderType::StopLossShort(order_direction.clone(), stop_loss_type.clone())
+        }
+        OrderDirection::Down => {
+            OrderType::StopLossLong(order_direction.clone(), stop_loss_type.clone())
+        }
+    };
+
     order::create_order(
         index,
         trade_id,
         instrument,
-        &OrderType::StopLoss(order_direction.clone(), stop_loss_type.clone()),
+        &stop_loss,
         &target_price,
-        &100.,
+        &order_size,
     )
 }

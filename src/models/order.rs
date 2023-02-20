@@ -23,7 +23,8 @@ pub enum OrderType {
     SellOrderShort(OrderDirection, f64, f64),
     TakeProfitLong(OrderDirection, f64, f64),
     TakeProfitShort(OrderDirection, f64, f64),
-    StopLoss(OrderDirection, StopLossType),
+    StopLossLong(OrderDirection, StopLossType),
+    StopLossShort(OrderDirection, StopLossType),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -75,7 +76,7 @@ impl OrderType {
 
     pub fn is_stop(&self) -> bool {
         match self {
-            OrderType::StopLoss(_, _) => true,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => true,
             _ => false,
         }
     }
@@ -87,11 +88,11 @@ pub struct Order {
     pub trade_id: usize,
     pub index_created: usize,
     pub index_fulfilled: usize,
+    pub size: f64,
     pub order_type: OrderType,
     pub status: OrderStatus,
     pub origin_price: f64,
     pub target_price: f64,
-    pub quantity: f64,
     pub created_at: DbDateTime,
     pub updated_at: Option<DbDateTime>,
     pub full_filled_at: Option<DbDateTime>,
@@ -119,19 +120,16 @@ impl Order {
         self.trade_id = val
     }
 
+    pub fn size(&self) -> f64 {
+        self.size
+    }
+
     pub fn update_pricing(&mut self, origin_price: f64, target_price: f64) {
         self.origin_price = origin_price;
         self.target_price = target_price;
     }
 
     pub fn fulfill_order(&mut self, index: usize, date: DateTime<Local>) {
-        // let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-        // let trade_id = match execution_mode.is_back_test() {
-        //     true => {
-        //         self.set_full_filled_index(index);
-        //     }
-        //     false => {}
-        // };
         self.set_full_filled_index(index);
         self.set_status(OrderStatus::Fulfilled);
         self.set_updated_at(to_dbtime(date));
@@ -147,6 +145,21 @@ impl Order {
     pub fn cancel_order(&mut self, date: DbDateTime) {
         self.set_status(OrderStatus::Canceled);
         self.set_updated_at(date);
+    }
+
+    pub fn to_trade_type(&self) -> TradeType {
+        match self.order_type {
+            OrderType::BuyOrderLong(_, _, _) => TradeType::MarketInLong,
+            OrderType::SellOrderLong(_, _, _) | OrderType::TakeProfitLong(_, _, _) => {
+                TradeType::MarketOutLong
+            }
+            OrderType::StopLossLong(_, _) => TradeType::StopLossLong,
+            OrderType::BuyOrderShort(_, _, _) => TradeType::MarketInShort,
+            OrderType::SellOrderShort(_, _, _) | OrderType::TakeProfitShort(_, _, _) => {
+                TradeType::MarketOutShort
+            }
+            OrderType::StopLossShort(_, _) => TradeType::StopLossShort,
+        }
     }
 }
 
@@ -178,12 +191,12 @@ pub fn prepare_orders(
 
     for order_type in order_types {
         match order_type {
-            OrderType::BuyOrderLong(direction, quantity, target_price)
-            | OrderType::BuyOrderShort(direction, quantity, target_price)
-            | OrderType::SellOrderLong(direction, quantity, target_price)
-            | OrderType::SellOrderShort(direction, quantity, target_price)
-            | OrderType::TakeProfitLong(direction, quantity, target_price)
-            | OrderType::TakeProfitShort(direction, quantity, target_price) => {
+            OrderType::BuyOrderLong(direction, order_size, target_price)
+            | OrderType::BuyOrderShort(direction, order_size, target_price)
+            | OrderType::SellOrderLong(direction, order_size, target_price)
+            | OrderType::SellOrderShort(direction, order_size, target_price)
+            | OrderType::TakeProfitLong(direction, order_size, target_price)
+            | OrderType::TakeProfitShort(direction, order_size, target_price) => {
                 if validate_target_price(order_type, direction, &close_price, target_price) {
                     //log::info!("{:?} validated", &order_type,);
                     let order = create_order(
@@ -192,7 +205,7 @@ pub fn prepare_orders(
                         instrument,
                         order_type,
                         target_price,
-                        quantity,
+                        order_size,
                     );
 
                     match order_type.is_entry() {
@@ -216,12 +229,18 @@ pub fn prepare_orders(
                     log::error!("{:?} not valid", &order_type,);
                 }
             }
-            OrderType::StopLoss(direction, stop_loss_type) => {
+            OrderType::StopLossLong(direction, stop_loss_type)
+            | OrderType::StopLossShort(direction, stop_loss_type) => {
                 is_stop_loss = true;
 
                 let target_price = match orders.first() {
                     Some(order) => order.target_price,
                     None => next_candle.open(),
+                };
+
+                let order_size = match orders.first() {
+                    Some(order) => order.size,
+                    None => std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap(),
                 };
 
                 if is_valid_buy_sell_order {
@@ -230,10 +249,10 @@ pub fn prepare_orders(
                         trade_id,
                         instrument,
                         pricing,
-                        trade_type,
                         direction,
                         stop_loss_type,
                         target_price,
+                        order_size,
                     );
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
@@ -332,7 +351,7 @@ pub fn validate_target_price(
                     target_price,
                     close_price,
                 );
-                //panic!();
+                panic!();
                 false
             } else {
                 true
@@ -346,7 +365,7 @@ pub fn validate_target_price(
                     target_price,
                     close_price,
                 );
-                //panic!();
+                panic!();
                 false
             } else {
                 true
@@ -361,7 +380,7 @@ pub fn create_order(
     instrument: &Instrument,
     order_type: &OrderType,
     target_price: &f64,
-    quantity: &f64,
+    order_size: &f64,
 ) -> Order {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
@@ -392,7 +411,7 @@ pub fn create_order(
         status: OrderStatus::Pending,
         origin_price,
         target_price: *target_price,
-        quantity: *quantity,
+        size: *order_size,
         created_at: to_dbtime(*current_date),
         updated_at: None,
         full_filled_at: None,
@@ -427,7 +446,7 @@ pub fn resolve_active_orders(
                         order_position = Position::MarketOutOrder(order.clone());
                         orders_activated.push(order_position.clone());
                     }
-                    OrderType::StopLoss(_, _) => {
+                    OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
                         orders_activated.push(order_position.clone());
                     }
@@ -490,13 +509,12 @@ fn order_activated(
             OrderDirection::Up => cross_over,
             OrderDirection::Down => cross_bellow,
         },
-        OrderType::StopLoss(direction, _) => match direction {
-            OrderDirection::Up => stop_cross_over,
-            OrderDirection::Down => stop_cross_bellow,
-        },
+        OrderType::StopLossLong(direction, _) => stop_cross_bellow,
+        OrderType::StopLossShort(direction, _) => stop_cross_over,
         _ => todo!(),
     };
-    activated
+    //activated
+    true
 }
 
 pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
@@ -535,7 +553,9 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
             | OrderType::SellOrderShort(_, _, _)
             | OrderType::TakeProfitLong(_, _, _)
             | OrderType::TakeProfitShort(_, _, _) => sell_orders < max_sell_orders,
-            OrderType::StopLoss(_, _) => stop_losses < max_stop_losses,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
+                stop_losses < max_stop_losses
+            }
         })
         .map(|order| order.clone())
         .collect();
@@ -604,7 +624,7 @@ pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
             | OrderType::SellOrderShort(_, _, _)
             | OrderType::TakeProfitLong(_, _, _)
             | OrderType::TakeProfitShort(_, _, _) => sell_orders += 1,
-            OrderType::StopLoss(_, _) => stop_losses += 1,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => stop_losses += 1,
         };
     }
     (buy_orders, sell_orders, stop_losses)
@@ -626,23 +646,13 @@ pub fn cancel_all_pending_orders(
         .map(|x| {
             let valid_until = fom_dbtime(&x.valid_until.unwrap());
             if current_date >= valid_until && x.status == OrderStatus::Pending {
+                log::warn!("Order canceled {:?} ", (current_date, valid_until));
                 x.cancel_order(to_dbtime(Local::now()));
-                //log::info!("CANCELED {:?}", (valid_until));
             }
             x.clone()
         })
-        // .filter(|x| {
-        //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
-        //     current_date < valid_until && x.status != OrderStatus::Pending
-        // })
         .map(|x| x.clone())
         .collect()
-
-    // orders.retain(|x| {
-    //     let valid_until = &fom_dbtime(&x.valid_until.unwrap());
-    //     current_date <= valid_until && x.status != OrderStatus::Pending
-    // });
-    // orders
 }
 
 pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) -> Vec<Order> {
@@ -651,15 +661,10 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, mut orders: Vec<Order>) 
         .map(|x| {
             if x.status == OrderStatus::Pending {
                 x.cancel_order(*trade.get_date());
-                // log::info!("Order {} canceled", x.id);
-                //log::info!("CANCELED {:?}", x.order_type);
             }
             x.clone()
         })
         .collect()
-
-    // orders.retain(|x| x.status != OrderStatus::Pending);
-    // orders
 }
 
 pub fn update_pending_trade_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) -> Vec<Order> {

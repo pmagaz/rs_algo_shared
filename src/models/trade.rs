@@ -3,7 +3,7 @@ use std::env;
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
 use super::pricing::Pricing;
-use crate::helpers::calc::*;
+use crate::helpers::calc;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::scanner::instrument::*;
@@ -34,7 +34,8 @@ pub enum TradeType {
     OrderOutLong,
     OrderInShort,
     OrderOutShort,
-    StopLoss,
+    StopLossLong,
+    StopLossShort,
     None,
 }
 
@@ -74,7 +75,8 @@ impl TradeType {
             TradeType::MarketOutLong
             | TradeType::MarketOutShort
             | TradeType::OrderOutLong
-            | TradeType::StopLoss
+            | TradeType::StopLossLong
+            | TradeType::StopLossShort
             | TradeType::OrderOutShort => true,
             _ => false,
         }
@@ -96,14 +98,15 @@ impl TradeType {
             | TradeType::OrderOutLong
             | TradeType::OrderInShort
             | TradeType::OrderOutShort
-            | TradeType::StopLoss => true,
+            | TradeType::StopLossLong
+            | TradeType::StopLossShort => true,
             _ => false,
         }
     }
 
     pub fn is_stop(&self) -> bool {
         match *self {
-            TradeType::StopLoss => true,
+            TradeType::StopLossLong | TradeType::StopLossShort => true,
             _ => false,
         }
     }
@@ -119,7 +122,8 @@ pub fn type_from_str(trade_type: &str) -> TradeType {
         "OrderOutLong" => TradeType::OrderOutLong,
         "OrderInShort" => TradeType::OrderInShort,
         "OrderOutShort" => TradeType::OrderOutShort,
-        "StopLoss" => TradeType::StopLoss,
+        "StopLossLong" => TradeType::StopLossLong,
+        "StopLossShort" => TradeType::StopLossShort,
         _ => TradeType::None,
     }
 }
@@ -228,7 +232,7 @@ pub fn resolve_trade_in(
 
         let price = match order {
             Some(order) => order.target_price,
-            None => current_candle.close(),
+            None => current_candle.open(),
         };
 
         let ask = match trade_type.is_long() {
@@ -241,7 +245,7 @@ pub fn resolve_trade_in(
             false => price,
         };
 
-        let quantity = round(trade_size / price, 3);
+        let quantity = calc::calculate_quantity(trade_size, price_in);
         let index_in = match execution_mode.is_back_test() {
             true => index,
             false => id,
@@ -285,11 +289,9 @@ pub fn resolve_trade_out(
     let price_origin = *trade_in.get_price_in();
 
     let close_trade_price = match trade_type {
-        TradeType::StopLoss => match trade_in_type.is_long() {
-            true => current_candle.low(),
-            false => current_candle.high(),
-        },
-        _ => current_candle.close(),
+        TradeType::StopLossLong => current_candle.low(),
+        TradeType::StopLossShort => current_candle.high(),
+        _ => current_candle.open(),
     };
 
     let price = match order {
@@ -308,8 +310,6 @@ pub fn resolve_trade_out(
     };
     let index_out = index;
 
-    // match execution_mode.is_back_test() {
-    //     true => {
     let profit = match trade_in_type.is_long() {
         true => price_out - price_in,
         false => price_in - price_out,
@@ -320,7 +320,7 @@ pub fn resolve_trade_out(
         _ => false,
     };
 
-    if trade_type == &TradeType::StopLoss && profit > 0. {
+    if trade_type.is_stop() && profit > 0. {
         panic!(
             "[PANIC] Profitable stop loss! {} @ {:?} {} ",
             index,
@@ -329,7 +329,7 @@ pub fn resolve_trade_out(
         )
     }
 
-    if is_profitable || trade_type == &TradeType::StopLoss {
+    if is_profitable || trade_type.is_stop() {
         let date_out = to_dbtime(current_candle.date());
 
         let date_in = match execution_mode.is_back_test() {
@@ -338,32 +338,32 @@ pub fn resolve_trade_out(
         };
 
         let profit = match execution_mode.is_back_test() {
-            true => calculate_profit(quantity, price_in, price_out, trade_in_type),
+            true => calc::calculate_profit(quantity, price_in, price_out, trade_in_type),
             false => 0.,
         };
 
         let profit_per = match execution_mode.is_back_test() {
-            true => calculate_profit_per(price_in, price_out, trade_in_type),
+            true => calc::calculate_profit_per(price_in, price_out, trade_in_type),
             false => 0.,
         };
 
         let run_up = match execution_mode.is_back_test() {
-            true => calculate_runup(data, price_in, index_in, index, trade_in_type),
+            true => calc::calculate_runup(data, price_in, index_in, index, trade_in_type),
             false => 0.,
         };
 
         let run_up_per = match execution_mode.is_back_test() {
-            true => calculate_runup_per(run_up, price_in, trade_in_type),
+            true => calc::calculate_runup_per(run_up, price_in, trade_in_type),
             false => 0.,
         };
 
         let draw_down = match execution_mode.is_back_test() {
-            true => calculate_drawdown(data, price_in, index_in, index, trade_in_type),
+            true => calc::calculate_drawdown(data, price_in, index_in, index, trade_in_type),
             false => 0.,
         };
 
         let draw_down_per = match execution_mode.is_back_test() {
-            true => calculate_drawdown_per(draw_down, price_in, trade_in_type),
+            true => calc::calculate_drawdown_per(draw_down, price_in, trade_in_type),
             false => 0.,
         };
 
