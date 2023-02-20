@@ -296,7 +296,7 @@ pub fn prepare_orders(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    panic!();
+                    //panic!();
                 }
             }
             false => {
@@ -305,7 +305,7 @@ pub fn prepare_orders(
                         "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    panic!();
+                    //panic!();
                 }
             }
         }
@@ -513,8 +513,7 @@ fn order_activated(
         OrderType::StopLossShort(direction, _) => stop_cross_over,
         _ => todo!(),
     };
-    //activated
-    true
+    activated
 }
 
 pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {

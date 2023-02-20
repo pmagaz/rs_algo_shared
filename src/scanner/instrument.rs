@@ -578,6 +578,7 @@ impl Instrument {
             (Local::now(), 1., 1., 1., 1., 0.),
             (Local::now(), 1., 1., 1., 1., 0.),
             (Local::now(), 1., 1., 1., 1., 0.),
+            (Local::now(), 1., 1., 1., 1., 0.),
         ])
         .unwrap();
         self
