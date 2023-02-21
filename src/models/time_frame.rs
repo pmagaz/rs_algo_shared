@@ -125,7 +125,7 @@ impl TimeFrameType {
         self == &TimeFrameType::D
     }
 
-    pub fn max_bars(&self) -> i64 {
+    pub fn to_minutes(&self) -> i64 {
         match *self {
             TimeFrameType::ERR => 0,
             TimeFrameType::M1 => 1,
@@ -140,11 +140,23 @@ impl TimeFrameType {
         }
     }
 
+    pub fn to_hours(&self) -> i64 {
+        match *self {
+            TimeFrameType::ERR => 0,
+            TimeFrameType::H1 => 1,
+            TimeFrameType::H4 => 4,
+            TimeFrameType::D => 24,
+            TimeFrameType::W => 168,
+            TimeFrameType::MN => 672,
+            _ => 0,
+        }
+    }
+
     pub fn prev_candles(&self) -> i64 {
         self.to_number()
     }
 
-    pub fn closing_time(&self) -> Vec<i64> {
+    pub fn closing_minutes(&self) -> Vec<i64> {
         //BRUTE FORZE XDDDDD
         match *self {
             TimeFrameType::ERR => vec![0],
@@ -156,13 +168,27 @@ impl TimeFrameType {
             TimeFrameType::M5 => vec![0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
             TimeFrameType::M15 => vec![0, 15, 30, 45],
             TimeFrameType::M30 => vec![0, 30],
+            TimeFrameType::H1 => vec![0],
+            TimeFrameType::H4 => vec![0],
+            TimeFrameType::D => vec![0],
+            TimeFrameType::W => vec![0],
+            TimeFrameType::MN => vec![0],
+        }
+    }
+
+    pub fn closing_hours(&self) -> Vec<i64> {
+        match *self {
+            TimeFrameType::ERR => vec![],
+            TimeFrameType::M1 => vec![],
+            TimeFrameType::M5 => vec![],
+            TimeFrameType::M15 => vec![],
+            TimeFrameType::M30 => vec![],
             TimeFrameType::H1 => vec![
                 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
                 23, 24,
             ],
-            //FIXME when it starts?
             TimeFrameType::H4 => vec![0, 4, 8, 12, 16, 20, 24],
-            TimeFrameType::D => vec![1],
+            TimeFrameType::D => vec![0],
             TimeFrameType::W => vec![1],
             TimeFrameType::MN => vec![1],
         }
@@ -185,7 +211,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     let date = data.0;
     let candle_minute = date.minute() as i64 + 1;
     let candle_hour = date.hour() as i64 + 1;
-    let minutes_interval = time_frame.max_bars();
+    let minutes_interval = time_frame.to_minutes();
 
     let comparator = match time_frame.is_minutely_time_frame() {
         true => candle_minute,
@@ -195,7 +221,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     let open_until = match next {
         true => {
             let next_close_idx = time_frame
-                .closing_time()
+                .closing_minutes()
                 .iter()
                 .enumerate()
                 .filter(|(_i, val)| comparator > **val)
@@ -203,12 +229,12 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 .last()
                 .unwrap();
 
-            let closing_time = time_frame.closing_time();
-            let next_close = match closing_time.get(next_close_idx + 1) {
+            let closing_minutes = time_frame.closing_minutes();
+            let next_close = match closing_minutes.get(next_close_idx + 1) {
                 Some(val) => *val,
                 _ => match time_frame.is_minutely_time_frame() {
-                    true => closing_time.first().unwrap() + 60,
-                    false => closing_time.first().unwrap() + 1,
+                    true => closing_minutes.first().unwrap() + 60,
+                    false => closing_minutes.first().unwrap() + 1,
                 },
             };
 
@@ -226,7 +252,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
 }
 
 pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
-    let minutes_interval = time_frame.max_bars();
+    let minutes_interval = time_frame.to_minutes();
     get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
 }
 
@@ -234,17 +260,40 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
     let date = data.0;
     let now = Local::now();
     let minutes = date.minute() as i64;
-    let minutes_interval = time_frame.max_bars();
+    let num_minutes = time_frame.to_minutes();
 
     let open_until = match next {
-        true => match time_frame.closing_time().contains(&minutes) {
-            true => get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval),
-            false => get_open_until(data, time_frame, next),
-        },
+        true => {
+            if time_frame.is_minutely_time_frame() {
+                match time_frame.closing_minutes().contains(&minutes) {
+                    true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
+                    false => get_open_until(data, time_frame, next),
+                }
+            } else if time_frame.is_hourly_time_frame() {
+                let hours = date.hour() as i64;
+                //let num_hours = time_frame.to_hours();
+
+                match time_frame.closing_hours().contains(&hours) {
+                    true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
+                    false => get_open_until(data, time_frame, next),
+                }
+            } else {
+                get_open_until(data, time_frame, next)
+            }
+        }
         false => get_open_until(data, time_frame, next),
     };
 
-    let open_from = open_until - Duration::minutes(minutes_interval);
+    // let open_until = match next {
+    //     true => match time_frame.closing_minutes().contains(&minutes) {
+    //         true => get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval),
+    //         false => get_open_until(data, time_frame, next),
+    //     },
+    //     false => get_open_until(data, time_frame, next),
+    // };
+
+    let open_from = open_until - Duration::minutes(num_minutes);
+
     let is_closed = match next {
         true => date == open_until,
         false => now >= open_until,

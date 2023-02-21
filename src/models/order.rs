@@ -392,12 +392,12 @@ pub fn create_order(
     let next_index = index + 1;
     let current_date = &current_candle.date();
     let origin_price = current_candle.close();
-    let base_time_frame = &env::var("TIME_FRAME").unwrap();
+    let time_frame = instrument.time_frame();
     let valid_until_bars = &env::var("VALID_UNTIL_BARS")
         .unwrap()
         .parse::<i64>()
         .unwrap();
-    let time_frame = TimeFrame::new(base_time_frame);
+
     let bar_value = time_frame.to_number();
     let minutes_add = bar_value * valid_until_bars;
     let valid_until = *current_date + date::Duration::minutes(minutes_add);

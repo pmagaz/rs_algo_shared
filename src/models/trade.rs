@@ -246,6 +246,7 @@ pub fn resolve_trade_in(
         };
 
         let quantity = calc::calculate_quantity(trade_size, price_in);
+
         let index_in = match execution_mode.is_back_test() {
             true => index,
             false => id,
