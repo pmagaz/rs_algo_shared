@@ -185,9 +185,9 @@ impl TimeFrameType {
             TimeFrameType::M30 => vec![],
             TimeFrameType::H1 => vec![
                 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-                23, 24,
+                23,
             ],
-            TimeFrameType::H4 => vec![0, 4, 8, 12, 16, 20, 24],
+            TimeFrameType::H4 => vec![0, 4, 8, 12, 16, 20],
             TimeFrameType::D => vec![0],
             TimeFrameType::W => vec![1],
             TimeFrameType::MN => vec![1],
@@ -211,43 +211,79 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     let date = data.0;
     let candle_minute = date.minute() as i64 + 1;
     let candle_hour = date.hour() as i64 + 1;
-    let minutes_interval = time_frame.to_minutes();
+    let num_minutes = time_frame.to_minutes();
+    let num_hours = time_frame.to_hours();
 
-    let comparator = match time_frame.is_minutely_time_frame() {
-        true => candle_minute,
-        false => candle_hour,
-    };
+    // let comparator = match time_frame.is_minutely_time_frame() {
+    //     true => candle_minute,
+    //     false => candle_hour,
+    // };
 
     let open_until = match next {
         true => {
-            let next_close_idx = time_frame
+            // let next_close_idx = time_frame
+            //     .closing_minutes()
+            //     .iter()
+            //     .enumerate()
+            //     .filter(|(_i, val)| comparator > **val)
+            //     .map(|(i, _val)| i)
+            //     .last()
+            //     .unwrap();
+
+            let next_close_minutes_idx = time_frame
                 .closing_minutes()
                 .iter()
                 .enumerate()
-                .filter(|(_i, val)| comparator > **val)
+                .filter(|(_i, val)| candle_minute > **val)
+                .map(|(i, _val)| i)
+                .last()
+                .unwrap();
+
+            let next_close_hours_idx = time_frame
+                .closing_hours()
+                .iter()
+                .enumerate()
+                .filter(|(_i, val)| candle_hour > **val)
                 .map(|(i, _val)| i)
                 .last()
                 .unwrap();
 
             let closing_minutes = time_frame.closing_minutes();
-            let next_close = match closing_minutes.get(next_close_idx + 1) {
-                Some(val) => *val,
-                _ => match time_frame.is_minutely_time_frame() {
-                    true => closing_minutes.first().unwrap() + 60,
-                    false => closing_minutes.first().unwrap() + 1,
+            let closing_hours = time_frame.closing_hours();
+
+            let next_close = match time_frame.is_minutely_time_frame() {
+                true => match closing_minutes.get(next_close_minutes_idx + 1) {
+                    Some(val) => *val,
+                    None => time_frame.closing_minutes().first().unwrap() + 60,
+                },
+                false => match closing_hours.get(next_close_hours_idx + 1) {
+                    Some(val) => *val,
+                    None => time_frame.closing_hours().first().unwrap() + 1,
                 },
             };
 
-            let next_minute = 1;
+            log::info!("44444444 {:?}", (date, next_close_hours_idx, next_close));
+            // let next_close = match closing_minutes.get(next_close_idx + 1) {
+            //     Some(val) => *val,
+            //     _ => match time_frame.is_minutely_time_frame() {
+            //         true => closing_minutes.first().unwrap() + 60,
+            //         false => closing_minutes.first().unwrap() + 1,
+            //     },
+            // };
+
+            // let next_minute = 1;
 
             match time_frame.is_minutely_time_frame() {
-                true => date + Duration::minutes(next_close - candle_minute + next_minute),
-                false => date + Duration::minutes(minutes_interval - candle_minute + next_minute),
+                true => date + Duration::minutes(next_close - candle_minute + 1),
+                false => date + Duration::hours(next_close - candle_hour + 1),
             }
         }
-        false => date + Duration::minutes(minutes_interval),
+        false => match time_frame.is_minutely_time_frame() {
+            true => date + Duration::minutes(num_minutes),
+            false => date + Duration::hours(num_hours),
+        },
     };
-
+    log::info!("555555555555 {:?}", (date, open_until));
     open_until
 }
 
@@ -273,7 +309,9 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
                 let hours = date.hour() as i64;
                 //let num_hours = time_frame.to_hours();
 
-                match time_frame.closing_hours().contains(&hours) {
+                match time_frame.closing_hours().contains(&hours)
+                    && time_frame.closing_minutes().contains(&minutes)
+                {
                     true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
                     false => get_open_until(data, time_frame, next),
                 }
