@@ -230,33 +230,52 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
             //     .last()
             //     .unwrap();
 
-            let next_close_minutes_idx = time_frame
-                .closing_minutes()
-                .iter()
-                .enumerate()
-                .filter(|(_i, val)| candle_minute > **val)
-                .map(|(i, _val)| i)
-                .last()
-                .unwrap();
+            // let next_close_minutes_idx = time_frame
+            //     .closing_minutes()
+            //     .iter()
+            //     .enumerate()
+            //     .filter(|(_i, val)| candle_minute > **val)
+            //     .map(|(i, _val)| i)
+            //     .last()
+            //     .unwrap();
 
-            let next_close_hours_idx = time_frame
-                .closing_hours()
-                .iter()
-                .enumerate()
-                .filter(|(_i, val)| candle_hour > **val)
-                .map(|(i, _val)| i)
-                .last()
-                .unwrap();
+            // let next_close_hours_idx = time_frame
+            //     .closing_hours()
+            //     .iter()
+            //     .enumerate()
+            //     .filter(|(_i, val)| candle_hour > **val)
+            //     .map(|(i, _val)| i)
+            //     .last()
+            //     .unwrap();
+
+            let closing_idx = match time_frame.is_minutely_time_frame() {
+                true => time_frame
+                    .closing_minutes()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_i, val)| candle_minute > **val)
+                    .map(|(i, _val)| i)
+                    .last()
+                    .unwrap(),
+                false => time_frame
+                    .closing_hours()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_i, val)| candle_hour > **val)
+                    .map(|(i, _val)| i)
+                    .last()
+                    .unwrap(),
+            };
 
             let closing_minutes = time_frame.closing_minutes();
             let closing_hours = time_frame.closing_hours();
 
             let next_close = match time_frame.is_minutely_time_frame() {
-                true => match closing_minutes.get(next_close_minutes_idx + 1) {
+                true => match closing_minutes.get(closing_idx + 1) {
                     Some(val) => *val,
                     None => time_frame.closing_minutes().first().unwrap() + 60,
                 },
-                false => match closing_hours.get(next_close_hours_idx + 1) {
+                false => match closing_hours.get(closing_idx + 1) {
                     Some(val) => *val,
                     None => time_frame.closing_hours().first().unwrap() + 1,
                 },
@@ -276,10 +295,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 true => date + Duration::minutes(next_close - candle_minute + 1),
                 false => date + Duration::hours(next_close - candle_hour + 1),
             };
-            log::info!(
-                "44444444 {:?}",
-                (next_close_hours_idx, next_close, date, leches)
-            );
+            log::info!("44444444 {:?}", (closing_idx, next_close, date, leches));
 
             leches
         }
