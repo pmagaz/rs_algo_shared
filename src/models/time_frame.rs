@@ -262,7 +262,6 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                 },
             };
 
-            log::info!("44444444 {:?}", (date, next_close_hours_idx, next_close));
             // let next_close = match closing_minutes.get(next_close_idx + 1) {
             //     Some(val) => *val,
             //     _ => match time_frame.is_minutely_time_frame() {
@@ -273,10 +272,16 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
 
             // let next_minute = 1;
 
-            match time_frame.is_minutely_time_frame() {
+            let leches = match time_frame.is_minutely_time_frame() {
                 true => date + Duration::minutes(next_close - candle_minute + 1),
                 false => date + Duration::hours(next_close - candle_hour + 1),
-            }
+            };
+            log::info!(
+                "44444444 {:?}",
+                (next_close_hours_idx, next_close, date, leches)
+            );
+
+            leches
         }
         false => match time_frame.is_minutely_time_frame() {
             true => date + Duration::minutes(num_minutes),
