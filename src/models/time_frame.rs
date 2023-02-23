@@ -220,85 +220,57 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     // };
 
     let open_until = match next {
-        true => {
-            match time_frame.is_minutely_time_frame() {
-                true => {
-                    let closing_idx = time_frame
-                        .closing_minutes()
-                        .iter()
-                        .enumerate()
-                        .filter(|(_i, val)| candle_minute > **val)
-                        .map(|(i, _val)| i)
-                        .last()
-                        .unwrap();
-
-                    let closing_minutes = time_frame.closing_minutes();
-                }
-            };
-
-            let closing_idx = match time_frame.is_minutely_time_frame() {
-                true => time_frame
+        true => match time_frame.is_minutely_time_frame() {
+            true => {
+                let closing_idx = time_frame
                     .closing_minutes()
                     .iter()
                     .enumerate()
                     .filter(|(_i, val)| candle_minute > **val)
                     .map(|(i, _val)| i)
                     .last()
-                    .unwrap(),
-                false => time_frame
+                    .unwrap();
+
+                let closing_minutes = time_frame.closing_minutes();
+
+                let next_close_mins = match closing_minutes.get(closing_idx + 1) {
+                    Some(val) => *val,
+                    None => time_frame.closing_minutes().first().unwrap() + 60,
+                };
+
+                date + Duration::minutes(next_close_mins - candle_minute + 1)
+            }
+            false => {
+                let closing_idx = time_frame
                     .closing_hours()
                     .iter()
                     .enumerate()
                     .filter(|(_i, val)| candle_hour > **val)
                     .map(|(i, _val)| i)
                     .last()
-                    .unwrap(),
-            };
+                    .unwrap();
 
-            let closing_minutes = time_frame.closing_minutes();
-            let closing_hours = time_frame.closing_hours();
+                let closing_hours = time_frame.closing_hours();
 
-            let next_close_mins = match closing_minutes.get(closing_idx + 1) {
-                Some(val) => *val,
-                None => time_frame.closing_minutes().first().unwrap() + 60,
-            };
+                let next_close_hours = match closing_hours.get(closing_idx + 1) {
+                    Some(val) => *val,
+                    None => time_frame.closing_hours().first().unwrap() + 1,
+                };
 
-            let next_close_hours = match closing_hours.get(closing_idx + 1) {
-                Some(val) => *val,
-                None => time_frame.closing_hours().first().unwrap() + 1,
-            };
+                let leches = date + Duration::hours(next_close_hours - candle_hour + 1)
+                    - Duration::minutes(candle_minute - 1);
 
-            // let next_close_mins = match closing_minutes.get(closing_idx + 1) {
-            //     Some(val) => *val,
-            //     _ => match time_frame.is_minutely_time_frame() {
-            //         true => closing_minutes.first().unwrap() + 60,
-            //         false => closing_minutes.first().unwrap() + 1,
-            //     },
-            // };
-
-            // let next_minute = 1;
-
-            let leches = match time_frame.is_minutely_time_frame() {
-                true => date + Duration::minutes(next_close_mins - candle_minute + 1),
-                false => {
-                    date + Duration::hours(next_close_hours - candle_hour + 1)
-                        - Duration::minutes(next_close_mins - candle_minute + 1)
+                if !time_frame.is_minutely_time_frame() {
+                    log::info!("Open Until {:?}", (date, leches, candle_minute));
                 }
-            };
-            if !time_frame.is_minutely_time_frame() {
-                log::info!(
-                    "44444444 {:?}",
-                    (closing_idx, next_close_hours, date, leches, candle_minute)
-                );
+                leches
             }
-            leches
-        }
+        },
         false => match time_frame.is_minutely_time_frame() {
             true => date + Duration::minutes(num_minutes),
             false => date + Duration::hours(num_hours),
         },
     };
-    log::info!("555555555555 {:?}", (date, open_until));
     open_until
 }
 
