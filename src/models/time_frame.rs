@@ -47,6 +47,7 @@ impl TimeFrame {
     }
 
     pub fn get_starting_bar(num_bars: i64, time_frame: &TimeFrameType) -> DateTime<Local> {
+        let num_bars = num_bars * time_frame.to_minutes();
         match time_frame {
             TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(num_bars),
             TimeFrameType::H4 => Local::now() - Duration::minutes(num_bars),
@@ -285,15 +286,11 @@ pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Dat
 
 pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
     let date = data.0;
-    let mut data = data.clone();
-    let date = DateTime::parse_from_rfc3339("2023-02-23T23:00:00+01:00").unwrap();
-    data.0 = date.with_timezone(&Local);
     let now = Local::now();
     let minutes = date.minute() as i64;
     let num_minutes = time_frame.to_minutes();
     let num_hours = time_frame.to_hours();
 
-    log::info!("00000 {:?}", (date));
     let open_until = match next {
         true => {
             if time_frame.is_minutely_time_frame() {
