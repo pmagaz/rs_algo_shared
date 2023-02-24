@@ -1,5 +1,6 @@
 pub use bson::{Bson, DateTime as DbDateTime};
 pub use chrono::offset::{Local, TimeZone, Utc};
+use chrono::FixedOffset;
 pub use chrono::{Date, DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, Timelike};
 
 use crate::helpers::uuid;
@@ -10,7 +11,7 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 }
 
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
-    DbDateTime::from_chrono(date)
+    DbDateTime::from_chrono(date + Duration::hours(1)) // ;)
 }
 
 pub fn fom_dbtime(date: &DbDateTime) -> DateTime<Local> {

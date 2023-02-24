@@ -254,7 +254,7 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
 
                 let next_close_hours = match closing_hours.get(closing_idx + 1) {
                     Some(val) => *val,
-                    None => time_frame.closing_hours().first().unwrap() + 1,
+                    None => time_frame.closing_hours().first().unwrap() + 24,
                 };
 
                 let leches = date + Duration::hours(next_close_hours - candle_hour + 1)
@@ -271,6 +271,10 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
             false => date + Duration::hours(num_hours),
         },
     };
+
+    if !time_frame.is_minutely_time_frame() {
+        log::info!("Open UUUUUUUUUntil {:?}", open_until);
+    }
     open_until
 }
 
@@ -281,25 +285,39 @@ pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Dat
 
 pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
     let date = data.0;
+    let mut data = data.clone();
+    let date = DateTime::parse_from_rfc3339("2023-02-23T23:00:00+01:00").unwrap();
+    data.0 = date.with_timezone(&Local);
     let now = Local::now();
     let minutes = date.minute() as i64;
     let num_minutes = time_frame.to_minutes();
+    let num_hours = time_frame.to_hours();
 
+    log::info!("00000 {:?}", (date));
     let open_until = match next {
         true => {
             if time_frame.is_minutely_time_frame() {
                 match time_frame.closing_minutes().contains(&minutes) {
-                    true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
+                    true => {
+                        //"2023-02-23T23:00:00+01:00"
+                        //  1111111 2023-02-23T23:05:00+01:00
+                        // 777777777 (2023-02-23T23:00:00+01:00, 2023-02-23T22:55:00+01:00)
+                        //log::info!("1111111 {:?}", get_open_until(data, time_frame, next));
+                        get_open_until(data, time_frame, next) - Duration::minutes(num_minutes)
+                    }
                     false => get_open_until(data, time_frame, next),
                 }
             } else if time_frame.is_hourly_time_frame() {
                 let hours = date.hour() as i64;
-                //let num_hours = time_frame.to_hours();
-
                 match time_frame.closing_hours().contains(&hours)
                     && time_frame.closing_minutes().contains(&minutes)
                 {
-                    true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
+                    true => {
+                        //"2023-02-23T23:00:00+01:00"
+                        //22222222 2023-02-24T00:00:00+01:00
+                        // 777777777 (2023-02-23T23:00:00+01:00, 2023-02-23T22:00:00+01:00)
+                        get_open_until(data, time_frame, next) - Duration::hours(num_hours)
+                    }
                     false => get_open_until(data, time_frame, next),
                 }
             } else {
@@ -309,15 +327,10 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         false => get_open_until(data, time_frame, next),
     };
 
-    // let open_until = match next {
-    //     true => match time_frame.closing_minutes().contains(&minutes) {
-    //         true => get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval),
-    //         false => get_open_until(data, time_frame, next),
-    //     },
-    //     false => get_open_until(data, time_frame, next),
-    // };
-
-    let open_from = open_until - Duration::minutes(num_minutes);
+    let open_from = match time_frame.is_minutely_time_frame() {
+        true => open_until - Duration::minutes(num_minutes),
+        false => open_until - Duration::hours(num_hours),
+    };
 
     let is_closed = match next {
         true => date == open_until,
@@ -328,6 +341,10 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         true => (open_from, data.1, data.2, data.3, data.4, data.5, is_closed),
         false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
     };
+
+    if time_frame.is_hourly_time_frame() {
+        log::info!("777777777 {:?}", (open_until, adapted.0));
+    }
 
     adapted
 }

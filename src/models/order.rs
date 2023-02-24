@@ -398,9 +398,10 @@ pub fn create_order(
         .parse::<i64>()
         .unwrap();
 
-    let bar_value = time_frame.to_number();
-    let minutes_add = bar_value * valid_until_bars;
-    let valid_until = *current_date + date::Duration::minutes(minutes_add);
+    let valid_until = match instrument.time_frame().is_minutely_time_frame() {
+        true => *current_date + date::Duration::minutes(valid_until_bars * time_frame.to_minutes()),
+        false => *current_date + date::Duration::hours(valid_until_bars * time_frame.to_hours()),
+    };
 
     Order {
         id: uuid::generate_ts_id(*current_date),
