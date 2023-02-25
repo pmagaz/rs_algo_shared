@@ -1,6 +1,7 @@
 use super::*;
 use crate::error::Result;
 use crate::helpers::calc;
+use crate::helpers::date;
 use crate::helpers::date::parse_time;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
@@ -173,6 +174,12 @@ impl BrokerStream for Xtb {
             },
         };
 
+        log::info!(
+            "[SOCKET] requesting {} data since {:?}",
+            time_frame,
+            date::parse_time(from_date)
+        );
+
         self.send(&instrument_command).await.unwrap();
 
         let res = self.get_response().await?;
@@ -196,13 +203,14 @@ impl BrokerStream for Xtb {
                 let bid = data["returnData"]["bid"].as_f64().unwrap();
                 let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
                 let spread = ask - bid;
-
+                let percentage = 0.;
                 // let pip_size = match symbol.contains("JPY") {
                 //     true => 0.01,
                 //     false => 0.0001,
                 // };
 
-                let pricing = Pricing::new(symbol.to_owned(), ask, bid, spread, pip_size);
+                let pricing =
+                    Pricing::new(symbol.to_owned(), ask, bid, spread, pip_size, percentage);
                 ResponseBody {
                     response: ResponseType::GetInstrumentPricing,
                     payload: Some(pricing),

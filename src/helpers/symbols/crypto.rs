@@ -35,11 +35,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "EURUSD",
-        "name": "EURUSD",
-        "sector": "Crypto"
-    },
-    {
         "symbol": "BINANCECOIN",
         "name": "BINANCECOIN",
         "sector": "Crypto"
@@ -55,31 +50,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "CHAINLINK",
-        "name": "CHAINLINK",
-        "sector": "Crypto"
-    },
-    {
-        "symbol": "CHILIZ",
-        "name": "CHILIZ",
-        "sector": "Crypto"
-    },
-    {
-        "symbol": "EOS",
-        "name": "EOS",
-        "sector": "Crypto"
-    },
-    {
-        "symbol": "POLKADOT",
-        "name": "POLKADOT",
-        "sector": "Crypto"
-    },
-    {
-        "symbol": "POLYGON",
-        "name": "POLYGON",
-        "sector": "Crypto"
-    },
-    {
         "symbol": "STELLAR",
         "name": "STELLAR",
         "sector": "Crypto"
@@ -87,6 +57,11 @@ pub fn get_symbols() -> Vec<String> {
     {
         "symbol": "SOLANA",
         "name": "SOLANA",
+        "sector": "Crypto"
+    },
+    {
+        "symbol": "DOGECOIN",
+        "name": "DOGECOIN",
         "sector": "Crypto"
     }
 ]}"#;

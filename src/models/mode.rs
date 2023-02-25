@@ -1,6 +1,7 @@
 #[derive(PartialEq)]
 pub enum ExecutionMode {
     Scanner,
+    ScannerBackTest,
     BackTest,
     Bot,
 }
@@ -25,6 +26,7 @@ pub fn from_str(strategy: &str) -> ExecutionMode {
     match strategy {
         "Scanner" => ExecutionMode::Scanner,
         "BackTest" => ExecutionMode::BackTest,
+        "ScannerBackTest" => ExecutionMode::ScannerBackTest,
         "Bot" => ExecutionMode::Bot,
         _ => ExecutionMode::Bot,
     }

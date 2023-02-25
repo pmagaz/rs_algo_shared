@@ -9,6 +9,8 @@ use crate::{
 use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 
+use super::mode::{self, ExecutionMode};
+
 type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 type DOHLCC = (DateTime<Local>, f64, f64, f64, f64, f64, bool);
 type VEC_DOHLC = Vec<DOHLC>;
@@ -46,8 +48,27 @@ impl TimeFrame {
         }
     }
 
-    pub fn get_starting_bar(num_bars: i64, time_frame: &TimeFrameType) -> DateTime<Local> {
-        let num_bars = num_bars * time_frame.to_minutes();
+    pub fn get_starting_bar(
+        num_bars: i64,
+        time_frame: &TimeFrameType,
+        execution_mode: &ExecutionMode,
+    ) -> DateTime<Local> {
+        let bars_time_frame = match execution_mode {
+            mode::ExecutionMode::Scanner => num_bars,
+            _ => num_bars * time_frame.to_minutes(),
+        };
+
+        // match time_frame {
+        //     TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(bars_time_frame),
+        //     TimeFrameType::H4 => Local::now() - Duration::minutes(bars_time_frame),
+        //     TimeFrameType::H1 => Local::now() - Duration::minutes(bars_time_frame),
+        //     TimeFrameType::M30 => Local::now() - Duration::minutes(bars_time_frame),
+        //     TimeFrameType::M15 => Local::now() - Duration::minutes(bars_time_frame),
+        //     TimeFrameType::M5 => Local::now() - Duration::minutes(bars_time_frame),
+        //     TimeFrameType::M1 => Local::now() - Duration::minutes(bars_time_frame),
+        //     _ => Local::now() - Duration::days(bars_time_frame),
+        // }
+
         match time_frame {
             TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(num_bars),
             TimeFrameType::H4 => Local::now() - Duration::minutes(num_bars),
@@ -215,11 +236,6 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
     let num_minutes = time_frame.to_minutes();
     let num_hours = time_frame.to_hours();
 
-    // let comparator = match time_frame.is_minutely_time_frame() {
-    //     true => candle_minute,
-    //     false => candle_hour,
-    // };
-
     let open_until = match next {
         true => match time_frame.is_minutely_time_frame() {
             true => {
@@ -258,13 +274,8 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
                     None => time_frame.closing_hours().first().unwrap() + 24,
                 };
 
-                let leches = date + Duration::hours(next_close_hours - candle_hour + 1)
-                    - Duration::minutes(candle_minute - 1);
-
-                if !time_frame.is_minutely_time_frame() {
-                    log::info!("Open Until {:?}", (date, leches, candle_minute));
-                }
-                leches
+                date + Duration::hours(next_close_hours - candle_hour + 1)
+                    - Duration::minutes(candle_minute - 1)
             }
         },
         false => match time_frame.is_minutely_time_frame() {
@@ -273,9 +284,6 @@ pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Da
         },
     };
 
-    if !time_frame.is_minutely_time_frame() {
-        log::info!("Open UUUUUUUUUntil {:?}", open_until);
-    }
     open_until
 }
 
@@ -338,10 +346,6 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         true => (open_from, data.1, data.2, data.3, data.4, data.5, is_closed),
         false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
     };
-
-    if time_frame.is_hourly_time_frame() {
-        log::info!("777777777 {:?}", (open_until, adapted.0));
-    }
 
     adapted
 }
