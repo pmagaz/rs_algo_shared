@@ -9,14 +9,12 @@ pub mod sd;
 pub mod stoch;
 
 use crate::error::Result;
-use crate::indicators::adx::Adx;
 use crate::indicators::atr::Atr;
 use crate::indicators::bb::BollingerB;
 use crate::indicators::bbw::BollingerBW;
 use crate::indicators::ema::Ema;
 use crate::indicators::macd::Macd;
 use crate::indicators::rsi::Rsi;
-use crate::indicators::stoch::Stoch;
 
 use serde::{Deserialize, Serialize};
 use std::env;

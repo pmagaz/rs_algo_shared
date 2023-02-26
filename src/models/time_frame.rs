@@ -58,26 +58,15 @@ impl TimeFrame {
             _ => num_bars * time_frame.to_minutes(),
         };
 
-        // match time_frame {
-        //     TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(bars_time_frame),
-        //     TimeFrameType::H4 => Local::now() - Duration::minutes(bars_time_frame),
-        //     TimeFrameType::H1 => Local::now() - Duration::minutes(bars_time_frame),
-        //     TimeFrameType::M30 => Local::now() - Duration::minutes(bars_time_frame),
-        //     TimeFrameType::M15 => Local::now() - Duration::minutes(bars_time_frame),
-        //     TimeFrameType::M5 => Local::now() - Duration::minutes(bars_time_frame),
-        //     TimeFrameType::M1 => Local::now() - Duration::minutes(bars_time_frame),
-        //     _ => Local::now() - Duration::days(bars_time_frame),
-        // }
-
         match time_frame {
-            TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(num_bars),
-            TimeFrameType::H4 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::H1 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M30 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M15 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M5 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M1 => Local::now() - Duration::minutes(num_bars),
-            _ => Local::now() - Duration::days(num_bars),
+            TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(bars_time_frame),
+            TimeFrameType::H4 => Local::now() - Duration::minutes(bars_time_frame),
+            TimeFrameType::H1 => Local::now() - Duration::minutes(bars_time_frame),
+            TimeFrameType::M30 => Local::now() - Duration::minutes(bars_time_frame),
+            TimeFrameType::M15 => Local::now() - Duration::minutes(bars_time_frame),
+            TimeFrameType::M5 => Local::now() - Duration::minutes(bars_time_frame),
+            TimeFrameType::M1 => Local::now() - Duration::minutes(bars_time_frame),
+            _ => Local::now() - Duration::days(bars_time_frame),
         }
     }
 }
