@@ -74,7 +74,8 @@ impl Divergences {
 
         let data_indicators: [(IndicatorType, &Vec<f64>); 2] = [
             (IndicatorType::Rsi, indicators.rsi().get_data_a()),
-            (IndicatorType::Stoch, indicators.stoch().get_data_a()),
+            (IndicatorType::Rsi, indicators.rsi().get_data_a()),
+            //(IndicatorType::Stoch, indicators.stoch().get_data_a()),
         ];
 
         for (indicator_type, indicator_value) in data_indicators {

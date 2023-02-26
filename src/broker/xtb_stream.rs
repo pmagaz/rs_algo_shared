@@ -199,6 +199,8 @@ impl BrokerStream for Xtb {
         let txt_msg = match msg {
             Message::Text(txt) => {
                 let data = self.parse_message(&txt).await.unwrap();
+                log::info!("1111111 {:?}", data);
+
                 let ask = data["returnData"]["ask"].as_f64().unwrap();
                 let bid = data["returnData"]["bid"].as_f64().unwrap();
                 let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();

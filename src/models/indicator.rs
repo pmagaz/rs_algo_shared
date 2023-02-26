@@ -46,9 +46,9 @@ pub struct Indicators {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CompactIndicators {
     pub macd: CompactIndicator,
-    pub stoch: CompactIndicator,
+    //pub stoch: CompactIndicator,
     pub atr: CompactIndicator,
-    pub adx: CompactIndicator,
+    //pub adx: CompactIndicator,
     pub bb: CompactIndicator,
     pub bbw: CompactIndicator,
     pub rsi: CompactIndicator,

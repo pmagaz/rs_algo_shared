@@ -41,9 +41,9 @@ use std::env;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
     pub macd: Macd,
-    pub stoch: Stoch,
+    //pub stoch: Stoch,
     pub atr: Atr,
-    pub adx: Adx,
+    //pub adx: Adx,
     pub rsi: Rsi,
     pub bb: BollingerB,
     pub bbw: BollingerBW,
@@ -61,9 +61,9 @@ impl Indicators {
         Ok(Self {
             macd: Macd::new().unwrap(),
             rsi: Rsi::new().unwrap(),
-            stoch: Stoch::new().unwrap(),
+            //stoch: Stoch::new().unwrap(),
             atr: Atr::new().unwrap(),
-            adx: Adx::new().unwrap(),
+            //adx: Adx::new().unwrap(),
             bb: BollingerB::new().unwrap(),
             bbw: BollingerBW::new().unwrap(),
             ema_a: Ema::new_ema(*ema_a).unwrap(),
@@ -76,9 +76,9 @@ impl Indicators {
         &self.atr
     }
 
-    pub fn adx(&self) -> &Adx {
-        &self.adx
-    }
+    // pub fn adx(&self) -> &Adx {
+    //     &self.adx
+    // }
 
     pub fn bb(&self) -> &BollingerB {
         &self.bb
@@ -92,9 +92,9 @@ impl Indicators {
         &self.rsi
     }
 
-    pub fn stoch(&self) -> &Stoch {
-        &self.stoch
-    }
+    // pub fn stoch(&self) -> &Stoch {
+    //     &self.stoch
+    // }
 
     pub fn ema_a(&self) -> &Ema {
         &self.ema_a
@@ -111,13 +111,13 @@ impl Indicators {
     pub fn calculate_indicators(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
         self.macd.next(close).unwrap();
-        self.stoch.next(close).unwrap();
+        //self.stoch.next(close).unwrap();
         let extended_indicators = env::var("EXTENDED_INDICATORS")
             .unwrap()
             .parse::<bool>()
             .unwrap();
         if extended_indicators {
-            self.atr.next_OHLC(OHLC).unwrap();
+            //self.atr.next_OHLC(OHLC).unwrap();
             //self.adx.next(close).unwrap();
             self.bb.next(close).unwrap();
             self.bbw.next(close).unwrap();

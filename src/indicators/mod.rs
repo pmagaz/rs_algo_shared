@@ -50,9 +50,9 @@ pub trait Indicator {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
     pub macd: Macd,
-    pub stoch: Stoch,
+    //pub stoch: Stoch,
     pub atr: Atr,
-    pub adx: Adx,
+    // //pub adx: Adx,
     pub rsi: Rsi,
     pub bb: BollingerB,
     pub bbw: BollingerBW,
@@ -70,9 +70,9 @@ impl Indicators {
         Ok(Self {
             macd: Macd::new().unwrap(),
             rsi: Rsi::new().unwrap(),
-            stoch: Stoch::new().unwrap(),
+            //stoch: Stoch::new().unwrap(),
             atr: Atr::new().unwrap(),
-            adx: Adx::new().unwrap(),
+            //adx: Adx::new().unwrap(),
             bb: BollingerB::new().unwrap(),
             bbw: BollingerBW::new().unwrap(),
             ema_a: Ema::new_ema(*ema_a).unwrap(),
@@ -85,9 +85,9 @@ impl Indicators {
         &self.atr
     }
 
-    pub fn adx(&self) -> &Adx {
-        &self.adx
-    }
+    // pub fn adx(&self) -> &Adx {
+    //     &self.adx
+    // }
 
     pub fn bb(&self) -> &BollingerB {
         &self.bb
@@ -101,9 +101,9 @@ impl Indicators {
         &self.rsi
     }
 
-    pub fn stoch(&self) -> &Stoch {
-        &self.stoch
-    }
+    // pub fn stoch(&self) -> &Stoch {
+    //     &self.stoch
+    // }
 
     pub fn ema_a(&self) -> &Ema {
         &self.ema_a
@@ -137,13 +137,13 @@ impl Indicators {
             self.macd.next(close).unwrap();
         }
 
-        if env::var("INDICATORS_STOCH")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.stoch.next(close).unwrap();
-        }
+        // if env::var("INDICATORS_STOCH")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap()
+        // {
+        //     self.stoch.next(close).unwrap();
+        // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.next(close).unwrap();
@@ -204,13 +204,13 @@ impl Indicators {
             self.macd.update(close).unwrap();
         }
 
-        if env::var("INDICATORS_STOCH")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.stoch.update(close).unwrap();
-        }
+        // if env::var("INDICATORS_STOCH")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap()
+        // {
+        //     self.stoch.update(close).unwrap();
+        // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.update(close).unwrap();
@@ -276,17 +276,17 @@ impl Indicators {
             self.macd.next(close).unwrap();
         }
 
-        if env::var("INDICATORS_STOCH")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            if self.stoch.get_data_a().len() >= max_bars + next_delete {
-                self.stoch.remove_a(0);
-                self.stoch.remove_b(0);
-            }
-            self.stoch.next(close).unwrap();
-        }
+        // if env::var("INDICATORS_STOCH")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap()
+        // {
+        //     if self.stoch.get_data_a().len() >= max_bars + next_delete {
+        //         self.stoch.remove_a(0);
+        //         self.stoch.remove_b(0);
+        //     }
+        //     self.stoch.next(close).unwrap();
+        // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             if self.rsi.get_data_a().len() >= max_bars + next_delete {
@@ -375,13 +375,13 @@ impl Indicators {
             self.macd.update(close).unwrap();
         }
 
-        if env::var("INDICATORS_STOCH")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.stoch.update(close).unwrap();
-        }
+        // if env::var("INDICATORS_STOCH")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap()
+        // {
+        //     self.stoch.update(close).unwrap();
+        // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.update(close).unwrap();
