@@ -54,7 +54,7 @@ impl TimeFrame {
         execution_mode: &ExecutionMode,
     ) -> DateTime<Local> {
         let bars_time_frame = match execution_mode {
-            mode::ExecutionMode::Scanner => num_bars,
+            mode::ExecutionMode::Scanner | mode::ExecutionMode::ScannerBackTest => num_bars,
             _ => num_bars * time_frame.to_minutes(),
         };
 
