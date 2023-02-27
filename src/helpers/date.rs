@@ -1,5 +1,6 @@
 pub use bson::{Bson, DateTime as DbDateTime};
 pub use chrono::offset::{Local, TimeZone, Utc};
+use chrono::FixedOffset;
 pub use chrono::{DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, Timelike};
 
 pub fn parse_time(date: i64) -> DateTime<Local> {
@@ -8,7 +9,9 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 }
 
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
-    DbDateTime::from_chrono(date + Duration::hours(1)) // ;)
+    let ts = date.timestamp_micros() / 1000;
+    let db_time: bson::DateTime = DbDateTime::from_millis(ts);
+    db_time
 }
 
 pub fn fom_dbtime(date: &DbDateTime) -> DateTime<Local> {

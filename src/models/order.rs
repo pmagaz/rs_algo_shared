@@ -2,7 +2,6 @@ use std::env;
 
 use super::mode;
 use super::pricing::Pricing;
-use super::time_frame::TimeFrame;
 use super::trade::{Trade, TradeType};
 
 use crate::helpers::calc::*;
@@ -514,6 +513,7 @@ fn order_activated(
         OrderType::StopLossShort(direction, _) => stop_cross_over,
         _ => todo!(),
     };
+
     activated
 }
 
