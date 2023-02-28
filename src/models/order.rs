@@ -513,7 +513,6 @@ fn order_activated(
         OrderType::StopLossShort(direction, _) => stop_cross_over,
         _ => todo!(),
     };
-
     activated
 }
 

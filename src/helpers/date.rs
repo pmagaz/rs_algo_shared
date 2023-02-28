@@ -9,17 +9,24 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 }
 
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
-    //let offset = date.offset().to_string();
-    let offset = date.offset().to_string()[2..3].parse::<i64>().unwrap();
-    // let db_date_time = match offset.contains("+01") {
-    //     true => DbDateTime::from_chrono(date + Duration::hours(1)),
-    //     false => DbDateTime::from_chrono(date),
-    // };
-    let db_date_time = DbDateTime::from_chrono(date + Duration::hours(offset));
+    let offset = date.offset().to_string();
+    //let offset = date.offset().to_string()[2..3].parse::<i64>().unwrap();
+    //let db_date_time = DbDateTime::from_chrono(date + Duration::hours(offset));
+
+    let db_date_time = match offset.contains("+01") {
+        true => DbDateTime::from_chrono(date + Duration::hours(1)),
+        false => DbDateTime::from_chrono(date),
+    };
+
     db_date_time
 }
 
 pub fn fom_dbtime(date: &DbDateTime) -> DateTime<Local> {
-    let date_time: DateTime<Local> = DateTime::from(date.to_chrono());
-    date_time
+    let chrono_date = date.to_chrono();
+    let offset = chrono_date.offset().to_string();
+    let db_date_time: DateTime<Local> = match offset.contains("UTC") {
+        true => DateTime::from(chrono_date - Duration::hours(1)),
+        false => DateTime::from(chrono_date),
+    };
+    db_date_time
 }
