@@ -8,7 +8,6 @@ use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::scanner::instrument::*;
 
-use round::round;
 use serde::{Deserialize, Serialize};
 
 pub trait Trade {
