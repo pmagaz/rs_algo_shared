@@ -9,12 +9,13 @@ pub fn parse_time(date: i64) -> DateTime<Local> {
 }
 
 pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
-    let offset = date.offset().to_string();
-    //let offset = date.offset().to_string()[2..3].parse::<i64>().unwrap();
-    let db_date_time = match offset.contains("+01") {
-        true => DbDateTime::from_chrono(date + Duration::hours(1)),
-        false => DbDateTime::from_chrono(date),
-    };
+    //let offset = date.offset().to_string();
+    let offset = date.offset().to_string()[2..3].parse::<i64>().unwrap();
+    // let db_date_time = match offset.contains("+01") {
+    //     true => DbDateTime::from_chrono(date + Duration::hours(1)),
+    //     false => DbDateTime::from_chrono(date),
+    // };
+    let db_date_time = DbDateTime::from_chrono(date + Duration::hours(offset));
     db_date_time
 }
 
