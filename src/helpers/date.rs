@@ -1,5 +1,6 @@
 pub use bson::DateTime as DbDateTime;
 pub use chrono::offset::{Local, TimeZone, Utc};
+use chrono::Weekday;
 
 pub use chrono::{DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, Timelike};
 
@@ -29,4 +30,8 @@ pub fn fom_dbtime(date: &DbDateTime) -> DateTime<Local> {
         false => DateTime::from(chrono_date),
     };
     db_date_time
+}
+
+pub fn get_week_day(date: DateTime<Local>) -> u32 {
+    date.weekday().number_from_monday()
 }

@@ -4,6 +4,7 @@ pub use tungstenite::Message;
 
 use crate::broker::{DOHLC, VEC_DOHLC};
 use crate::models::bot::BotData;
+use crate::models::market::MarketHours;
 use crate::models::order::Order;
 use crate::models::pricing::Pricing;
 use crate::models::strategy::StrategyType;
@@ -18,6 +19,7 @@ pub enum CommandType {
     GetCurrentState,
     GetInstrumentData,
     GetInstrumentPricing,
+    GetMarketHours,
     UpdateBotData,
     ExecuteTrade,
     ExecutePosition,
@@ -34,12 +36,13 @@ pub struct Command<T> {
 pub enum ResponseType {
     Connected,
     Error,
+    Reconnect,
     GetInstrumentData,
     GetInstrumentPricing,
+    GetMarketHours,
     ExecuteTradeIn,
     ExecuteTradeOut,
     InitSession,
-    //GetHTFInstrumentData,
     SubscribeStream,
 }
 
@@ -71,6 +74,11 @@ pub struct InstrumentData<T> {
     pub symbol: String,
     pub time_frame: TimeFrameType,
     pub data: T,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Symbol {
+    pub symbol: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,10 +115,12 @@ pub enum MessageType {
     StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     PricingData(ResponseBody<Pricing>),
+    MarketHours(ResponseBody<MarketHours>),
     InitSession(ResponseBody<BotData>),
     ExecuteTradeIn(ResponseBody<TradeData<TradeIn>>),
     ExecuteTradeOut(ResponseBody<TradeData<TradeOut>>),
     ExecuteOrder(ResponseBody<TradeData<Order>>),
     Connected(ResponseBody<Uuid>),
+    Reconnect(ResponseBody<bool>),
     Error(ResponseBody<bool>),
 }

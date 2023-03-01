@@ -2,12 +2,12 @@ use crate::error::Result;
 use crate::ws::message::*;
 
 use std::net::TcpStream;
-use std::time::Duration;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{connect, WebSocket as Ws};
 
 #[derive(Debug)]
 pub struct WebSocket {
+    url: String,
     socket: Ws<MaybeTlsStream<TcpStream>>,
 }
 
@@ -18,7 +18,10 @@ impl WebSocket {
         log::info!("[SOCKET] Connected to the server");
         log::info!("[SOCKET] Response HTTP code: {}", response.status());
 
-        Self { socket }
+        Self {
+            url: url.to_string(),
+            socket,
+        }
     }
 
     pub async fn send(&mut self, msg: &str) -> Result<()> {
@@ -26,8 +29,11 @@ impl WebSocket {
         Ok(())
     }
 
-    pub fn send2(&mut self, msg: &str) {
-        self.socket.write_message(Message::text(msg)).unwrap();
+    pub async fn re_connect(&mut self) {
+        log::info!("[SOCKET] Reconnecting to the server");
+        let url = self.url.to_owned();
+        let (socket, _response) = connect(url).expect("Can't connect");
+        self.socket = socket;
     }
 
     pub async fn ping(&mut self, msg: &[u8]) {
@@ -44,16 +50,23 @@ impl WebSocket {
 
     pub async fn read(&mut self) -> Result<Message> {
         let msg = self.socket.read_message().unwrap();
+
         Ok(msg)
     }
 
-    pub fn read2(&mut self) -> Result<Message> {
-        let msg = self
-            .socket
-            .read_message()
-            .expect("SOCKET] Error reading message");
-        Ok(msg)
+    pub async fn read_msg(
+        &mut self,
+    ) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
+        self.socket.read_message()
     }
+
+    // pub fn read2(&mut self) -> Result<Message> {
+    //     let msg = self
+    //         .socket
+    //         .read_message()
+    //         .expect("SOCKET] Error reading message");
+    //     Ok(msg)
+    // }
 }
 
 // impl Default for WebSocket {

@@ -130,6 +130,11 @@ pub struct TickParams {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TradingHoursCommand {
+    pub symbols: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CommandGetTickPrices {
     pub command: String,
     pub streamSessionId: String,

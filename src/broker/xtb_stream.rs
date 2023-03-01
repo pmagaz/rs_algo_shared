@@ -5,6 +5,7 @@ use crate::helpers::date;
 use crate::helpers::date::parse_time;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
+use crate::models::market::*;
 use crate::models::order::*;
 use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
@@ -58,6 +59,7 @@ pub trait BrokerStream {
         &mut self,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeData<TradeOut>>>;
+    async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
@@ -204,16 +206,63 @@ impl BrokerStream for Xtb {
                 let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
                 let spread = ask - bid;
                 let percentage = 0.;
-                // let pip_size = match symbol.contains("JPY") {
-                //     true => 0.01,
-                //     false => 0.0001,
-                // };
-
                 let pricing =
                     Pricing::new(symbol.to_owned(), ask, bid, spread, pip_size, percentage);
                 ResponseBody {
                     response: ResponseType::GetInstrumentPricing,
                     payload: Some(pricing),
+                }
+            }
+            _ => panic!(),
+        };
+
+        Ok(txt_msg)
+    }
+
+    async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
+        let trading_hours_command = Command {
+            command: "getTradingHours".to_owned(),
+            arguments: TradingHoursCommand {
+                symbols: vec![symbol.to_string()],
+            },
+        };
+
+        self.send(&trading_hours_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+
+        let txt_msg = match msg {
+            Message::Text(txt) => {
+                let data = self.parse_message(&txt).await.unwrap();
+                let mut result: Vec<MarketHour> = vec![];
+
+                let current_date = Local::now();
+                let week_day = date::get_week_day(current_date) as isize;
+                let mut open = false;
+                for obj in data["returnData"][0]["trading"].as_array().unwrap() {
+                    let day = obj["day"].as_i64().unwrap() as isize;
+                    let from = obj["fromT"].as_i64().unwrap();
+                    let to = obj["toT"].as_i64().unwrap();
+                    let base = current_date.date().and_hms(0, 0, 0);
+                    let date_from = base + Duration::milliseconds(from);
+                    let date_to = base + Duration::milliseconds(to);
+                    if day == week_day {
+                        if current_date > date_from && current_date < date_to {
+                            open = true
+                        } else {
+                            open = false
+                        }
+                    };
+                    let market_hour = MarketHour {
+                        day,
+                        from: date_from,
+                        to: date_to,
+                    };
+                    result.push(market_hour);
+                }
+
+                ResponseBody {
+                    response: ResponseType::GetMarketHours,
+                    payload: Some(MarketHours::new(open, symbol.to_owned(), result)),
                 }
             }
             _ => panic!(),
@@ -516,34 +565,6 @@ impl BrokerStream for Xtb {
         F: Send + FnMut(Message) -> T,
         T: Future<Output = Result<()>> + Send + 'static,
     {
-        // let login_command = &Command {
-        //     command: String::from("login"),
-        //     arguments: LoginParams {
-        //         userId: String::from(username),
-        //         password: String::from(password),
-        //         appName: String::from("rs-algo-bot"),
-        //     },
-        // };
-
-        // let candles_command = &CommandGetTickPrices{
-        //     command: "getCandles".to_owned(),
-        //     streamSessionId: self.streamSessionId,
-        //     symbol: "BITCOINT".to_owned()
-        // };
-
-        // let tick_command = &CommandGetTickPrices {
-        //     command: "getTickPrices".to_owned(),
-        //     streamSessionId: session_id,
-        //     symbol: symbol.to_owned(),
-        //     minArrivalTime: 5000,
-        //     maxLevel: 2,
-        // };
-
-        // // let url = &env::var("BROKER_STREAM_URL").unwrap();
-        // // let mut wss = WebSocketStream::connect(url).await;
-        // self.send_stream(&serde_json::to_string(&tick_command).unwrap())
-        //     .await
-        //     .unwrap();
     }
 
     async fn parse_stream_data(msg: Message) -> Option<String> {
@@ -666,7 +687,7 @@ impl Xtb {
                     }),
                 }
             }
-            // // Get data
+            // Pricing Data
             _x if matches!(&data["returnData"]["digits"], Value::Number(_x)) => ResponseBody {
                 response: ResponseType::GetInstrumentData,
                 payload: Some(InstrumentData {
@@ -703,37 +724,58 @@ impl Xtb {
         Ok(result)
     }
 
-    async fn parse_symbols_data(&mut self, data: &Value) -> Result<Vec<Symbol>> {
-        let mut result: Vec<Symbol> = vec![];
-        let symbols = data["returnData"].as_array().unwrap();
-        for s in symbols {
-            let symbol = match &s["symbol"] {
-                Value::String(s) => s.to_string(),
-                _ => panic!("Symbol parse error"),
-            };
-            let currency = match &s["currency"] {
-                Value::String(s) => s.to_string(),
-                _ => panic!("Currency parse error"),
-            };
-            let category = match &s["symbol"] {
-                Value::String(s) => s.to_string(),
-                _ => panic!("Category parse error"),
-            };
+    pub fn parse_market_hours(&mut self, data: &Value) -> Result<Vec<MarketHour>> {
+        let mut result: Vec<MarketHour> = vec![];
+        let current_date = Local::now();
+        let base = current_date.date().and_hms(0, 0, 0);
 
-            let description = match &s["description"] {
-                Value::String(s) => s.to_string(),
-                _ => panic!("Description parse error"),
+        for obj in data["returnData"]["trading"].as_array().unwrap() {
+            let day = obj["day"].as_i64().unwrap().try_into().unwrap();
+            let from = obj["from"].as_i64().unwrap();
+            let to = obj["to"].as_i64().unwrap();
+            let date_from = base + Duration::milliseconds(from);
+            let date_to = base + Duration::milliseconds(to);
+            let market_hour = MarketHour {
+                day,
+                from: date_from,
+                to: date_to,
             };
-
-            result.push(Symbol {
-                symbol,
-                currency,
-                category,
-                description,
-            });
+            result.push(market_hour);
         }
         Ok(result)
     }
+
+    // async fn parse_symbols_data(&mut self, data: &Value) -> Result<Vec<Symbol>> {
+    //     let mut result: Vec<Symbol> = vec![];
+    //     let symbols = data["returnData"].as_array().unwrap();
+    //     for s in symbols {
+    //         let symbol = match &s["symbol"] {
+    //             Value::String(s) => s.to_string(),
+    //             _ => panic!("Symbol parse error"),
+    //         };
+    //         let currency = match &s["currency"] {
+    //             Value::String(s) => s.to_string(),
+    //             _ => panic!("Currency parse error"),
+    //         };
+    //         let category = match &s["symbol"] {
+    //             Value::String(s) => s.to_string(),
+    //             _ => panic!("Category parse error"),
+    //         };
+
+    //         let description = match &s["description"] {
+    //             Value::String(s) => s.to_string(),
+    //             _ => panic!("Description parse error"),
+    //         };
+
+    //         result.push(Symbol {
+    //             symbol,
+    //             currency,
+    //             category,
+    //             description,
+    //         });
+    //     }
+    //     Ok(result)
+    // }
 
     pub fn parse_symbol(symbol: String) -> Result<String> {
         if symbol.contains('_') {
