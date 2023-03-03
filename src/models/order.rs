@@ -135,12 +135,6 @@ impl Order {
         self.set_full_filled_at(to_dbtime(date));
     }
 
-    pub fn fulfill_bot2_order(&mut self, date: DateTime<Local>) {
-        self.set_status(OrderStatus::Fulfilled);
-        self.set_updated_at(to_dbtime(date));
-        self.set_full_filled_at(to_dbtime(date));
-    }
-
     pub fn cancel_order(&mut self, date: DbDateTime) {
         self.set_status(OrderStatus::Canceled);
         self.set_updated_at(date);
@@ -318,7 +312,8 @@ pub fn prepare_orders(
                 log::error!(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
-                )
+                );
+                panic!();
             }
         }
         false => {
@@ -388,7 +383,7 @@ pub fn create_order(
         false => instrument.data().last().unwrap(),
     };
 
-    let next_index = index + 1;
+    //let next_index = index + 1;
     let current_date = &current_candle.date();
     let origin_price = current_candle.close();
     let time_frame = instrument.time_frame();
@@ -404,7 +399,7 @@ pub fn create_order(
 
     Order {
         id: uuid::generate_ts_id(*current_date),
-        index_created: next_index,
+        index_created: index,
         index_fulfilled: 0,
         trade_id,
         order_type: order_type.clone(),
@@ -427,12 +422,13 @@ pub fn resolve_active_orders(
 ) -> Position {
     let mut order_position: Position = Position::None;
     let mut orders_activated = vec![];
+
     for (_id, order) in orders
         .iter()
         .enumerate()
         .filter(|(_id, order)| order.status == OrderStatus::Pending)
     {
-        match order_activated(index, order, instrument, pricing) {
+        match order_activated(index, order, instrument) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
@@ -465,38 +461,41 @@ pub fn resolve_active_orders(
     resolved
 }
 
-fn order_activated(
-    index: usize,
-    order: &Order,
-    instrument: &Instrument,
-    pricing: &Pricing,
-) -> bool {
+fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
     let prev_candle = data.get(prev_index).unwrap();
-    let is_next_order = index > order.index_fulfilled;
-    let (current_price_over, current_price_bellow, previous_price_over, previous_price_bellow) =
+    let is_next_bar = index > order.index_created;
+    let (current_price_over, current_price_bellow, _, _) =
         get_order_activation_price(current_candle, prev_candle);
 
-    let cross_over = current_price_over >= order.target_price
-        && previous_price_over < current_price_over
-        && is_next_order;
-
-    let cross_bellow = current_price_bellow <= order.target_price
-        && previous_price_bellow > current_price_bellow
-        && is_next_order;
-
-    let stop_cross_over = current_candle.high() >= order.target_price
-        && prev_candle.high() < current_candle.high()
-        && is_next_order;
-
-    let stop_cross_bellow = current_candle.low() <= order.target_price
-        && prev_candle.low() > current_candle.low()
-        && is_next_order;
+    let cross_over = current_price_over >= order.target_price && is_next_bar;
+    let cross_bellow = current_price_bellow <= order.target_price && is_next_bar;
+    let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
+    let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
+            // if pricing.symbol() == "GBPUSD" {
+            //     log::warn!(
+            //         "11111111 {:?}",
+            //         (
+            //             current_price_over,
+            //             order.target_price,
+            //             index,
+            //             current_candle.date(),
+            //             order.index_created,
+            //             is_next_bar,
+            //             current_price_over >= order.target_price
+            //         )
+            //     );
+
+            //     log::warn!(
+            //         "22222222 {:?}",
+            //         (cross_over, cross_bellow, current_candle, order)
+            //     );
+            // }
             match direction {
                 OrderDirection::Up => cross_over,
                 OrderDirection::Down => cross_bellow,
@@ -509,8 +508,8 @@ fn order_activated(
             OrderDirection::Up => cross_over,
             OrderDirection::Down => cross_bellow,
         },
-        OrderType::StopLossLong(direction, _) => stop_cross_bellow,
-        OrderType::StopLossShort(direction, _) => stop_cross_over,
+        OrderType::StopLossLong(_, _) => stop_cross_bellow,
+        OrderType::StopLossShort(_, _) => stop_cross_over,
         _ => todo!(),
     };
     activated
@@ -644,14 +643,14 @@ pub fn cancel_all_pending_orders(
         .iter_mut()
         .map(|x| {
             let valid_until = fom_dbtime(&x.valid_until.unwrap());
-            log::warn!(
-                "Checking cancellation {:?} ",
-                (
-                    current_date,
-                    valid_until,
-                    current_date >= valid_until && x.status == OrderStatus::Pending
-                )
-            );
+            // log::warn!(
+            //     "Checking cancellation {:?} ",
+            //     (
+            //         current_date,
+            //         valid_until,
+            //         current_date >= valid_until && x.status == OrderStatus::Pending
+            //     )
+            // );
             if current_date >= valid_until && x.status == OrderStatus::Pending {
                 //log::warn!("Order canceled {:?} ", (current_date, valid_until));
                 x.cancel_order(to_dbtime(Local::now()));

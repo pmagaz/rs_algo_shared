@@ -205,7 +205,7 @@ impl BrokerStream for Xtb {
                 let data = self.parse_message(&txt).await.unwrap();
                 let ask = data["returnData"]["ask"].as_f64().unwrap();
                 let bid = data["returnData"]["bid"].as_f64().unwrap();
-                let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
+                let pip_size = data["returnData"]["tickSize"].as_f64().unwrap() * 10.;
                 let spread = ask - bid;
                 let percentage = 0.;
                 let pricing =
