@@ -444,7 +444,7 @@ impl Instrument {
                 self.next_indicators(candle.clone());
             }
             false => {
-                log::info!("Updating candle {:?}", &candle.date());
+                //log::info!("Updating candle {:?}", &candle.date());
                 let updated_candle =
                     self.update_last_candle(candle.clone(), &last_candle, &time_frame);
                 self.next_indicators(updated_candle.clone());
@@ -559,7 +559,7 @@ impl Instrument {
         log::info!("Current data size {:?}", (len, num_bars));
 
         if len >= num_bars + next_delete {
-            log::info!("Cleaning {:?}", (self.data.get(0)));
+            log::info!("Cleaning data...");
             self.data.remove(0);
         }
 

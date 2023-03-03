@@ -289,7 +289,6 @@ pub fn prepare_orders(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    //panic!();
                 }
             }
             false => {
@@ -298,7 +297,6 @@ pub fn prepare_orders(
                         "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    //panic!();
                 }
             }
         }
@@ -313,7 +311,6 @@ pub fn prepare_orders(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
-                panic!();
             }
         }
         false => {
