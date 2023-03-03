@@ -644,6 +644,14 @@ pub fn cancel_all_pending_orders(
         .iter_mut()
         .map(|x| {
             let valid_until = fom_dbtime(&x.valid_until.unwrap());
+            log::warn!(
+                "Checking cancellation {:?} ",
+                (
+                    current_date,
+                    valid_until,
+                    current_date >= valid_until && x.status == OrderStatus::Pending
+                )
+            );
             if current_date >= valid_until && x.status == OrderStatus::Pending {
                 //log::warn!("Order canceled {:?} ", (current_date, valid_until));
                 x.cancel_order(to_dbtime(Local::now()));

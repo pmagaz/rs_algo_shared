@@ -87,6 +87,25 @@ pub struct TradeData<T> {
     pub data: T,
 }
 
+impl<T> TradeData<T> {
+    pub fn new(symbol: &str, data: T) -> Self
+    where
+        for<'de> T: Serialize + Deserialize<'de>,
+    {
+        Self {
+            symbol: symbol.to_string(),
+            data,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TradeResponse<T> {
+    pub symbol: String,
+    pub accepted: bool,
+    pub data: T,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PricingData {
     pub symbol: String,
@@ -117,9 +136,9 @@ pub enum MessageType {
     PricingData(ResponseBody<Pricing>),
     MarketHours(ResponseBody<MarketHours>),
     InitSession(ResponseBody<BotData>),
-    ExecuteTradeIn(ResponseBody<TradeData<TradeIn>>),
-    ExecuteTradeOut(ResponseBody<TradeData<TradeOut>>),
-    ExecuteOrder(ResponseBody<TradeData<Order>>),
+    ExecuteTradeIn(ResponseBody<TradeResponse<TradeIn>>),
+    ExecuteTradeOut(ResponseBody<TradeResponse<TradeOut>>),
+    ExecuteOrder(ResponseBody<TradeResponse<Order>>),
     Connected(ResponseBody<Uuid>),
     Reconnect(ResponseBody<bool>),
     Error(ResponseBody<bool>),

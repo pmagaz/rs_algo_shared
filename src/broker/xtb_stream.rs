@@ -10,7 +10,9 @@ use crate::models::order::*;
 use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
-use crate::ws::message::{InstrumentData, Message, ResponseBody, ResponseType, TradeData};
+use crate::ws::message::{
+    InstrumentData, Message, ResponseBody, ResponseType, TradeData, TradeResponse,
+};
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
 
@@ -46,19 +48,19 @@ pub trait BrokerStream {
     async fn open_trade(
         &mut self,
         trade_in: TradeData<TradeIn>,
-    ) -> Result<ResponseBody<TradeData<TradeIn>>>;
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
     async fn close_trade(
         &mut self,
         trade_out: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeData<TradeOut>>>;
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn order_in(
         &mut self,
         order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeData<TradeIn>>>;
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
     async fn order_out(
         &mut self,
         order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeData<TradeOut>>>;
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
@@ -260,6 +262,11 @@ impl BrokerStream for Xtb {
                     result.push(market_hour);
                 }
 
+                match self.get_instrument_pricing(&symbol).await {
+                    Ok(_) => open = true,
+                    Err(_) => open = false,
+                };
+
                 ResponseBody {
                     response: ResponseType::GetMarketHours,
                     payload: Some(MarketHours::new(open, symbol.to_owned(), result)),
@@ -300,7 +307,7 @@ impl BrokerStream for Xtb {
     async fn open_trade(
         &mut self,
         trade: TradeData<TradeIn>,
-    ) -> Result<ResponseBody<TradeData<TradeIn>>> {
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         let trade_command = Command {
             command: "tradeTransaction".to_owned(),
             arguments: Transaction {
@@ -345,8 +352,9 @@ impl BrokerStream for Xtb {
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,
-            payload: Some(TradeData {
+            payload: Some(TradeResponse {
                 symbol: trade.symbol,
+                accepted: true,
                 //time_frame: trade.time_frame,
                 data: data,
             }),
@@ -357,9 +365,9 @@ impl BrokerStream for Xtb {
     async fn close_trade(
         &mut self,
         trade: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeData<TradeOut>>> {
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
-
+        //CONTINUE HERE RETURN REJECTED NOT PROFITABLE
         let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
         let pricing = pricing.payload.unwrap();
         let ask = pricing.ask();
@@ -381,13 +389,34 @@ impl BrokerStream for Xtb {
             },
         };
 
-        log::info!(
-            "{:?} {} accepted at ask: {} bid: {} pricing",
-            trade_type,
-            trade.symbol,
-            ask,
-            bid
-        );
+        let profit = match trade_type.is_long() {
+            true => price_out - price_in,
+            false => price_in - price_out,
+        };
+
+        let is_profitable = match profit {
+            _ if profit > 0. => {
+                log::info!(
+                    "{:?} {} accepted at ask: {} bid: {} with {} profit",
+                    trade_type,
+                    trade.symbol,
+                    ask,
+                    bid,
+                    profit
+                );
+                true
+            }
+            _ => {
+                log::info!(
+                    "{:?} {} NOT accepted at ask: {} bid: {}",
+                    trade_type,
+                    trade.symbol,
+                    ask,
+                    bid,
+                );
+                false
+            }
+        };
 
         data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
@@ -398,8 +427,9 @@ impl BrokerStream for Xtb {
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeOut,
-            payload: Some(TradeData {
+            payload: Some(TradeResponse {
                 symbol: trade.symbol,
+                accepted: is_profitable,
                 data: data,
             }),
         };
@@ -409,7 +439,7 @@ impl BrokerStream for Xtb {
     async fn order_in(
         &mut self,
         order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeData<TradeIn>>> {
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         let trade_command = Command {
             command: "tradeTransaction".to_owned(),
             arguments: Transaction {
@@ -459,8 +489,9 @@ impl BrokerStream for Xtb {
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,
-            payload: Some(TradeData {
+            payload: Some(TradeResponse {
                 symbol: symbol.clone(),
+                accepted: true,
                 data: trade_in,
             }),
         };
@@ -471,7 +502,7 @@ impl BrokerStream for Xtb {
     async fn order_out(
         &mut self,
         order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeData<TradeOut>>> {
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let trade_command = Command {
             command: "tradeTransaction".to_owned(),
             arguments: Transaction {
@@ -532,8 +563,9 @@ impl BrokerStream for Xtb {
 
         let txt_msg = ResponseBody {
             response: ResponseType::ExecuteTradeIn,
-            payload: Some(TradeData {
+            payload: Some(TradeResponse {
                 symbol: symbol.clone(),
+                accepted: true,
                 data: trade_out,
             }),
         };
@@ -744,38 +776,6 @@ impl Xtb {
         }
         Ok(result)
     }
-
-    // async fn parse_symbols_data(&mut self, data: &Value) -> Result<Vec<Symbol>> {
-    //     let mut result: Vec<Symbol> = vec![];
-    //     let symbols = data["returnData"].as_array().unwrap();
-    //     for s in symbols {
-    //         let symbol = match &s["symbol"] {
-    //             Value::String(s) => s.to_string(),
-    //             _ => panic!("Symbol parse error"),
-    //         };
-    //         let currency = match &s["currency"] {
-    //             Value::String(s) => s.to_string(),
-    //             _ => panic!("Currency parse error"),
-    //         };
-    //         let category = match &s["symbol"] {
-    //             Value::String(s) => s.to_string(),
-    //             _ => panic!("Category parse error"),
-    //         };
-
-    //         let description = match &s["description"] {
-    //             Value::String(s) => s.to_string(),
-    //             _ => panic!("Description parse error"),
-    //         };
-
-    //         result.push(Symbol {
-    //             symbol,
-    //             currency,
-    //             category,
-    //             description,
-    //         });
-    //     }
-    //     Ok(result)
-    // }
 
     pub fn parse_symbol(symbol: String) -> Result<String> {
         if symbol.contains('_') {
