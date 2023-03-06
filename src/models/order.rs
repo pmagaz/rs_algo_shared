@@ -181,6 +181,10 @@ pub fn prepare_orders(
     };
 
     let trade_id = uuid::generate_ts_id(next_candle.date());
+    let order_with_spread = env::var("ORDER_WITH_SPREAD")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
 
     for order_type in order_types {
         match order_type {
@@ -204,14 +208,20 @@ pub fn prepare_orders(
                     match order_type.is_entry() {
                         true => {
                             buy_order_target = match order_type.is_long() {
-                                true => order.target_price + pricing.spread(),
+                                true => match order_with_spread {
+                                    true => order.target_price,
+                                    false => order.target_price + pricing.spread(),
+                                },
                                 false => order.target_price,
                             }
                         }
                         false => {
                             sell_order_target = match order_type.is_long() {
                                 true => order.target_price,
-                                false => order.target_price + pricing.spread(),
+                                false => match order_with_spread {
+                                    true => order.target_price,
+                                    false => order.target_price + pricing.spread(),
+                                },
                             }
                         }
                     };
