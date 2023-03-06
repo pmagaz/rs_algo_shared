@@ -176,7 +176,7 @@ pub fn prepare_orders(
     let close_price = current_candle.close();
 
     let next_candle = match execution_mode.is_back_test() {
-        true => instrument.data().get(index + 1).unwrap(),
+        true => instrument.data().get(index).unwrap(),
         false => instrument.data.last().unwrap(),
     };
 
@@ -259,8 +259,7 @@ pub fn prepare_orders(
     if is_stop_loss {
         match stop_loss_direction == OrderDirection::Down {
             true => {
-                if stop_order_target >= buy_order_target + pricing.spread() && buy_order_target > 0.
-                {
+                if stop_order_target >= buy_order_target && buy_order_target > 0. {
                     log::error!(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
@@ -280,27 +279,27 @@ pub fn prepare_orders(
         }
     };
 
-    //CHECK STOP LOSS
-    if is_stop_loss {
-        match stop_loss_direction == OrderDirection::Down {
-            true => {
-                if stop_order_target >= buy_order_target && buy_order_target > 0. {
-                    log::error!(
-                        "Stop loss can't be placed higher than buy level {:?}",
-                        (buy_order_target, stop_order_target)
-                    );
-                }
-            }
-            false => {
-                if stop_order_target <= buy_order_target && buy_order_target > 0. {
-                    log::error!(
-                        "Stop loss can't be placed lower than buy level {:?}",
-                        (buy_order_target, stop_order_target)
-                    );
-                }
-            }
-        }
-    };
+    // //CHECK STOP LOSS
+    // if is_stop_loss {
+    //     match stop_loss_direction == OrderDirection::Up {
+    //         true => {
+    //             if stop_order_target <= buy_order_target && buy_order_target > 0. {
+    //                 log::error!(
+    //                     "Stop loss can't be placed higher than buy level {:?}",
+    //                     (buy_order_target, stop_order_target)
+    //                 );
+    //             }
+    //         }
+    //         false => {
+    //             if stop_order_target <= buy_order_target && buy_order_target > 0. {
+    //                 log::error!(
+    //                     "Stop loss can't be placed lower than buy level {:?}",
+    //                     (buy_order_target, stop_order_target)
+    //                 );
+    //             }
+    //         }
+    //     }
+    // };
 
     //CHECK SELL ORDER VALUE
     match trade_type.is_long() {
@@ -311,6 +310,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
+                panic!();
             }
         }
         false => {

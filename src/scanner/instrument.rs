@@ -439,7 +439,7 @@ impl Instrument {
         let time_frame = &self.time_frame.clone();
         match candle.is_closed() {
             true => {
-                log::info!("Closing Candle {:?}", &candle.date());
+                //log::info!("Closing Candle {:?}", &candle.date());
                 self.close_last_candle();
                 self.next_indicators(candle.clone());
             }
@@ -556,7 +556,7 @@ impl Instrument {
         candle.set_date(open_from);
 
         let len = self.data.len();
-        log::info!("Current data size {:?}", (len, num_bars));
+        //log::info!("Current data size {:?}", (len, num_bars));
 
         if len >= num_bars + next_delete {
             log::info!("Cleaning data...");

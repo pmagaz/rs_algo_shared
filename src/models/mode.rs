@@ -1,4 +1,4 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ExecutionMode {
     Scanner,
     ScannerBackTest,
