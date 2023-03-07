@@ -23,7 +23,6 @@ pub struct MarketHours {
     open: bool,
     retry_after: isize,
     symbol: String,
-    //market: String,
     data: Vec<MarketHour>,
 }
 

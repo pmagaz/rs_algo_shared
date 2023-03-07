@@ -21,6 +21,7 @@ pub trait Trade {
 pub enum TradeDirection {
     Long,
     Short,
+    None,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
