@@ -168,7 +168,7 @@ impl Trade for TradeIn {
         &self.date_in
     }
     fn get_chrono_date(&self) -> DateTime<Local> {
-        fom_dbtime(&self.date_in)
+        from_dbtime(&self.date_in)
     }
     fn get_price_in(&self) -> &f64 {
         &self.price_in
@@ -206,7 +206,7 @@ impl Trade for TradeOut {
         &self.date_out
     }
     fn get_chrono_date(&self) -> DateTime<Local> {
-        fom_dbtime(&self.date_out)
+        from_dbtime(&self.date_out)
     }
     fn get_price_in(&self) -> &f64 {
         &self.price_in

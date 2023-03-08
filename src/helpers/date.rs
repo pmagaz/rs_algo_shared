@@ -22,7 +22,7 @@ pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
     db_date_time
 }
 
-pub fn fom_dbtime(date: &DbDateTime) -> DateTime<Local> {
+pub fn from_dbtime(date: &DbDateTime) -> DateTime<Local> {
     let chrono_date = date.to_chrono();
     let offset = chrono_date.offset().to_string();
     let db_date_time: DateTime<Local> = match offset.contains("UTC") {
