@@ -674,16 +674,13 @@ pub fn cancel_pending_expired_orders(
 
     orders
         .iter_mut()
-        .filter(|x| x.status == OrderStatus::Pending)
         .map(|x| {
-            if !x.is_still_valid(current_date) {
+            if x.status == OrderStatus::Pending && !x.is_still_valid(current_date) {
                 x.cancel_order(to_dbtime(Local::now()));
             }
             x.clone()
         })
         .collect()
-
-    //  orders
 }
 
 pub fn extend_all_pending_orders(orders: &mut Vec<Order>) {
