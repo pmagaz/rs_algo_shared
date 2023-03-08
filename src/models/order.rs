@@ -574,18 +574,22 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
     }
 }
 
-pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
+pub fn get_pending(orders: &Vec<Order>, date_compare: DateTime<Local>) -> Vec<Order> {
     let max_pending_orders = env::var("MAX_PENDING_ORDERS")
         .unwrap()
         .parse::<usize>()
         .unwrap();
+
     let pending_orders: Vec<Order> = orders
         .iter()
         .rev()
         .take(max_pending_orders)
-        .filter(|x| x.status == OrderStatus::Pending)
+        .filter(
+            |x| x.status == OrderStatus::Pending, //&& x.is_still_valid(date_compare)
+        )
         .map(|x| x.clone())
         .collect();
+
     pending_orders
 }
 
