@@ -21,20 +21,19 @@ pub trait Trade {
 pub enum TradeDirection {
     Long,
     Short,
-    LongShort,
     None,
 }
 impl TradeDirection {
     pub fn is_long(&self) -> bool {
         match *self {
-            TradeDirection::Long | TradeDirection::LongShort => true,
+            TradeDirection::Long => true,
             _ => false,
         }
     }
 
     pub fn is_short(&self) -> bool {
         match *self {
-            TradeDirection::Short | TradeDirection::LongShort => true,
+            TradeDirection::Short => true,
             _ => false,
         }
     }

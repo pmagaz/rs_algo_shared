@@ -376,7 +376,7 @@ where
     callback(upper_tf_data)
 }
 
-pub fn get_htf_trade_direction<F>(
+pub fn get_htf_trading_direction<F>(
     index: usize,
     instrument: &Instrument,
     htf_instrument: &HTFInstrument,
