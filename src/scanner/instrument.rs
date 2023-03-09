@@ -439,7 +439,6 @@ impl Instrument {
         let time_frame = &self.time_frame.clone();
         match candle.is_closed() {
             true => {
-                //log::info!("Closing Candle {:?}", &candle.date());
                 self.close_last_candle();
                 self.next_indicators(candle.clone());
             }
@@ -490,7 +489,7 @@ impl Instrument {
 
     pub fn close_last_candle(&mut self) {
         let last_candle = self.data.last_mut().unwrap();
-        log::info!("Closing candle {:?}", &last_candle.date());
+        log::info!("Closing candle {:?}", &last_candle);
         last_candle.set_is_closed(true);
     }
 
@@ -523,6 +522,8 @@ impl Instrument {
             candle.set_open(previous_open);
             candle.set_high(higher_value);
             candle.set_low(lower_value);
+
+            log::info!("Ingesting HTF Candle {:?}", candle);
             // if candle.is_closed() {
             //     log::info!("5555555555555");
             //     //candle.set_close(previous_close);
@@ -589,8 +590,6 @@ impl Instrument {
         self
     }
 
-    //pub fn reset_and_set(&mut self, data: Vec<(DateTime<Local>, f64, f64, f64, f64, f64)>) {}
-
     pub fn reset(&mut self) {
         self.data = vec![];
         self.peaks = Peaks::new();
@@ -644,7 +643,7 @@ impl InstrumentBuilder {
                 date: to_dbtime(Local::now()), //FIXME
                 current_candle: CandleType::Default,
                 min_price: env::var("MIN_PRICE").unwrap().parse::<f64>().unwrap(),
-                max_price: env::var("MIN_PRICE").unwrap().parse::<f64>().unwrap(),
+                max_price: env::var("MAX_PRICE").unwrap().parse::<f64>().unwrap(),
                 avg_volume: 0.,
                 data: vec![],
                 peaks: Peaks::new(),
