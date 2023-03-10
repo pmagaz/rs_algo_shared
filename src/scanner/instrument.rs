@@ -483,6 +483,8 @@ impl Instrument {
             let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
             if candle.is_closed() {
                 self.indicators.next_delete(ohlc_indicators).unwrap();
+            } else {
+                self.indicators.next_update(ohlc_indicators).unwrap();
             }
         }
     }
@@ -559,7 +561,7 @@ impl Instrument {
         //log::info!("Current data size {:?}", (len, num_bars));
 
         if len > 0 {
-            log::info!("Cleaning previous candle. Data size{}", len);
+            log::info!("Cleaning previous candle. Data size {}", len);
             self.data.remove(0);
         }
 
