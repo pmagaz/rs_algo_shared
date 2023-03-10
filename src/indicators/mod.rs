@@ -252,11 +252,11 @@ impl Indicators {
     pub fn next_delete(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
-        let max_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            if self.atr.get_data_a().len() >= max_bars + next_delete {
+            if self.atr.get_data_a().len() >= num_bars + next_delete {
                 self.atr.remove_a(0);
             }
             self.atr.next(close).unwrap();
@@ -267,7 +267,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            if self.macd.get_data_a().len() >= max_bars + next_delete {
+            if self.macd.get_data_a().len() >= num_bars + next_delete {
                 self.macd.remove_a(0);
                 self.macd.remove_b(0);
             }
@@ -279,7 +279,7 @@ impl Indicators {
         //     .parse::<bool>()
         //     .unwrap()
         // {
-        //     if self.stoch.get_data_a().len() >= max_bars + next_delete {
+        //     if self.stoch.get_data_a().len() >= num_bars + next_delete {
         //         self.stoch.remove_a(0);
         //         self.stoch.remove_b(0);
         //     }
@@ -287,14 +287,14 @@ impl Indicators {
         // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            if self.rsi.get_data_a().len() >= max_bars + next_delete {
+            if self.rsi.get_data_a().len() >= num_bars + next_delete {
                 self.rsi.remove_a(0);
             }
             self.rsi.next(close).unwrap();
         }
 
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            if self.bb.get_data_a().len() >= max_bars + next_delete {
+            if self.bb.get_data_a().len() >= num_bars + next_delete {
                 self.bb.remove_a(0);
                 self.bb.remove_b(0);
                 self.bb.remove_c(0);
@@ -303,15 +303,15 @@ impl Indicators {
         }
 
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            if self.bbw.get_data_a().len() >= max_bars + next_delete {
+            if self.bbw.get_data_a().len() >= num_bars + next_delete {
                 self.bbw.remove_a(0);
             }
 
-            if self.bbw.get_data_b().len() >= max_bars + next_delete {
+            if self.bbw.get_data_b().len() >= num_bars + next_delete {
                 self.bbw.remove_b(0);
             }
 
-            if self.bbw.get_data_c().len() >= max_bars + next_delete {
+            if self.bbw.get_data_c().len() >= num_bars + next_delete {
                 self.bbw.remove_c(0);
             }
             self.bbw.next(close).unwrap();
@@ -322,7 +322,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            if self.ema_a.get_data_a().len() >= max_bars + next_delete {
+            if self.ema_a.get_data_a().len() >= num_bars + next_delete {
                 self.ema_a.remove_a(0);
             }
             self.ema_a.next(close).unwrap();
@@ -333,7 +333,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            if self.ema_b.get_data_a().len() >= max_bars + next_delete {
+            if self.ema_b.get_data_a().len() >= num_bars + next_delete {
                 self.ema_b.remove_a(0);
             }
             self.ema_b.next(close).unwrap();
@@ -344,7 +344,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            if self.ema_c.get_data_a().len() >= max_bars + next_delete {
+            if self.ema_c.get_data_a().len() >= num_bars + next_delete {
                 self.ema_c.remove_a(0);
             }
             self.ema_c.next(close).unwrap();

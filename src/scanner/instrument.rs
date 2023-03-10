@@ -549,15 +549,14 @@ impl Instrument {
         let adapted = adapt_to_time_frame(data, &self.time_frame, true);
         let open_from = get_open_from(data, &self.time_frame, true);
 
-        let next_id = self.data.len();
+        let len = self.data.len();
 
-        let mut candle = self.generate_candle(next_id, adapted, &self.data, logarithmic_scanner);
+        let mut candle = self.generate_candle(len, adapted, &self.data, logarithmic_scanner);
 
         candle.set_is_closed(false);
         candle.set_date(open_from);
 
-        let len = self.data.len();
-        //log::info!("Current data size {:?}", (len, num_bars));
+        log::info!("Current data size {:?}", (len, num_bars));
 
         if len >= num_bars + next_delete {
             log::info!("Cleaning data...");
