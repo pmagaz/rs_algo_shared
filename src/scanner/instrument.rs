@@ -543,8 +543,8 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
-        let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
+        //let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+        //let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
 
         let adapted = adapt_to_time_frame(data, &self.time_frame, true);
         let open_from = get_open_from(data, &self.time_frame, true);
@@ -556,12 +556,12 @@ impl Instrument {
         candle.set_is_closed(false);
         candle.set_date(open_from);
 
-        log::info!("Current data size {:?}", (len, num_bars));
+        //log::info!("Current data size {:?}", (len, num_bars));
 
-        if len >= num_bars + next_delete {
-            log::info!("Cleaning data...");
-            self.data.remove(0);
-        }
+        //if len >= num_bars + next_delete {
+        log::info!("Cleaning previous candle. Data size: {}", len);
+        self.data.remove(0);
+        //}
 
         self.data.push(candle);
     }
