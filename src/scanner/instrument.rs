@@ -558,10 +558,10 @@ impl Instrument {
 
         //log::info!("Current data size {:?}", (len, num_bars));
 
-        //if len >= num_bars + next_delete {
-        log::info!("Cleaning previous candle. Data size: {}", len);
-        self.data.remove(0);
-        //}
+        if len > 0 {
+            log::info!("Cleaning previous candle. Data size{}", len);
+            self.data.remove(0);
+        }
 
         self.data.push(candle);
     }

@@ -78,7 +78,7 @@ impl Peaks {
         let max_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
         let len = self.highs.len();
-        if len >= max_bars + next_delete {
+        if len >= next_delete {
             self.highs.remove(0);
             self.lows.remove(0);
             self.close.remove(0);
