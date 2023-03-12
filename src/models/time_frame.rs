@@ -284,7 +284,7 @@ pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Dat
     get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
 }
 
-pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
+pub fn adapt_timeframe_time(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
     let date = data.0;
     let now = Local::now();
     let minutes = date.minute() as i64;
@@ -295,13 +295,7 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
         true => {
             if time_frame.is_minutely_time_frame() {
                 match time_frame.closing_minutes().contains(&minutes) {
-                    true => {
-                        //"2023-02-23T23:00:00+01:00"
-                        //  1111111 2023-02-23T23:05:00+01:00
-                        // 777777777 (2023-02-23T23:00:00+01:00, 2023-02-23T22:55:00+01:00)
-                        //log::info!("1111111 {:?}", get_open_until(data, time_frame, next));
-                        get_open_until(data, time_frame, next) - Duration::minutes(num_minutes)
-                    }
+                    true => get_open_until(data, time_frame, next) - Duration::minutes(num_minutes),
                     false => get_open_until(data, time_frame, next),
                 }
             } else if time_frame.is_hourly_time_frame() {
@@ -309,12 +303,7 @@ pub fn adapt_to_time_frame(data: DOHLC, time_frame: &TimeFrameType, next: bool) 
                 match time_frame.closing_hours().contains(&hours)
                     && time_frame.closing_minutes().contains(&minutes)
                 {
-                    true => {
-                        //"2023-02-23T23:00:00+01:00"
-                        //22222222 2023-02-24T00:00:00+01:00
-                        // 777777777 (2023-02-23T23:00:00+01:00, 2023-02-23T22:00:00+01:00)
-                        get_open_until(data, time_frame, next) - Duration::hours(num_hours)
-                    }
+                    true => get_open_until(data, time_frame, next) - Duration::hours(num_hours),
                     false => get_open_until(data, time_frame, next),
                 }
             } else {

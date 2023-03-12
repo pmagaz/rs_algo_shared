@@ -2,7 +2,7 @@ use super::Indicator;
 use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
-use ta::indicators::{BollingerBands};
+use ta::indicators::BollingerBands;
 use ta::Next;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

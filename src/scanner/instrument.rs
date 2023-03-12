@@ -4,7 +4,6 @@ use crate::helpers::date::*;
 use crate::indicators::Indicators;
 use crate::models::indicator::CompactIndicators;
 use crate::models::market::*;
-use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
@@ -304,7 +303,7 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                let adapted_dohlcc = adapt_to_time_frame(*x, &self.time_frame, false);
+                let adapted_dohlcc = adapt_timeframe_time(*x, &self.time_frame, false);
                 let candle = self.process_candle(id, &data, adapted_dohlcc, logarithmic_scanner);
 
                 let low = candle.low();
@@ -335,10 +334,13 @@ impl Instrument {
                 if process_indicators {
                     let ohlc_indicators =
                         self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-                    self.indicators.next(ohlc_indicators).unwrap();
+                    let delete_previous = false;
+
+                    self.indicators
+                        .next(ohlc_indicators, delete_previous)
+                        .unwrap();
                 }
                 candle
-                //data
             })
             .collect();
 
@@ -422,50 +424,62 @@ impl Instrument {
         Ok(())
     }
 
-    pub fn next(
-        &mut self,
-        data: (DateTime<Local>, f64, f64, f64, f64, f64),
-        //last_candle: &Candle,
-    ) -> Result<Candle> {
+    pub fn next(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) -> Result<Candle> {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
             .unwrap();
 
         let next_id = self.data.len();
-        let last_candle = self.data().last().unwrap().clone();
-        let adapted_dohlcc = adapt_to_time_frame(data, &self.time_frame, true);
-        let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
+        let last_candle = &self.data().last().unwrap().clone();
         let time_frame = &self.time_frame.clone();
-        match candle.is_closed() {
-            true => {
-                self.close_last_candle();
-                self.next_indicators(candle.clone());
-            }
-            false => {
-                //log::info!("Updating candle {:?}", &candle.date());
-                let updated_candle =
-                    self.update_last_candle(candle.clone(), &last_candle, &time_frame);
-                self.next_indicators(updated_candle.clone());
-            }
-        };
+
+        let adapted_dohlcc = adapt_timeframe_time(data, &self.time_frame, true);
+        let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
+
+        if candle.is_closed() {
+            self.close_last_candle();
+            //let last_candle = self.data().last().unwrap().clone();
+            self.next_indicators(&last_candle);
+            //self.next_peaks(&last_candle);
+        } else {
+            self.adapt_htf_last_candle(candle.clone(), &last_candle, time_frame);
+            self.update_indicators(&candle);
+        }
 
         Ok(candle)
     }
 
-    pub fn next_indicators(&mut self, candle: Candle) {
+    pub fn next_indicators(&mut self, candle: &Candle) {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
             .unwrap();
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
-        let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
-        // let process_divergences = env::var("DIVERGENCES").unwrap().parse::<bool>().unwrap();
-        // let process_horizontal_levels = env::var("HORIZONTAL_LEVELS")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap();
+        if process_indicators {
+            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+            self.indicators.update(ohlc_indicators).unwrap();
+        }
+    }
 
+    pub fn update_indicators(&mut self, candle: &Candle) {
+        let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap();
+        let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
+        if process_indicators {
+            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+            self.indicators.update(ohlc_indicators).unwrap();
+        }
+    }
+
+    pub fn next_peaks(&mut self, candle: &Candle) {
+        let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap();
+        let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
         if process_patterns {
             //FIXME peaks next detection iterates the whole list
             self.peaks.update(&candle);
@@ -478,15 +492,6 @@ impl Instrument {
             self.patterns
                 .update(PatternSize::Local, local_maxima, local_minima, &self.data);
         }
-
-        if process_indicators {
-            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-            if candle.is_closed() {
-                self.indicators.next_delete(ohlc_indicators).unwrap();
-            } else {
-                self.indicators.next_update(ohlc_indicators).unwrap();
-            }
-        }
     }
 
     pub fn close_last_candle(&mut self) {
@@ -495,12 +500,12 @@ impl Instrument {
         last_candle.set_is_closed(true);
     }
 
-    pub fn update_last_candle(
+    pub fn adapt_htf_last_candle(
         &mut self,
         mut candle: Candle,
         last_candle: &Candle,
         time_frame: &TimeFrameType,
-    ) -> Candle {
+    ) {
         let current_high = candle.high();
         let previous_open = last_candle.open();
         let previous_high = last_candle.high();
@@ -525,16 +530,10 @@ impl Instrument {
             candle.set_high(higher_value);
             candle.set_low(lower_value);
 
-            log::info!("Ingesting HTF Candle {:?}", candle);
-            // if candle.is_closed() {
-            //     log::info!("5555555555555");
-            //     //candle.set_close(previous_close);
-            // }
+            log::info!("Adapting HTF Candle {:?}", candle);
         }
 
         *self.data.last_mut().unwrap() = candle.clone();
-
-        candle
     }
 
     pub fn init_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
@@ -545,10 +544,7 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        //let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
-        //let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
-
-        let adapted = adapt_to_time_frame(data, &self.time_frame, true);
+        let adapted = adapt_timeframe_time(data, &self.time_frame, true);
         let open_from = get_open_from(data, &self.time_frame, true);
 
         let len = self.data.len();
@@ -557,8 +553,6 @@ impl Instrument {
 
         candle.set_is_closed(false);
         candle.set_date(open_from);
-
-        //log::info!("Current data size {:?}", (len, num_bars));
 
         if len > 0 {
             log::info!("Cleaning previous candle. Data size {}", len);

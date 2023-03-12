@@ -108,24 +108,24 @@ impl Indicators {
         &self.ema_c
     }
 
-    pub fn calculate_indicators(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        let close = OHLC.3;
-        self.macd.next(close).unwrap();
-        //self.stoch.next(close).unwrap();
-        let extended_indicators = env::var("EXTENDED_INDICATORS")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap();
-        if extended_indicators {
-            //self.atr.next_OHLC(OHLC).unwrap();
-            //self.adx.next(close).unwrap();
-            self.bb.next(close).unwrap();
-            self.bbw.next(close).unwrap();
-            self.rsi.next(close).unwrap();
-            self.ema_a.next(close).unwrap();
-            self.ema_b.next(close).unwrap();
-            self.ema_c.next(close).unwrap();
-        }
-        Ok(())
-    }
+    // pub fn calculate_indicators(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    //     let close = OHLC.3;
+    //     self.macd.next(close).unwrap();
+    //     //self.stoch.next(close).unwrap();
+    //     let extended_indicators = env::var("EXTENDED_INDICATORS")
+    //         .unwrap()
+    //         .parse::<bool>()
+    //         .unwrap();
+    //     if extended_indicators {
+    //         //self.atr.next_OHLC(OHLC).unwrap();
+    //         //self.adx.next(close).unwrap();
+    //         self.bb.next(close).unwrap();
+    //         self.bbw.next(close).unwrap();
+    //         self.rsi.next(close).unwrap();
+    //         self.ema_a.next(close).unwrap();
+    //         self.ema_b.next(close).unwrap();
+    //         self.ema_c.next(close).unwrap();
+    //     }
+    //     Ok(())
+    // }
 }
