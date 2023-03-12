@@ -75,7 +75,7 @@ impl Peaks {
     }
 
     pub fn next_delete(&mut self, candle: &Candle) {
-        let max_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+        let _max_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let next_delete = env::var("NEXT_DELETE").unwrap().parse::<usize>().unwrap();
         let len = self.highs.len();
         if len >= next_delete {

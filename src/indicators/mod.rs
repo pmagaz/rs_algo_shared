@@ -16,7 +16,7 @@ use crate::indicators::ema::Ema;
 use crate::indicators::macd::Macd;
 use crate::indicators::rsi::Rsi;
 
-use chrono::{DateTime, Local};
+
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::marker::Sized;
@@ -127,7 +127,7 @@ impl Indicators {
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
 
-            if delete && self.atr.get_data_a().len() > 0 {
+            if delete && !self.atr.get_data_a().is_empty() {
                 self.atr.remove_a(0);
             }
         }
@@ -139,7 +139,7 @@ impl Indicators {
         {
             self.macd.next(close).unwrap();
 
-            if delete && self.macd.get_data_a().len() > 0 {
+            if delete && !self.macd.get_data_a().is_empty() {
                 self.macd.remove_a(0);
                 self.macd.remove_b(0);
             }
@@ -156,7 +156,7 @@ impl Indicators {
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.next(close).unwrap();
 
-            if delete && self.rsi.get_data_a().len() > 0 {
+            if delete && !self.rsi.get_data_a().is_empty() {
                 self.rsi.remove_a(0);
             }
         }
@@ -164,7 +164,7 @@ impl Indicators {
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
             self.bb.next(close).unwrap();
 
-            if delete && self.bb.get_data_a().len() > 0 {
+            if delete && !self.bb.get_data_a().is_empty() {
                 self.bb.remove_a(0);
                 self.bb.remove_b(0);
                 self.bb.remove_c(0);
@@ -174,7 +174,7 @@ impl Indicators {
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
             self.bbw.next(close).unwrap();
 
-            if delete && self.bbw.get_data_a().len() > 0 {
+            if delete && !self.bbw.get_data_a().is_empty() {
                 self.bbw.remove_a(0);
                 self.bbw.remove_b(0);
                 self.bbw.remove_c(0);
@@ -187,7 +187,7 @@ impl Indicators {
             .unwrap()
         {
             self.ema_a.next(close).unwrap();
-            if delete && self.ema_a.get_data_a().len() > 0 {
+            if delete && !self.ema_a.get_data_a().is_empty() {
                 self.ema_a.remove_a(0);
             }
         }
@@ -199,7 +199,7 @@ impl Indicators {
         {
             self.ema_b.next(close).unwrap();
 
-            if delete && self.ema_b.get_data_a().len() > 0 {
+            if delete && !self.ema_b.get_data_a().is_empty() {
                 self.ema_b.remove_a(0);
             }
         }
@@ -211,7 +211,7 @@ impl Indicators {
         {
             self.ema_c.next(close).unwrap();
 
-            if delete && self.ema_c.get_data_a().len() > 0 {
+            if delete && !self.ema_c.get_data_a().is_empty() {
                 self.ema_c.remove_a(0);
             }
         }

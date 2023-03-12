@@ -1,6 +1,6 @@
 pub use bson::DateTime as DbDateTime;
 pub use chrono::offset::{Local, TimeZone, Utc};
-use chrono::Weekday;
+
 
 pub use chrono::{DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, Timelike};
 
@@ -14,12 +14,12 @@ pub fn to_dbtime(date: DateTime<Local>) -> DbDateTime {
     //let offset = date.offset().to_string()[2..3].parse::<i64>().unwrap();
     //let db_date_time = DbDateTime::from_chrono(date + Duration::hours(offset));
 
-    let db_date_time = match offset.contains("+01") {
+    
+
+    match offset.contains("+01") {
         true => DbDateTime::from_chrono(date + Duration::hours(1)),
         false => DbDateTime::from_chrono(date),
-    };
-
-    db_date_time
+    }
 }
 
 pub fn from_dbtime(date: &DbDateTime) -> DateTime<Local> {

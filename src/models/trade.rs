@@ -393,7 +393,7 @@ pub fn resolve_trade_out(
             ask: price_in,
             index_out,
             price_origin,
-            price_out: price_out,
+            price_out,
             bid,
             spread_out: pricing.spread(),
             date_out,

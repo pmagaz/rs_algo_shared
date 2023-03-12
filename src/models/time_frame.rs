@@ -10,7 +10,7 @@ use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    mode::{self, ExecutionMode},
+    mode::{ExecutionMode},
     trade::TradeDirection,
 };
 
@@ -54,7 +54,7 @@ impl TimeFrame {
     pub fn get_starting_bar(
         num_bars: i64,
         time_frame: &TimeFrameType,
-        execution_mode: &ExecutionMode,
+        _execution_mode: &ExecutionMode,
     ) -> DateTime<Local> {
         // let bars_time_frame = match execution_mode {
         //     mode::ExecutionMode::Scanner | mode::ExecutionMode::ScannerBackTest => num_bars,

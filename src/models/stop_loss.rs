@@ -1,6 +1,6 @@
 use super::order::{self, Order, OrderDirection, OrderType};
 use super::pricing::Pricing;
-use super::trade::*;
+
 
 use crate::helpers::{calc, date::*};
 use crate::indicators::Indicator;
@@ -66,7 +66,7 @@ pub fn create_stop_loss_order(
 
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
-    let current_close = instrument.data().get(index).unwrap().close();
+    let _current_close = instrument.data().get(index).unwrap().close();
     // log::info!(
     //     "888888888 {:?}",
     //     (

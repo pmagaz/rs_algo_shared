@@ -30,7 +30,7 @@ where
         HttpMethod::Patch => Client::builder().build()?.patch(url),
         HttpMethod::Delete => Client::builder().build()?.delete(url),
     };
-    let response = result.json(&data).send().await;
+    
 
-    response
+    result.json(&data).send().await
 }

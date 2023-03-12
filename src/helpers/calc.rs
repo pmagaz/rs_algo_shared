@@ -11,7 +11,7 @@ pub fn get_min_price(data: &Vec<Candle>, index_in: usize, index_out: usize) -> f
         .enumerate()
         .filter(|(index, _x)| index >= &index_in && index <= &index_out)
         .map(|(_i, x)| x.low)
-        .min_by(|a, b| a.partial_cmp(&b).unwrap())
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap()
 }
 
@@ -20,7 +20,7 @@ pub fn get_max_price(data: &Vec<Candle>, index_in: usize, index_out: usize) -> f
         .enumerate()
         .filter(|(index, _x)| index >= &index_in && index <= &index_out)
         .map(|(_i, x)| x.high)
-        .max_by(|a, b| a.partial_cmp(&b).unwrap())
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap()
 }
 
@@ -96,11 +96,11 @@ pub fn calculate_drawdown(
     }
 }
 
-pub fn calculate_drawdown_per(draw_down: f64, price_in: f64, trade_type: &TradeType) -> f64 {
+pub fn calculate_drawdown_per(draw_down: f64, price_in: f64, _trade_type: &TradeType) -> f64 {
     (draw_down / price_in) * 100.
 }
 
-pub fn calculate_runup_per(run_up: f64, price_in: f64, trade_type: &TradeType) -> f64 {
+pub fn calculate_runup_per(run_up: f64, price_in: f64, _trade_type: &TradeType) -> f64 {
     (run_up / price_in).abs() * 100.
 }
 
@@ -231,7 +231,7 @@ pub fn get_prev_index(index: usize) -> usize {
 pub fn get_trade_min_price(data: &Vec<Candle>) -> f64 {
     data.iter()
         .map(|x| x.low)
-        .min_by(|x, y| x.partial_cmp(&y).unwrap())
+        .min_by(|x, y| x.partial_cmp(y).unwrap())
         .unwrap()
 }
 
@@ -272,7 +272,7 @@ pub fn calculate_trade_runup_per(run_up: f64, price_in: f64, trade_type: &TradeT
 pub fn get_trade_max_price(data: &Vec<Candle>) -> f64 {
     data.iter()
         .map(|x| x.high)
-        .max_by(|x, y| x.partial_cmp(&y).unwrap())
+        .max_by(|x, y| x.partial_cmp(y).unwrap())
         .unwrap()
 }
 

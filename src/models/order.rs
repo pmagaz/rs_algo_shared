@@ -161,11 +161,7 @@ impl Order {
 
     pub fn is_still_valid(&self, date_compare: DateTime<Local>) -> bool {
         let valid_until = from_dbtime(&self.valid_until.unwrap());
-        if date_compare < valid_until && self.status == OrderStatus::Pending {
-            true
-        } else {
-            false
-        }
+        date_compare < valid_until && self.status == OrderStatus::Pending
     }
 }
 
@@ -437,7 +433,7 @@ pub fn resolve_active_orders(
     index: usize,
     instrument: &Instrument,
     orders: &Vec<Order>,
-    pricing: &Pricing,
+    _pricing: &Pricing,
 ) -> Position {
     let mut order_position: Position = Position::None;
     let mut orders_activated = vec![];
@@ -472,12 +468,12 @@ pub fn resolve_active_orders(
         }
     }
 
-    let resolved = match has_executed_buy_order(&orders, &order_position) {
+    
+
+    match has_executed_buy_order(orders, &order_position) {
         true => order_position,
         false => Position::None,
-    };
-
-    resolved
+    }
 }
 
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
@@ -547,7 +543,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .parse::<usize>()
         .unwrap();
 
-    let overwrite_orders = env::var("OVERWRITE_ORDERS")
+    let _overwrite_orders = env::var("OVERWRITE_ORDERS")
         .unwrap()
         .parse::<bool>()
         .unwrap();
@@ -567,8 +563,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
             OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                 stop_losses < max_stop_losses
             }
-        })
-        .map(|order| order.clone())
+        }).cloned()
         .collect();
 
     if result.len() <= max_pending_orders {
@@ -588,8 +583,7 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
         .iter()
         .rev()
         .take(max_pending_orders)
-        .filter(|x| x.status == OrderStatus::Pending)
-        .map(|x| x.clone())
+        .filter(|x| x.status == OrderStatus::Pending).cloned()
         .collect();
 
     pending_orders
@@ -601,9 +595,11 @@ pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool
         .parse::<usize>()
         .unwrap();
 
-    let (pending_buy_orders, _sell_orders, _stop_losses) = get_num_pending_orders(&orders);
+    let (pending_buy_orders, _sell_orders, _stop_losses) = get_num_pending_orders(orders);
 
-    let has_active_buy_order = match operation {
+    
+
+    match operation {
         Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
             //No Active buy
             std::cmp::Ordering::Equal => false,
@@ -611,9 +607,7 @@ pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool
             _ => true,
         },
         _ => true,
-    };
-
-    has_active_buy_order
+    }
 }
 
 pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
@@ -778,7 +772,7 @@ pub fn fulfill_bot_order<T: Trade>(
     instrument: &Instrument,
 ) {
     let index = instrument.data().len() - 1;
-    fulfill_trade_order(index, trade, &order, orders)
+    fulfill_trade_order(index, trade, order, orders)
 }
 
 fn get_order_activation_price(candle: &Candle, prev_candle: &Candle) -> (f64, f64, f64, f64) {

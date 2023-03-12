@@ -440,10 +440,10 @@ impl Instrument {
         if candle.is_closed() {
             self.close_last_candle();
             //let last_candle = self.data().last().unwrap().clone();
-            self.next_indicators(&last_candle);
+            self.next_indicators(last_candle);
             //self.next_peaks(&last_candle);
         } else {
-            self.adapt_htf_last_candle(candle.clone(), &last_candle, time_frame);
+            self.adapt_htf_last_candle(candle.clone(), last_candle, time_frame);
             self.update_indicators(&candle);
         }
 
@@ -457,7 +457,7 @@ impl Instrument {
             .unwrap();
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
-            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+            let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
             self.indicators.update(ohlc_indicators).unwrap();
         }
     }
@@ -469,20 +469,20 @@ impl Instrument {
             .unwrap();
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
-            let ohlc_indicators = self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+            let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
             self.indicators.update(ohlc_indicators).unwrap();
         }
     }
 
     pub fn next_peaks(&mut self, candle: &Candle) {
-        let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+        let _logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
             .unwrap();
         let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
         if process_patterns {
             //FIXME peaks next detection iterates the whole list
-            self.peaks.update(&candle);
+            self.peaks.update(candle);
             self.peaks
                 .calculate_peaks(&self.max_price, &self.min_price, &0)
                 .unwrap();
@@ -509,7 +509,7 @@ impl Instrument {
         let current_high = candle.high();
         let previous_open = last_candle.open();
         let previous_high = last_candle.high();
-        let previous_close = last_candle.close();
+        let _previous_close = last_candle.close();
 
         let current_low = candle.low();
         let previous_low = last_candle.low();

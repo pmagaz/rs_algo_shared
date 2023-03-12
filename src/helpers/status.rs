@@ -300,7 +300,7 @@ if won_per_trade == lost_per_trade {
 } else if won_per_trade > (lost_per_trade * -1.){
     Status::Bullish
 } else {
-  let diff = percentage_change(won_per_trade,(lost_per_trade * -1.));
+  let diff = percentage_change(won_per_trade,lost_per_trade * -1.);
   if diff < 10.{
     Status::Neutral 
   } else {
