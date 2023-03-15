@@ -2,7 +2,7 @@ use super::Indicator;
 use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
-use ta::indicators::{BollingerBands};
+use ta::indicators::BollingerBands;
 use ta::Next;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,5 +84,14 @@ impl Indicator for BollingerBW {
 
     fn remove_c(&mut self, index: usize) -> f64 {
         self.data_c.remove(index)
+    }
+
+    fn init(&mut self) {
+        let a = self.data_a.first().unwrap();
+        let b = self.data_b.first().unwrap();
+        let c = self.data_c.first().unwrap();
+        self.data_a.insert(0, *a);
+        self.data_b.insert(0, *b);
+        self.data_c.insert(0, *c);
     }
 }

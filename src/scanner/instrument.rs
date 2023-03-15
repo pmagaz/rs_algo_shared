@@ -303,8 +303,9 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                let adapted_dohlcc = adapt_timeframe_time(*x, &self.time_frame, false);
+                let adapted_dohlcc = adapt_to_timeframe(*x, &self.time_frame, false);
                 let candle = self.process_candle(id, &data, adapted_dohlcc, logarithmic_scanner);
+                let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
 
                 let low = candle.low();
                 let high = candle.high();
@@ -327,8 +328,11 @@ impl Instrument {
 
                 avg_volume.push(volume);
 
+                // if candle.is_closed() {
                 if process_patterns {
-                    self.peaks.next(&candle);
+                    if candle.is_closed() {
+                        self.peaks.next(&candle);
+                    }
                 }
 
                 if process_indicators {
@@ -336,10 +340,15 @@ impl Instrument {
                         self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
                     let delete_previous = false;
 
-                    self.indicators
-                        .next(ohlc_indicators, delete_previous)
-                        .unwrap();
+                    if candle.is_closed() {
+                        self.indicators
+                            .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
+                            .unwrap();
+                    } else {
+                        self.indicators.init(ohlc_indicators).unwrap();
+                    }
                 }
+                //  }
                 candle
             })
             .collect();
@@ -434,23 +443,22 @@ impl Instrument {
         let last_candle = &self.data().last().unwrap().clone();
         let time_frame = &self.time_frame.clone();
 
-        let adapted_dohlcc = adapt_timeframe_time(data, &self.time_frame, true);
+        let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
         let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
 
         if candle.is_closed() {
             self.close_last_candle();
-            //let last_candle = self.data().last().unwrap().clone();
-            self.next_indicators(last_candle);
+            self.next_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
-            self.adapt_htf_last_candle(candle.clone(), last_candle, time_frame);
-            self.update_indicators(&candle);
+            self.adapt_htf_last_candle(candle.clone(), &last_candle, time_frame);
         }
 
         Ok(candle)
     }
 
     pub fn next_indicators(&mut self, candle: &Candle) {
+        log::info!("NEXT INDICATORS");
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -458,11 +466,16 @@ impl Instrument {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
-            self.indicators.update(ohlc_indicators).unwrap();
+            let delete_previous = true;
+            self.indicators
+                .next(ohlc_indicators, delete_previous, &self.time_frame)
+                .unwrap();
+            //self.indicators.update(ohlc_indicators).unwrap();
         }
     }
 
     pub fn update_indicators(&mut self, candle: &Candle) {
+        log::info!("UPDATE INDICATORS");
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -530,13 +543,17 @@ impl Instrument {
             candle.set_high(higher_value);
             candle.set_low(lower_value);
 
-            log::info!("Adapting HTF Candle {:?}", candle);
+            // log::info!("Adapting HTF Candle {:?}", candle);
         }
 
         *self.data.last_mut().unwrap() = candle.clone();
     }
 
-    pub fn init_candle(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64)) {
+    pub fn init_candle(
+        &mut self,
+        data: (DateTime<Local>, f64, f64, f64, f64, f64),
+        time_frame: &Option<TimeFrameType>,
+    ) {
         log::info!("Init new candle {}", data.0);
 
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
@@ -544,7 +561,9 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        let adapted = adapt_timeframe_time(data, &self.time_frame, true);
+        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+
+        let adapted = adapt_to_timeframe(data, &self.time_frame, true);
         let open_from = get_open_from(data, &self.time_frame, true);
 
         let len = self.data.len();
@@ -554,7 +573,9 @@ impl Instrument {
         candle.set_is_closed(false);
         candle.set_date(open_from);
 
-        if len > 0 {
+        let max_bars = num_bars / time_frame.clone().unwrap().to_number() as usize;
+
+        if len > max_bars {
             log::info!("Cleaning previous candle. Data size {}", len);
             self.data.remove(0);
         }
@@ -562,28 +583,28 @@ impl Instrument {
         self.data.push(candle);
     }
 
-    pub fn init(mut self) -> Self {
-        self.set_data(vec![
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-            (Local::now(), 1., 1., 1., 1., 0.),
-        ])
-        .unwrap();
-        self
-    }
+    // pub fn init(mut self) -> Self {
+    //     self.set_data(vec![
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //         (Local::now(), 1., 1., 1., 1., 0.),
+    //     ])
+    //     .unwrap();
+    //     self
+    // }
 
     pub fn reset(&mut self) {
         self.data = vec![];

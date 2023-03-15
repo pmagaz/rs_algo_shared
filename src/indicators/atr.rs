@@ -83,4 +83,11 @@ impl Indicator for Atr {
     fn remove_c(&mut self, index: usize) -> f64 {
         self.data_b.remove(index)
     }
+
+    fn init(&mut self) {
+        let a = self.data_a.first().unwrap();
+        let b = self.data_b.first().unwrap();
+        self.data_a.insert(0, *a);
+        self.data_b.insert(0, *b);
+    }
 }

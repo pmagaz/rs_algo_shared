@@ -77,4 +77,11 @@ impl Indicator for StandardD {
     fn remove_c(&mut self, index: usize) -> f64 {
         self.data_b.remove(index)
     }
+
+    fn init(&mut self) {
+        let a = self.data_a.last().unwrap();
+        let b = self.data_b.last().unwrap();
+        self.data_a.push(*a);
+        self.data_b.push(*b);
+    }
 }

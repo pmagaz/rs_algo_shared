@@ -9,10 +9,7 @@ use crate::{
 use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    mode::{ExecutionMode},
-    trade::TradeDirection,
-};
+use super::{mode::ExecutionMode, trade::TradeDirection};
 
 type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 type DOHLCC = (DateTime<Local>, f64, f64, f64, f64, f64, bool);
@@ -284,7 +281,7 @@ pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Dat
     get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
 }
 
-pub fn adapt_timeframe_time(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
+pub fn adapt_to_timeframe(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
     let date = data.0;
     let now = Local::now();
     let minutes = date.minute() as i64;
