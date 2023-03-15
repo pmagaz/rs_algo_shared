@@ -125,11 +125,10 @@ impl Indicators {
     ) -> Result<()> {
         let close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
-        let max_bars = num_bars / time_frame.clone().to_number() as usize;
+        let max_bars = num_bars / time_frame.clone().to_number() as usize + 1;
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
-            let len = self.atr.get_data_a().len();
 
             if delete && self.atr.get_data_a().len() > max_bars {
                 self.atr.remove_a(0);

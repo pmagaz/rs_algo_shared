@@ -3,8 +3,9 @@ use crate::helpers::comp::*;
 use crate::helpers::date::*;
 use crate::indicators::Indicators;
 use crate::models::indicator::CompactIndicators;
-use crate::models::market::*;
+use crate::models::mode::ExecutionMode;
 use crate::models::time_frame::*;
+use crate::models::{market::*, mode};
 use crate::scanner::candle::{Candle, CandleType};
 use crate::scanner::divergence::{CompactDivergences, Divergences};
 use crate::scanner::horizontal_level::HorizontalLevels;
@@ -283,6 +284,8 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
         let process_divergences = env::var("DIVERGENCES").unwrap().parse::<bool>().unwrap();
@@ -299,7 +302,7 @@ impl Instrument {
         //FIXME Instrument should be Optional
         self.reset();
 
-        let candles: Vec<Candle> = data
+        let mut candles: Vec<Candle> = data
             .iter()
             .enumerate()
             .map(|(id, x)| {
@@ -345,13 +348,17 @@ impl Instrument {
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
                     } else {
-                        self.indicators.init(ohlc_indicators).unwrap();
+                        if execution_mode == ExecutionMode::Bot {
+                            self.indicators.init(ohlc_indicators).unwrap();
+                        }
                     }
                 }
                 //  }
                 candle
             })
             .collect();
+
+        //candles.remove(0);
 
         if !candles.is_empty() {
             if process_patterns {
@@ -451,7 +458,7 @@ impl Instrument {
             self.next_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
-            self.adapt_htf_last_candle(candle.clone(), &last_candle, time_frame);
+            self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
         }
 
         Ok(candle)
@@ -513,7 +520,7 @@ impl Instrument {
         last_candle.set_is_closed(true);
     }
 
-    pub fn adapt_htf_last_candle(
+    pub fn adapt_last_candle_tf(
         &mut self,
         mut candle: Candle,
         last_candle: &Candle,
