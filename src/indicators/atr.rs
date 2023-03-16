@@ -85,8 +85,6 @@ impl Indicator for Atr {
 
     fn duplicate_last(&mut self) {
         let a = self.data_a.last().unwrap();
-        let b = self.data_b.last().unwrap();
         self.data_a.push(*a);
-        self.data_b.push(*b);
     }
 }

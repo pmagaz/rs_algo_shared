@@ -248,6 +248,10 @@ impl Indicators {
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update(close).unwrap();
+
+            if self.atr.get_data_a().len() > max_bars {
+                self.atr.remove_a(0);
+            }
         }
 
         if env::var("INDICATORS_MACD")
