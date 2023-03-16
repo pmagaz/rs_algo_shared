@@ -527,7 +527,7 @@ impl Indicators {
         log::info!("DUPLICATE LAST");
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            let last_a = self.atr.get_data_a().last().unwrap();
+            self.atr.duplicate_last();
         }
 
         if env::var("INDICATORS_MACD")
