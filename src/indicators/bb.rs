@@ -64,12 +64,9 @@ impl Indicator for BollingerB {
 
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-        let last_a_index = self.data_a.len() - 1;
-        let last_b_index = self.data_b.len() - 1;
-        let last_c_index = self.data_c.len() - 1;
-        let last_a = self.data_a.get_mut(last_a_index).unwrap();
-        let last_b = self.data_b.get_mut(last_b_index).unwrap();
-        let last_c = self.data_c.get_mut(last_c_index).unwrap();
+        let last_a = self.data_a.last_mut().unwrap();
+        let last_b = self.data_b.last_mut().unwrap();
+        let last_c = self.data_c.last_mut().unwrap();
         *last_a = a.upper;
         *last_b = a.lower;
         *last_c = a.average;
@@ -88,12 +85,12 @@ impl Indicator for BollingerB {
         self.data_c.remove(index)
     }
 
-    fn init(&mut self) {
-        let a = self.data_a.first().unwrap();
-        let b = self.data_b.first().unwrap();
-        let c = self.data_c.first().unwrap();
-        self.data_a.insert(0, *a);
-        self.data_b.insert(0, *b);
-        self.data_c.insert(0, *c);
+    fn duplicate_last(&mut self) {
+        let a = self.data_a.last().unwrap();
+        let b = self.data_b.last().unwrap();
+        let c = self.data_c.last().unwrap();
+        self.data_a.push(*a);
+        self.data_b.push(*b);
+        self.data_c.push(*c);
     }
 }

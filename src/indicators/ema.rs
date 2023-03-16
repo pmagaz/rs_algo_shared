@@ -58,7 +58,9 @@ impl Indicator for Ema {
 
     fn next(&mut self, value: f64) -> Result<()> {
         let a = self.ema.next(value);
+        log::info!("EMA SIZE {:?}", self.data_a.len());
         self.data_a.push(a);
+        log::info!("EMA SIZE {:?}", self.data_a.len());
         Ok(())
     }
 
@@ -68,8 +70,7 @@ impl Indicator for Ema {
 
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.ema.next(value);
-        let last_index = self.data_a.len() - 1;
-        let last = self.data_a.get_mut(last_index).unwrap();
+        let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
@@ -86,8 +87,9 @@ impl Indicator for Ema {
         self.data_b.remove(index)
     }
 
-    fn init(&mut self) {
-        let a = self.data_a.first().unwrap();
-        self.data_a.insert(0, *a);
+    fn duplicate_last(&mut self) {
+        let a = self.data_a.last().unwrap();
+        log::info!("7777777777{:?}", self.data_a.len());
+        self.data_a.push(*a);
     }
 }

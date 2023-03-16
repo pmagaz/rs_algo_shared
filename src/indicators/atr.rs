@@ -66,8 +66,7 @@ impl Indicator for Atr {
 
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.atr.next(value);
-        let last_index = self.data_a.len() - 1;
-        let last = self.data_a.get_mut(last_index).unwrap();
+        let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
@@ -84,10 +83,10 @@ impl Indicator for Atr {
         self.data_b.remove(index)
     }
 
-    fn init(&mut self) {
-        let a = self.data_a.first().unwrap();
-        let b = self.data_b.first().unwrap();
-        self.data_a.insert(0, *a);
-        self.data_b.insert(0, *b);
+    fn duplicate_last(&mut self) {
+        let a = self.data_a.last().unwrap();
+        let b = self.data_b.last().unwrap();
+        self.data_a.push(*a);
+        self.data_b.push(*b);
     }
 }

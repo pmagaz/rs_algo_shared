@@ -349,7 +349,7 @@ impl Instrument {
                             .unwrap();
                     } else {
                         if execution_mode == ExecutionMode::Bot {
-                            self.indicators.init(ohlc_indicators).unwrap();
+                            self.indicators.duplicate_last().unwrap();
                         }
                     }
                 }
@@ -357,8 +357,6 @@ impl Instrument {
                 candle
             })
             .collect();
-
-        //candles.remove(0);
 
         if !candles.is_empty() {
             if process_patterns {
@@ -455,7 +453,7 @@ impl Instrument {
 
         if candle.is_closed() {
             self.close_last_candle();
-            self.next_indicators(&last_candle);
+            self.next_update_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
@@ -463,6 +461,31 @@ impl Instrument {
 
         Ok(candle)
     }
+
+    // pub fn next_stream(
+    //     &mut self,
+    //     data: (DateTime<Local>, f64, f64, f64, f64, f64),
+    // ) -> Result<Candle> {
+    //     let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
+    //         .unwrap()
+    //         .parse::<bool>()
+    //         .unwrap();
+
+    //     let next_id = self.data.len();
+    //     let last_candle = &self.data().last().unwrap().clone();
+    //     let time_frame = &self.time_frame.clone();
+
+    //     let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
+    //     let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
+    //     if candle.is_closed() {
+    //         self.close_last_candle();
+    //         self.next_update_indicators(&last_candle);
+    //     } else {
+    //         self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
+    //     }
+
+    //     Ok(candle)
+    // }
 
     pub fn next_indicators(&mut self, candle: &Candle) {
         log::info!("NEXT INDICATORS");
@@ -481,8 +504,8 @@ impl Instrument {
         }
     }
 
-    pub fn update_indicators(&mut self, candle: &Candle) {
-        log::info!("UPDATE INDICATORS");
+    pub fn next_update_indicators(&mut self, candle: &Candle) {
+        log::info!("NEXT UPDATE INDICATORS");
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -490,7 +513,8 @@ impl Instrument {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
-            self.indicators.update(ohlc_indicators).unwrap();
+            self.indicators.next_update(ohlc_indicators).unwrap();
+            self.indicators.duplicate_last().unwrap();
         }
     }
 
@@ -583,8 +607,8 @@ impl Instrument {
         let max_bars = num_bars / time_frame.clone().unwrap().to_number() as usize;
 
         if len > max_bars {
-            log::info!("Cleaning previous candle. Data size {}", len);
             self.data.remove(0);
+            log::info!("Deleted previous candle. Data size {}", len);
         }
 
         self.data.push(candle);

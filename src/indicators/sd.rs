@@ -57,7 +57,7 @@ impl Indicator for StandardD {
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.sd.next(value);
         let last_index = self.data_a.len() - 1;
-        let last = self.data_a.get_mut(last_index).unwrap();
+        let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
@@ -78,7 +78,7 @@ impl Indicator for StandardD {
         self.data_b.remove(index)
     }
 
-    fn init(&mut self) {
+    fn duplicate_last(&mut self) {
         let a = self.data_a.last().unwrap();
         let b = self.data_b.last().unwrap();
         self.data_a.push(*a);

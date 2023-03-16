@@ -65,10 +65,8 @@ impl Indicator for Stoch {
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.stoch.next(value);
         let b = self.ema.next(a);
-        let last_a_index = self.data_a.len() - 1;
-        let last_b_index = self.data_b.len() - 1;
-        let last_a = self.data_a.get_mut(last_a_index).unwrap();
-        let last_b = self.data_b.get_mut(last_b_index).unwrap();
+        let last_a = self.data_a.last_mut().unwrap();
+        let last_b = self.data_b.last_mut().unwrap();
         *last_a = a;
         *last_b = b;
         Ok(())
@@ -90,10 +88,10 @@ impl Indicator for Stoch {
         self.data_b.remove(index)
     }
 
-    fn init(&mut self) {
-        let a = self.data_a.first().unwrap();
-        let b = self.data_b.first().unwrap();
-        self.data_a.insert(0, *a);
-        self.data_b.insert(0, *b);
+    fn duplicate_last(&mut self) {
+        let a = self.data_a.last().unwrap();
+        let b = self.data_b.last().unwrap();
+        self.data_a.push(*a);
+        self.data_b.push(*b);
     }
 }
