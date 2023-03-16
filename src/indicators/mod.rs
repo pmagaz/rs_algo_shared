@@ -126,6 +126,7 @@ impl Indicators {
         let close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
+        log::info!("INDICATORS  SIZE {:?}", self.ema_a().get_data_a().len());
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
@@ -167,7 +168,7 @@ impl Indicators {
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
             self.bb.next(close).unwrap();
 
-            if delete && !self.bb.get_data_a().len() > max_bars {
+            if delete && self.bb.get_data_a().len() > max_bars {
                 self.bb.remove_a(0);
                 self.bb.remove_b(0);
                 self.bb.remove_c(0);
@@ -177,7 +178,7 @@ impl Indicators {
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
             self.bbw.next(close).unwrap();
 
-            if delete && !self.bbw.get_data_a().len() > max_bars {
+            if delete && self.bbw.get_data_a().len() > max_bars {
                 self.bbw.remove_a(0);
                 self.bbw.remove_b(0);
                 self.bbw.remove_c(0);
@@ -190,7 +191,7 @@ impl Indicators {
             .unwrap()
         {
             self.ema_a.next(close).unwrap();
-            log::info!("222222222222 {:?}", self.ema_a.get_data_a().len());
+            //log::info!("222222222222 {:?}", self.ema_a.get_data_a().len());
 
             if delete && !self.ema_a.get_data_a().len() > max_bars {
                 self.ema_a.remove_a(0);
@@ -209,7 +210,7 @@ impl Indicators {
         {
             self.ema_b.next(close).unwrap();
 
-            if delete && !self.ema_b.get_data_a().len() > max_bars {
+            if delete && self.ema_b.get_data_a().len() > max_bars {
                 self.ema_b.remove_a(0);
             }
         }
@@ -221,7 +222,7 @@ impl Indicators {
         {
             self.ema_c.next(close).unwrap();
 
-            if delete && !self.ema_c.get_data_a().len() > max_bars {
+            if delete && self.ema_c.get_data_a().len() > max_bars {
                 self.ema_c.remove_a(0);
             }
         }
@@ -229,8 +230,14 @@ impl Indicators {
         Ok(())
     }
 
-    pub fn next_update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    pub fn next_update(
+        &mut self,
+        OHLC: (f64, f64, f64, f64),
+        time_frame: &TimeFrameType,
+    ) -> Result<()> {
         let close = OHLC.3;
+        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+        let max_bars = num_bars / time_frame.clone().to_number() as usize;
 
         log::info!("UPDATE LAST");
 
@@ -249,6 +256,11 @@ impl Indicators {
             .unwrap()
         {
             self.macd.update(close).unwrap();
+
+            if self.macd.get_data_a().len() > max_bars {
+                self.macd.remove_a(0);
+                self.macd.remove_b(0);
+            }
         }
 
         // if env::var("INDICATORS_STOCH")
@@ -261,14 +273,30 @@ impl Indicators {
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.update(close).unwrap();
+
+            if self.rsi.get_data_a().len() > max_bars {
+                self.rsi.remove_a(0);
+            }
         }
 
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
             self.bb.update(close).unwrap();
+
+            if self.bb.get_data_a().len() > max_bars {
+                self.bb.remove_a(0);
+                self.bb.remove_b(0);
+                self.bb.remove_c(0);
+            }
         }
 
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
             self.bbw.update(close).unwrap();
+
+            if self.bbw.get_data_a().len() > max_bars {
+                self.bbw.remove_a(0);
+                self.bbw.remove_b(0);
+                self.bbw.remove_c(0);
+            }
         }
 
         if env::var("INDICATORS_EMA_A")
@@ -277,6 +305,15 @@ impl Indicators {
             .unwrap()
         {
             self.ema_a.update(close).unwrap();
+
+            if self.ema_a.get_data_a().len() > max_bars {
+                self.ema_a.remove_a(0);
+
+                log::info!(
+                    "Deleted previous indicator. Data size {}",
+                    self.ema_a.get_data_a().len()
+                );
+            }
         }
 
         if env::var("INDICATORS_EMA_B")
@@ -285,6 +322,10 @@ impl Indicators {
             .unwrap()
         {
             self.ema_b.update(close).unwrap();
+
+            if self.ema_b.get_data_a().len() > max_bars {
+                self.ema_b.remove_a(0);
+            }
         }
 
         if env::var("INDICATORS_EMA_C")
@@ -293,6 +334,10 @@ impl Indicators {
             .unwrap()
         {
             self.ema_c.update(close).unwrap();
+
+            if self.ema_c.get_data_a().len() > max_bars {
+                self.ema_c.remove_a(0);
+            }
         }
 
         Ok(())

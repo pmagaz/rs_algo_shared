@@ -1,7 +1,7 @@
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::helpers::comp::*;
 use crate::helpers::date::*;
-use crate::indicators::Indicators;
+use crate::indicators::{Indicator, Indicators};
 use crate::models::indicator::CompactIndicators;
 use crate::models::mode::ExecutionMode;
 use crate::models::time_frame::*;
@@ -358,6 +358,11 @@ impl Instrument {
             })
             .collect();
 
+        log::info!("CANDLES INIT SIZE {:?}", candles.len());
+        log::info!(
+            "INDICATORS INIT SIZE {:?}",
+            self.indicators.ema_a().get_data_a().len()
+        );
         if !candles.is_empty() {
             if process_patterns {
                 self.peaks
@@ -458,7 +463,11 @@ impl Instrument {
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
         }
-
+        log::info!("CANDLES NEXT SIZE {:?}", self.data().len());
+        log::info!(
+            "INDICATORS NEXT SIZE {:?}",
+            self.indicators.ema_a().get_data_a().len()
+        );
         Ok(candle)
     }
 
@@ -513,7 +522,9 @@ impl Instrument {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
-            self.indicators.next_update(ohlc_indicators).unwrap();
+            self.indicators
+                .next_update(ohlc_indicators, &self.time_frame().clone())
+                .unwrap();
             self.indicators.duplicate_last().unwrap();
         }
     }
@@ -613,29 +624,6 @@ impl Instrument {
 
         self.data.push(candle);
     }
-
-    // pub fn init(mut self) -> Self {
-    //     self.set_data(vec![
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //         (Local::now(), 1., 1., 1., 1., 0.),
-    //     ])
-    //     .unwrap();
-    //     self
-    // }
 
     pub fn reset(&mut self) {
         self.data = vec![];
