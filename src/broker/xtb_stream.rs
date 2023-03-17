@@ -410,7 +410,7 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "{:?} {}  at ask: {} bid: {} with {} profit",
+            "{:?} {}  at ask: {} bid: {} with {} profit {}",
             trade_type,
             trade.symbol,
             str_accepted,
