@@ -302,7 +302,7 @@ impl Instrument {
         //FIXME Instrument should be Optional
         self.reset();
 
-        let mut candles: Vec<Candle> = data
+        let candles: Vec<Candle> = data
             .iter()
             .enumerate()
             .map(|(id, x)| {
@@ -347,10 +347,14 @@ impl Instrument {
                         self.indicators
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
+
+                        // if execution_mode == ExecutionMode::ScannerBackTest {
+                        //     self.next_update_indicators(&candle);
+                        // }
                     } else {
-                        if execution_mode == ExecutionMode::Bot {
-                            self.indicators.duplicate_last().unwrap();
-                        }
+                        //  if execution_mode == ExecutionMode::Bot {
+                        self.indicators.duplicate_last().unwrap();
+                        // }
                     }
                 }
                 //  }
@@ -522,7 +526,7 @@ impl Instrument {
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
             self.indicators
-                .next_update(ohlc_indicators, &self.time_frame().clone())
+                .next_update_delete(ohlc_indicators, &self.time_frame().clone())
                 .unwrap();
             self.indicators.duplicate_last().unwrap();
         }

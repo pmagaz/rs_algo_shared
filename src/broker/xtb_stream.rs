@@ -378,11 +378,12 @@ impl BrokerStream for Xtb {
         let price_in = data.price_in;
 
         let price_out = match trade_type.is_stop() {
-            true => match trade_type {
-                TradeType::StopLossLong => bid,
-                TradeType::StopLossShort => ask,
-                _ => todo!(),
-            },
+            // true => match trade_type {
+            //     TradeType::StopLossLong => bid,
+            //     TradeType::StopLossShort => ask,
+            //     _ => todo!(),
+            // },
+            true => data.price_out,
             false => match trade_type.is_long() {
                 true => bid,
                 false => ask,
