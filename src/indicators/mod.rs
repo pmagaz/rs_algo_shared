@@ -126,7 +126,7 @@ impl Indicators {
         let close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-        log::info!("INDICATORS  SIZE {:?}", self.ema_a().get_data_a().len());
+        //log::info!("INDICATORS  SIZE {:?}", self.ema_a().get_data_a().len());
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
@@ -523,8 +523,6 @@ impl Indicators {
         //     self.adx.remove_a(0);
         //     self.adx.next(close).unwrap();
         // }
-
-        log::info!("DUPLICATE LAST");
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.duplicate_last();

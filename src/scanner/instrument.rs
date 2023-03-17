@@ -358,11 +358,11 @@ impl Instrument {
             })
             .collect();
 
-        log::info!("CANDLES INIT SIZE {:?}", candles.len());
-        log::info!(
-            "INDICATORS INIT SIZE {:?}",
-            self.indicators.ema_a().get_data_a().len()
-        );
+        // log::info!("CANDLES INIT SIZE {:?}", candles.len());
+        // log::info!(
+        //     "INDICATORS INIT SIZE {:?}",
+        //     self.indicators.ema_a().get_data_a().len()
+        // );
         if !candles.is_empty() {
             if process_patterns {
                 self.peaks
@@ -463,11 +463,11 @@ impl Instrument {
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
         }
-        log::info!("CANDLES NEXT SIZE {:?}", self.data().len());
-        log::info!(
-            "INDICATORS NEXT SIZE {:?}",
-            self.indicators.ema_a().get_data_a().len()
-        );
+        // log::info!("CANDLES NEXT SIZE {:?}", self.data().len());
+        // log::info!(
+        //     "INDICATORS NEXT SIZE {:?}",
+        //     self.indicators.ema_a().get_data_a().len()
+        // );
         Ok(candle)
     }
 
@@ -514,7 +514,6 @@ impl Instrument {
     }
 
     pub fn next_update_indicators(&mut self, candle: &Candle) {
-        log::info!("NEXT UPDATE INDICATORS");
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()

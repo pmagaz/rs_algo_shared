@@ -58,9 +58,7 @@ impl Indicator for Ema {
 
     fn next(&mut self, value: f64) -> Result<()> {
         let a = self.ema.next(value);
-        log::info!("EMA SIZE {:?}", self.data_a.len());
         self.data_a.push(a);
-        log::info!("EMA SIZE {:?}", self.data_a.len());
         Ok(())
     }
 

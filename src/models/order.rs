@@ -468,8 +468,6 @@ pub fn resolve_active_orders(
         }
     }
 
-    
-
     match has_executed_buy_order(orders, &order_position) {
         true => order_position,
         false => Position::None,
@@ -480,8 +478,10 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
+    let candle_ts = uuid::generate_ts_id(current_candle.date());
     let prev_candle = data.get(prev_index).unwrap();
-    let is_next_bar = index > order.index_created;
+    let is_next_bar = candle_ts > order.id;
+
     let (current_price_over, current_price_bellow, _, _) =
         get_order_activation_price(current_candle, prev_candle);
 
@@ -490,9 +490,22 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
     let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
+    log::info!("Current date {:?}", current_candle.date());
+
+    log::info!(
+        "Checking Order pricing {:?}",
+        (order.target_price, current_price_over, current_price_bellow)
+    );
+
+    log::info!(
+        "Checking next_bar {:?}",
+        (candle_ts, order.id, candle_ts > order.id)
+    );
+
+    log::info!("Checking crosses {:?}", (cross_over, cross_bellow));
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
-            log::info!("Checking order activated {:?}", direction);
+            log::info!("Checking order direction {:?}", direction);
             match direction {
                 OrderDirection::Up => cross_over,
                 OrderDirection::Down => cross_bellow,
@@ -517,7 +530,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
             current_price_over,
             current_price_bellow,
             index,
-            order.index_created,
+            activated,
         ),
     );
 
@@ -563,7 +576,8 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
             OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                 stop_losses < max_stop_losses
             }
-        }).cloned()
+        })
+        .cloned()
         .collect();
 
     if result.len() <= max_pending_orders {
@@ -583,7 +597,8 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
         .iter()
         .rev()
         .take(max_pending_orders)
-        .filter(|x| x.status == OrderStatus::Pending).cloned()
+        .filter(|x| x.status == OrderStatus::Pending)
+        .cloned()
         .collect();
 
     pending_orders
@@ -596,8 +611,6 @@ pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool
         .unwrap();
 
     let (pending_buy_orders, _sell_orders, _stop_losses) = get_num_pending_orders(orders);
-
-    
 
     match operation {
         Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
