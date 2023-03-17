@@ -395,28 +395,29 @@ impl BrokerStream for Xtb {
         };
 
         let is_profitable = match profit {
-            _ if profit > 0. => {
-                log::info!(
-                    "{:?} {} accepted at ask: {} bid: {} with {} profit",
-                    trade_type,
-                    trade.symbol,
-                    ask,
-                    bid,
-                    profit
-                );
-                true
-            }
-            _ => {
-                log::info!(
-                    "{:?} {} NOT accepted at ask: {} bid: {}",
-                    trade_type,
-                    trade.symbol,
-                    ask,
-                    bid,
-                );
-                false
-            }
+            _ if profit > 0. => true,
+            _ => false,
         };
+
+        let accepted = match trade_type.is_stop() {
+            true => true,
+            false => is_profitable,
+        };
+
+        let str_accepted = match accepted {
+            true => "accepted",
+            false => "NOT accepted",
+        };
+
+        log::info!(
+            "{:?} {}  at ask: {} bid: {} with {} profit",
+            trade_type,
+            trade.symbol,
+            str_accepted,
+            ask,
+            bid,
+            profit
+        );
 
         data.id = uuid::generate_ts_id(Local::now());
         data.price_out = price_out;
@@ -429,8 +430,8 @@ impl BrokerStream for Xtb {
             response: ResponseType::ExecuteTradeOut,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
-                accepted: is_profitable,
-                data: data,
+                accepted,
+                data,
             }),
         };
         Ok(txt_msg)

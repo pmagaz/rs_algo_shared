@@ -195,11 +195,6 @@ impl Indicators {
 
             if delete && !self.ema_a.get_data_a().len() > max_bars {
                 self.ema_a.remove_a(0);
-
-                log::info!(
-                    "Deleted previous indicator. Data size {}",
-                    self.ema_a.get_data_a().len()
-                );
             }
         }
 
@@ -238,8 +233,6 @@ impl Indicators {
         let close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-
-        log::info!("UPDATE LAST");
 
         // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
         //     self.adx.remove_a(0);
@@ -312,11 +305,6 @@ impl Indicators {
 
             if self.ema_a.get_data_a().len() > max_bars {
                 self.ema_a.remove_a(0);
-
-                log::info!(
-                    "Deleted previous indicator. Data size {}",
-                    self.ema_a.get_data_a().len()
-                );
             }
         }
 

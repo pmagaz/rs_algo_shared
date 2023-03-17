@@ -550,7 +550,6 @@ impl Instrument {
 
     pub fn close_last_candle(&mut self) {
         let last_candle = self.data.last_mut().unwrap();
-        log::info!("Closing candle {:?}", &last_candle);
         last_candle.set_is_closed(true);
     }
 
