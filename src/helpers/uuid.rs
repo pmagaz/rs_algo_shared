@@ -13,7 +13,7 @@ fn calculate_hash<T: Hash>(t: &[T]) -> String {
     s.finish().to_string().chars().take(16).collect()
 }
 
-pub fn generate(seed: [&String; 4]) -> Uuid {
+pub fn generate(seed: [&String; 5]) -> Uuid {
     let hash = calculate_hash(&seed);
     let hash_bytes = to_be_bytes(&hash);
     Uuid::from_bytes(hash_bytes)
