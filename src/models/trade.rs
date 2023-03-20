@@ -305,19 +305,21 @@ pub fn resolve_trade_out(
     let price_origin = *trade_in.get_price_in();
 
     let close_trade_price = match trade_type {
-        TradeType::StopLossLong => current_candle.low(),
-        TradeType::StopLossShort => current_candle.high(),
+        TradeType::StopLossLong | TradeType::StopLossShort => order.unwrap().target_price,
         _ => current_candle.open(),
     };
 
-    let price = match order {
+    let price_out = match order {
         Some(order) => order.target_price,
         None => close_trade_price,
     };
 
-    let (price_in, price_out) = match trade_in_type.is_long() {
-        true => (trade_in.price_in, price),
-        false => (trade_in.price_in, price + spread),
+    let (price_in, price_out) = match execution_mode.is_back_test() {
+        true => match trade_in_type.is_long() {
+            true => (trade_in.price_in, price_out),
+            false => (trade_in.price_in, price_out + spread),
+        },
+        false => (trade_in.price_in, price_out),
     };
 
     let bid = match trade_type.is_long() {

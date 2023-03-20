@@ -374,16 +374,21 @@ impl BrokerStream for Xtb {
         let bid = pricing.bid();
         let spread = pricing.spread();
         let mut data = trade.data;
+
         let trade_type = data.trade_type.clone();
+
+        // log::info!(
+        //     "TRADE OUT {:?}",
+        //     (trade_type.is_stop(), trade_type.is_long(), &data)
+        // );
+
         let price_in = data.price_in;
 
         let price_out = match trade_type.is_stop() {
-            // true => match trade_type {
-            //     TradeType::StopLossLong => bid,
-            //     TradeType::StopLossShort => ask,
-            //     _ => todo!(),
-            // },
-            true => data.price_out,
+            true => match trade_type.is_long() {
+                true => data.price_out,
+                false => data.price_out + spread,
+            },
             false => match trade_type.is_long() {
                 true => bid,
                 false => ask,
