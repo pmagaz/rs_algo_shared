@@ -112,7 +112,7 @@ impl Candle {
             low: self.low.exp(),
             close: self.close.exp(),
             volume: self.volume,
-            is_closed: false,
+            is_closed: self.is_closed(),
             candle_type: self.candle_type.clone(),
         }
     }

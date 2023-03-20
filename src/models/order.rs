@@ -475,6 +475,8 @@ pub fn resolve_active_orders(
 }
 
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
+    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
     let current_candle = data.get(index).unwrap();
@@ -483,14 +485,27 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let is_next_bar = candle_ts > order.id;
 
     let (current_price_over, current_price_bellow, _, _) =
-        get_order_activation_price(current_candle, prev_candle);
+        get_order_activation_price(current_candle, prev_candle, activation_source);
 
-    let cross_over = current_price_over >= order.target_price && is_next_bar;
-    let cross_bellow = current_price_bellow <= order.target_price && is_next_bar;
+    let is_closed = match activation_source.as_ref() {
+        "close" => current_candle.is_closed(),
+        _ => true,
+    };
+
+    let cross_over = current_price_over >= order.target_price && is_next_bar && is_closed;
+    let cross_bellow = current_price_bellow <= order.target_price && is_next_bar && is_closed;
     let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
     let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
-    // log::info!("Current date {:?}", current_candle.date());
+    log::info!(
+        "order.target_price, current_price_over, current_price_bellow is_closed {:?}",
+        (
+            order.target_price,
+            current_price_over,
+            current_price_bellow,
+            is_closed
+        )
+    );
 
     // log::info!(
     //     "Checking Order pricing {:?}",
@@ -788,8 +803,11 @@ pub fn fulfill_bot_order<T: Trade>(
     fulfill_trade_order(index, trade, order, orders)
 }
 
-fn get_order_activation_price(candle: &Candle, prev_candle: &Candle) -> (f64, f64, f64, f64) {
-    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+fn get_order_activation_price(
+    candle: &Candle,
+    prev_candle: &Candle,
+    activation_source: &str,
+) -> (f64, f64, f64, f64) {
     match activation_source.as_ref() {
         "highs_lows" => (
             candle.high(),

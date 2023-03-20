@@ -188,9 +188,14 @@ impl Instrument {
         adapted: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
         logarithmic_scanner: bool,
     ) -> Candle {
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let date = adapted.0;
         let volume = adapted.5;
-        let is_closed = adapted.6;
+        let is_closed = match execution_mode {
+            ExecutionMode::ScannerBackTest => true,
+            _ => adapted.6,
+        };
+
         let (open, high, low, close) = self.get_scale_ohlc(adapted, logarithmic_scanner);
 
         let pre_0 = match id {
@@ -331,7 +336,6 @@ impl Instrument {
 
                 avg_volume.push(volume);
 
-                // if candle.is_closed() {
                 if process_patterns {
                     if candle.is_closed() {
                         self.peaks.next(&candle);
@@ -347,26 +351,16 @@ impl Instrument {
                         self.indicators
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
-
-                        // if execution_mode == ExecutionMode::ScannerBackTest {
-                        //     self.next_update_indicators(&candle);
-                        // }
                     } else {
-                        //  if execution_mode == ExecutionMode::Bot {
                         self.indicators.duplicate_last().unwrap();
-                        // }
                     }
                 }
-                //  }
+
+                log::info!("66666666 {:?}", candle.is_closed());
                 candle
             })
             .collect();
 
-        // log::info!("CANDLES INIT SIZE {:?}", candles.len());
-        // log::info!(
-        //     "INDICATORS INIT SIZE {:?}",
-        //     self.indicators.ema_a().get_data_a().len()
-        // );
         if !candles.is_empty() {
             if process_patterns {
                 self.peaks
@@ -415,7 +409,7 @@ impl Instrument {
             self.data = candles
                 .into_iter()
                 .map(|candle| {
-                    let data = match logarithmic_scanner {
+                    let mut data = match logarithmic_scanner {
                         true => candle.from_logarithmic_values(),
                         false => candle,
                     };
@@ -432,6 +426,7 @@ impl Instrument {
                     if data.high() > self.max_price {
                         self.max_price = data.high();
                     }
+
                     data
                 })
                 .collect();
