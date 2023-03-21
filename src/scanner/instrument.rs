@@ -356,7 +356,6 @@ impl Instrument {
                     }
                 }
 
-                log::info!("66666666 {:?}", candle.is_closed());
                 candle
             })
             .collect();
@@ -616,7 +615,6 @@ impl Instrument {
 
         if len > max_bars {
             self.data.remove(0);
-            log::info!("Deleted previous candle. Data size {}", len);
         }
 
         self.data.push(candle);
