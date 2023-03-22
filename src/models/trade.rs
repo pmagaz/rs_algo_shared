@@ -107,12 +107,26 @@ impl TradeType {
         }
     }
 
+    pub fn is_long_entry(&self) -> bool {
+        match *self {
+            TradeType::MarketInLong | TradeType::OrderInLong => true,
+            _ => false,
+        }
+    }
+
     pub fn is_short(&self) -> bool {
         match *self {
             TradeType::MarketInShort
             | TradeType::MarketOutShort
             | TradeType::OrderInShort
             | TradeType::OrderOutShort => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_short_entry(&self) -> bool {
+        match *self {
+            TradeType::MarketInShort | TradeType::OrderInShort => true,
             _ => false,
         }
     }
