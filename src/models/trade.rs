@@ -431,6 +431,7 @@ pub fn resolve_trade_out(
             draw_down_per,
         })
     } else {
+        log::warn!("Non profitable {:?} exit", trade_type);
         TradeResult::None
     }
 }
