@@ -497,15 +497,15 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
     let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
-    log::info!(
-        "order.target_price, current_price_over, current_price_bellow is_closed {:?}",
-        (
-            order.target_price,
-            current_price_over,
-            current_price_bellow,
-            is_closed
-        )
-    );
+    // log::info!(
+    //     "order.target_price, current_price_over, current_price_bellow is_closed {:?}",
+    //     (
+    //         order.target_price,
+    //         current_price_over,
+    //         current_price_bellow,
+    //         is_closed
+    //     )
+    // );
 
     // log::info!(
     //     "Checking Order pricing {:?}",
