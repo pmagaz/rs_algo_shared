@@ -322,6 +322,10 @@ pub fn resolve_trade_out(
     let index_in = trade_in.index_in;
     let spread_in = trade_in.spread;
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let non_profitable_outs = &env::var("NON_PROFITABLE_OUTS")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
 
     let index = calculate_trade_index(index, order, &execution_mode);
     let current_candle = instrument.data.get(index).unwrap();
@@ -371,7 +375,12 @@ pub fn resolve_trade_out(
         )
     }
 
-    if is_profitable || trade_type.is_stop() {
+    let profit_check = match non_profitable_outs {
+        true => true || trade_type.is_stop(),
+        false => is_profitable || trade_type.is_stop(),
+    };
+
+    if profit_check {
         let date_out = to_dbtime(current_candle.date());
 
         let date_in = match execution_mode.is_back_test() {

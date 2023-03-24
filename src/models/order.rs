@@ -548,7 +548,6 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     //         activated,
     //     ),
     //);
-
     activated
 }
 
@@ -665,24 +664,6 @@ pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
     (buy_orders, sell_orders, stop_losses)
 }
 
-// pub fn cancel_pending_expired_orders2(
-//     index: usize,
-//     instrument: &Instrument,
-//     orders: &mut Vec<Order>,
-// ) {
-//     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-//     let current_date = match execution_mode.is_back_test() {
-//         true => instrument.data.get(index).unwrap().date(),
-//         false => Local::now(),
-//     };
-
-//     for order in orders {
-//         if !order.is_still_valid(current_date) {
-//             order.cancel_order(to_dbtime(Local::now()));
-//         }
-//     }
-// }
-
 pub fn cancel_pending_expired_orders(
     index: usize,
     instrument: &Instrument,
@@ -710,69 +691,20 @@ pub fn extend_all_pending_orders(orders: &mut Vec<Order>) {
         if order.status == OrderStatus::Pending {
             let current_valid = from_dbtime(&order.valid_until.unwrap());
             let new_valid_date = current_valid + date::Duration::days(365);
+            log::info!("Extending StopLoss order to {:?}", new_valid_date);
             order.set_valid_until(to_dbtime(new_valid_date));
         }
     }
 }
 
-// pub fn extend_all_pending_orders2(orders: &mut Vec<Order>) -> Vec<Order> {
-//     orders
-//         .iter_mut()
-//         .filter(|x| x.status == OrderStatus::Pending)
-//         .map(|x| {
-//             let current_valid = from_dbtime(&x.valid_until.unwrap());
-//             let new_valid_date = current_valid + date::Duration::days(365);
-//             x.set_valid_until(to_dbtime(new_valid_date));
-//             x.clone()
-//         })
-//         .collect()
-// }
-
 pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) {
     for order in orders {
         if order.status == OrderStatus::Pending {
+            log::info!("Canceling Pending order to {:?}", order.id);
             order.cancel_order(*trade.get_date());
         }
     }
 }
-
-// pub fn cancel_trade_pending_orders2<T: Trade>(trade: &T, mut orders: Vec<Order>) -> Vec<Order> {
-//     orders
-//         .iter_mut()
-//         .map(|x| {
-//             if x.status == OrderStatus::Pending {
-//                 x.cancel_order(*trade.get_date());
-//             }
-//             x.clone()
-//         })
-//         .collect()
-// }
-
-// pub fn update_pending_trade_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) -> Vec<Order> {
-//     orders
-//         .iter_mut()
-//         .map(|x| {
-//             if x.status == OrderStatus::Pending {
-//                 //x.cancel_order(*trade.get_date());
-//                 log::info!("UPDATING {:?}", x.order_type);
-//             }
-//             x.clone()
-//         })
-//         .collect()
-// }
-
-// pub fn update_pending_trade_orders2<T: Trade>(trade: &T, orders: &mut Vec<Order>) -> Vec<Order> {
-//     orders
-//         .iter_mut()
-//         .map(|x| {
-//             if x.status == OrderStatus::Pending {
-//                 //x.cancel_order(*trade.get_date());
-//                 log::info!("UPDATING {:?}", x.order_type);
-//             }
-//             x.clone()
-//         })
-//         .collect()
-// }
 
 pub fn fulfill_trade_order<T: Trade>(
     index: usize,
