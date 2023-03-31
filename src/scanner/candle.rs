@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
@@ -100,8 +102,21 @@ impl Candle {
     pub fn volume(&self) -> f64 {
         self.volume
     }
+
     pub fn candle_type(&self) -> &CandleType {
         &self.candle_type
+    }
+
+    pub fn is_bullish(&self) -> bool {
+        self.candle_type == CandleType::Engulfing
+            || self.candle_type == CandleType::Karakasa
+            || self.candle_type == CandleType::MorningStar
+    }
+
+    pub fn is_bearish(&self) -> bool {
+        self.candle_type == CandleType::BearishEngulfing
+            || self.candle_type == CandleType::BearishKarakasa
+            || self.candle_type == CandleType::BearishStar
     }
 
     pub fn from_logarithmic_values(&self) -> Self {
@@ -398,40 +413,47 @@ impl CandleBuilder {
     }
 
     fn identify_candle_type(&self) -> CandleType {
-        if self.is_bullish_gap() {
-            CandleType::BullishGap
-        } else if self.is_karakasa() {
-            CandleType::Karakasa
-        } else if self.is_bullish_star() {
-            CandleType::MorningStar
-        } else if self.is_bullish_crows() {
-            CandleType::BullishCrows
-        } else if self.is_marubozu() {
-            CandleType::Marubozu
-        } else if self.is_engulfing() {
-            CandleType::Engulfing
-        } else if self.is_bearish_karakasa() {
-            CandleType::BearishKarakasa
-        } else if self.is_bearish_star() {
-            CandleType::BearishStar
-        } else if self.is_hanging_man() {
-            CandleType::HangingMan
-        } else if self.is_bearish_gap() {
-            CandleType::BearishGap
-        } else if self.is_bearish_crows() {
-            CandleType::BearishCrows
-        } else if self.is_bearish_marubozu() {
-            CandleType::BearishMarubozu
-        } else if self.is_bearish_engulfing() {
-            CandleType::BearishEngulfing
-        } else if self.is_harami() {
-            CandleType::Harami
-        } else if self.is_bearish_harami() {
-            CandleType::BearishHarami
-        } else if self.is_doji() {
-            CandleType::Doji
-        } else {
-            CandleType::Default
+        let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
+
+        match candle_types {
+            true => {
+                if self.is_bullish_gap() {
+                    CandleType::BullishGap
+                } else if self.is_karakasa() {
+                    CandleType::Karakasa
+                } else if self.is_bullish_star() {
+                    CandleType::MorningStar
+                } else if self.is_bullish_crows() {
+                    CandleType::BullishCrows
+                } else if self.is_marubozu() {
+                    CandleType::Marubozu
+                } else if self.is_engulfing() {
+                    CandleType::Engulfing
+                } else if self.is_bearish_karakasa() {
+                    CandleType::BearishKarakasa
+                } else if self.is_bearish_star() {
+                    CandleType::BearishStar
+                } else if self.is_hanging_man() {
+                    CandleType::HangingMan
+                } else if self.is_bearish_gap() {
+                    CandleType::BearishGap
+                } else if self.is_bearish_crows() {
+                    CandleType::BearishCrows
+                } else if self.is_bearish_marubozu() {
+                    CandleType::BearishMarubozu
+                } else if self.is_bearish_engulfing() {
+                    CandleType::BearishEngulfing
+                } else if self.is_harami() {
+                    CandleType::Harami
+                } else if self.is_bearish_harami() {
+                    CandleType::BearishHarami
+                } else if self.is_doji() {
+                    CandleType::Doji
+                } else {
+                    CandleType::Default
+                }
+            }
+            false => CandleType::Default,
         }
     }
 

@@ -30,6 +30,7 @@ chrono = {version = "0.4.19",  features = ["serde","wasmbind", "js-sys"]}
 round = "0.1.2"
 env_logger = "0.10.0"
 log = "0.4"
+regex = "1.7.2"
 
 [dependencies.plotters]
 optional = true

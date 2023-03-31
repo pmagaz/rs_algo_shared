@@ -238,27 +238,21 @@ impl BrokerStream for Xtb {
                 let mut result: Vec<MarketHour> = vec![];
 
                 let current_date = Local::now();
-                let week_day = date::get_week_day(current_date) as isize;
+                let current_hours = current_date.hour();
+                let week_day = date::get_week_day(current_date);
                 let mut open = false;
                 for obj in data["returnData"][0]["trading"].as_array().unwrap() {
-                    let day = obj["day"].as_i64().unwrap() as isize;
-                    let from = obj["fromT"].as_i64().unwrap();
-                    let to = obj["toT"].as_i64().unwrap();
-                    let base = current_date.date().and_hms(0, 0, 0);
-                    let date_from = base + Duration::milliseconds(from);
-                    let date_to = base + Duration::milliseconds(to);
+                    let day = obj["day"].as_i64().unwrap() as u32;
+                    let from = obj["fromT"].as_i64().unwrap() as u32;
+                    let to = obj["toT"].as_i64().unwrap() as u32;
                     if day == week_day {
-                        if current_date > date_from && current_date < date_to {
+                        if current_hours > from && current_hours < to {
                             open = true
                         } else {
                             open = false
                         }
                     };
-                    let market_hour = MarketHour {
-                        day,
-                        from: date_from,
-                        to: date_to,
-                    };
+                    let market_hour = MarketHour { day, from, to };
                     result.push(market_hour);
                 }
 
@@ -767,8 +761,8 @@ impl Xtb {
             let day = obj["day"].as_i64().unwrap().try_into().unwrap();
             let from = obj["from"].as_i64().unwrap();
             let to = obj["to"].as_i64().unwrap();
-            let date_from = base + Duration::milliseconds(from);
-            let date_to = base + Duration::milliseconds(to);
+            let date_from = (base + Duration::milliseconds(from)).hour();
+            let date_to = (base + Duration::milliseconds(to)).hour();
             let market_hour = MarketHour {
                 day,
                 from: date_from,

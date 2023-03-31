@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Timelike};
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::date;
@@ -13,9 +13,9 @@ pub enum Market {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketHour {
-    pub day: isize,
-    pub from: DateTime<Local>,
-    pub to: DateTime<Local>,
+    pub day: u32,
+    pub from: u32,
+    pub to: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,11 +47,12 @@ impl MarketHours {
     }
     pub fn is_open(&self) -> bool {
         let current_date = Local::now();
-        let week_day = date::get_week_day(current_date) as isize;
+        let current_hours = current_date.hour();
+        let week_day = date::get_week_day(current_date) as u32;
         let mut open = false;
         for key in &self.data {
             if key.day == week_day {
-                if current_date > key.from && current_date < key.to {
+                if current_hours > key.from && current_hours < key.to {
                     open = true
                 } else {
                     open = false
