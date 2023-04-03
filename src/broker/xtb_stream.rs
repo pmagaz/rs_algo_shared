@@ -243,10 +243,10 @@ impl BrokerStream for Xtb {
                 let mut open = false;
                 for obj in data["returnData"][0]["trading"].as_array().unwrap() {
                     let day = obj["day"].as_i64().unwrap() as u32;
-                    let from = obj["fromT"].as_i64().unwrap() as u32;
-                    let to = obj["toT"].as_i64().unwrap() as u32;
+                    let from = obj["fromT"].as_i64().unwrap() as u32 / 3600 / 1000;
+                    let to = obj["toT"].as_i64().unwrap() as u32 / 3600 / 1000;
                     if day == week_day {
-                        if current_hours > from && current_hours < to {
+                        if current_hours >= from && current_hours <= to {
                             open = true
                         } else {
                             open = false

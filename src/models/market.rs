@@ -52,7 +52,7 @@ impl MarketHours {
         let mut open = false;
         for key in &self.data {
             if key.day == week_day {
-                if current_hours > key.from && current_hours < key.to {
+                if current_hours >= key.from && current_hours <= key.to {
                     open = true
                 } else {
                     open = false

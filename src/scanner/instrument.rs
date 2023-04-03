@@ -592,8 +592,6 @@ impl Instrument {
         data: (DateTime<Local>, f64, f64, f64, f64, f64),
         time_frame: &Option<TimeFrameType>,
     ) {
-        log::info!("Init new candle {}", data.0);
-
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
