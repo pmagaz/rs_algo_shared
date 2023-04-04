@@ -44,6 +44,7 @@ pub enum ResponseType {
     ExecuteTradeOut,
     InitSession,
     SubscribeStream,
+    SubscribeTickPrices,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -82,19 +83,26 @@ pub struct Symbol {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TradeOptions {
+    pub non_profitable_out: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TradeData<T> {
     pub symbol: String,
     pub data: T,
+    pub options: TradeOptions,
 }
 
 impl<T> TradeData<T> {
-    pub fn new(symbol: &str, data: T) -> Self
+    pub fn new(symbol: &str, data: T, options: TradeOptions) -> Self
     where
         for<'de> T: Serialize + Deserialize<'de>,
     {
         Self {
             symbol: symbol.to_string(),
             data,
+            options: options,
         }
     }
 }
@@ -130,8 +138,14 @@ pub struct StreamResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ReconnectOptions {
+    pub clean_data: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum MessageType {
     StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
+    StreamPricingResponse(ResponseBody<Pricing>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     PricingData(ResponseBody<Pricing>),
     MarketHours(ResponseBody<MarketHours>),
@@ -140,6 +154,6 @@ pub enum MessageType {
     ExecuteTradeOut(ResponseBody<TradeResponse<TradeOut>>),
     ExecuteOrder(ResponseBody<TradeResponse<Order>>),
     Connected(ResponseBody<Uuid>),
-    Reconnect(ResponseBody<bool>),
+    Reconnect(ResponseBody<ReconnectOptions>),
     Error(ResponseBody<bool>),
 }

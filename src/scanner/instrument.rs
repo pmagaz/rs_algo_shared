@@ -4,6 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::{Indicator, Indicators};
 use crate::models::indicator::CompactIndicators;
 use crate::models::mode::ExecutionMode;
+use crate::models::pricing::Pricing;
 use crate::models::time_frame::*;
 use crate::models::{market::*, mode};
 use crate::scanner::candle::{Candle, CandleType};
@@ -525,6 +526,17 @@ impl Instrument {
             self.indicators.duplicate_last().unwrap();
         }
     }
+
+    // pub fn update_last_candle(&mut self, pricing: &Pricing) {
+    //     let last_candle = self.data.last_mut().unwrap();
+    //     if !last_candle.is_closed() {
+    //         let bid = pricing.bid();
+    //         let previous_open = last_candle.open();
+    //         let previous_high = last_candle.high();
+    //         self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
+    //         //last_candle.set_close(pricing.bid());
+    //     }
+    // }
 
     pub fn next_peaks(&mut self, candle: &Candle) {
         let _logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
