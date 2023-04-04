@@ -525,8 +525,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         _ => todo!(),
     };
 
-    true
-    //activated
+    activated
 }
 
 pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
