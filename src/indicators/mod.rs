@@ -191,7 +191,6 @@ impl Indicators {
             .unwrap()
         {
             self.ema_a.next(close).unwrap();
-            //log::info!("222222222222 {:?}", self.ema_a.get_data_a().len());
 
             if delete && !self.ema_a.get_data_a().len() > max_bars {
                 self.ema_a.remove_a(0);

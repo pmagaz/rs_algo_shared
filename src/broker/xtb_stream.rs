@@ -68,6 +68,7 @@ pub trait BrokerStream {
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
     async fn parse_stream_data(msg: Message) -> Option<String>;
     async fn keepalive_ping(&mut self) -> Result<String>;
+    async fn disconnect(&mut self) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -592,7 +593,6 @@ impl BrokerStream for Xtb {
                 let command = &obj["command"];
                 let data = &obj["data"];
                 if command == "candle" {
-                    log::info!("Broker Stream data received");
                     let date = parse_time(data["ctm"].as_i64().unwrap() / 1000);
                     let open = data["open"].as_f64().unwrap();
                     let high = data["high"].as_f64().unwrap();
@@ -644,6 +644,12 @@ impl BrokerStream for Xtb {
         };
 
         Ok(txt_msg)
+    }
+
+    async fn disconnect(&mut self) -> Result<()> {
+        self.socket.disconnect().await.unwrap();
+        self.stream.disconnect().await.unwrap();
+        Ok(())
     }
 }
 

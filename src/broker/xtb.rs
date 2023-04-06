@@ -42,6 +42,7 @@ pub trait Broker {
     ) -> Result<String>;
     async fn parse_stream_data(msg: Message) -> Option<String>;
     async fn keepalive_ping(&mut self) -> Result<String>;
+    async fn disconnect(&mut self) -> Result<()>;
 }
 
 #[derive(Debug)]
@@ -273,6 +274,11 @@ impl Broker for Xtb {
         };
 
         Ok(txt_msg)
+    }
+
+    async fn disconnect(&mut self) -> Result<()> {
+        self.websocket.disconnect().await.unwrap();
+        Ok(())
     }
 }
 

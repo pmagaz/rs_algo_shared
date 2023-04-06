@@ -60,17 +60,9 @@ impl WebSocket {
         self.socket.read_message()
     }
 
-    // pub fn read2(&mut self) -> Result<Message> {
-    //     let msg = self
-    //         .socket
-    //         .read_message()
-    //         .expect("SOCKET] Error reading message");
-    //     Ok(msg)
-    // }
+    pub async fn disconnect(&mut self) -> Result<()> {
+        log::info!("[SOCKET] Disconnecting from server!");
+        self.socket.close(None).unwrap();
+        Ok(())
+    }
 }
-
-// impl Default for WebSocket {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
