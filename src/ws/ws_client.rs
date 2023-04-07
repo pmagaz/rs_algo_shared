@@ -61,7 +61,6 @@ impl WebSocket {
     }
 
     pub async fn disconnect(&mut self) -> Result<()> {
-        log::info!("[SOCKET] Disconnecting from server!");
         self.socket.close(None).unwrap();
         Ok(())
     }
