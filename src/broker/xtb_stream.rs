@@ -231,13 +231,22 @@ impl BrokerStream for Xtb {
                 let mut result: Vec<MarketHour> = vec![];
 
                 let current_date = Local::now();
+
                 let current_hours = current_date.hour();
+
                 let week_day = date::get_week_day(current_date);
                 let mut open = false;
                 for obj in data["returnData"][0]["trading"].as_array().unwrap() {
                     let day = obj["day"].as_i64().unwrap() as u32;
                     let from = obj["fromT"].as_i64().unwrap() as u32 / 3600 / 1000;
                     let to = obj["toT"].as_i64().unwrap() as u32 / 3600 / 1000;
+
+                    //NAPA
+                    let from = match date::is_dst(&current_date) {
+                        false => from + 1,
+                        true => from,
+                    };
+
                     if day == week_day {
                         if current_hours >= from && current_hours <= to {
                             open = true

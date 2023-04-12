@@ -39,3 +39,10 @@ pub fn from_dbtime(date: &DbDateTime) -> DateTime<Local> {
 pub fn get_week_day(date: DateTime<Local>) -> u32 {
     date.weekday().number_from_monday()
 }
+
+pub fn is_dst(datetime: &DateTime<Local>) -> bool {
+    let local_minus_utc = datetime.offset().local_minus_utc();
+    //7200 during
+    //UTC +1
+    local_minus_utc == 3600
+}

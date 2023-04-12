@@ -511,10 +511,10 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
     let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
-    //log::info!("Checking crosses {:?}", (cross_over, cross_bellow));
+    log::info!("Checking crosses {:?}", (cross_over, cross_bellow));
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
-            //log::info!("Checking order direction {:?}", direction);
+            log::info!("Checking order direction {:?}", direction);
             match direction {
                 OrderDirection::Up => cross_over,
                 OrderDirection::Down => cross_bellow,
