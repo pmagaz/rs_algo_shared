@@ -569,7 +569,7 @@ impl BrokerStream for Xtb {
             command: "getTickPrices".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
             symbol: symbol.to_string(),
-            minArrivalTime: 10000,
+            minArrivalTime: 5000,
             maxLevel: 2,
         };
 
