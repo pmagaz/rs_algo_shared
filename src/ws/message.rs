@@ -82,7 +82,7 @@ pub struct Symbol {
     pub symbol: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TradeOptions {
     pub non_profitable_out: bool,
 }

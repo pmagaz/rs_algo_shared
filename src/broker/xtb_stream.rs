@@ -59,6 +59,7 @@ pub trait BrokerStream {
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
     async fn order_out(
         &mut self,
+        trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
@@ -349,15 +350,9 @@ impl BrokerStream for Xtb {
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = data.price_in;
 
-        let price_out = match trade_type.is_stop() {
-            true => match trade_type.is_long() {
-                true => data.price_out,
-                false => data.price_out + spread,
-            },
-            false => match trade_type.is_long() {
-                true => bid,
-                false => ask,
-            },
+        let price_out = match trade_type.is_long() {
+            true => bid,
+            false => ask,
         };
 
         let profit = match trade_type.is_long() {
@@ -370,12 +365,9 @@ impl BrokerStream for Xtb {
             _ => false,
         };
 
-        let accepted = match trade_type.is_stop() {
+        let accepted = match non_profitable_outs {
             true => true,
-            false => match non_profitable_outs {
-                true => true,
-                false => is_profitable,
-            },
+            false => is_profitable,
         };
 
         let str_accepted = match accepted {
@@ -384,12 +376,10 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "{:?} {}  at ask: {} bid: {} with {} profit {}",
+            "{:?} {} {} with profit {}",
             trade_type,
             trade.symbol,
             str_accepted,
-            ask,
-            bid,
             profit
         );
 
@@ -442,7 +432,6 @@ impl BrokerStream for Xtb {
             false => TradeType::OrderInShort,
         };
 
-        let ask = pricing.ask();
         let price_in = match trade_type.is_long() {
             true => pricing.ask(),
             false => pricing.bid(),
@@ -476,75 +465,82 @@ impl BrokerStream for Xtb {
 
     async fn order_out(
         &mut self,
+        trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
-        let trade_command = Command {
-            command: "tradeTransaction".to_owned(),
-            arguments: Transaction {
-                cmd: "".to_owned(),
-                symbol: "".to_owned(),
-                customComment: "".to_owned(),
-                expiration: 0,
-                order: 0,
-                price: 0.,
-                sl: 0.,
-                tp: 0.,
-                volume: 0.,
-                trans_type: 0,
+        let symbol = &trade.symbol;
+        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
+        let pricing = pricing.payload.unwrap();
+        let ask = pricing.ask();
+        let bid = pricing.bid();
+        let spread = pricing.spread();
+
+        let mut trade_data = trade.data;
+        let order_data = order.data;
+
+        let trade_type = trade_data.trade_type.clone();
+        let order_type = order_data.order_type;
+
+        let non_profitable_outs = trade.options.non_profitable_out;
+        let price_in = trade_data.price_in;
+
+        let price_out = match trade_type.is_stop() {
+            true => match trade_type.is_long() {
+                true => order_data.target_price,
+                false => order_data.target_price + spread,
+            },
+            false => match trade_type.is_long() {
+                true => bid,
+                false => ask,
             },
         };
 
-        let symbol = &order.symbol;
-        let order = order.data;
-        let pricing = self.get_instrument_pricing(&symbol).await.unwrap();
-        let pricing = pricing.payload.unwrap();
-        let spread = pricing.spread();
-
-        let trade_type = match order.order_type.is_long() {
-            true => TradeType::OrderOutLong,
-            false => TradeType::OrderOutShort,
+        let profit = match trade_type.is_long() {
+            true => price_out - price_in,
+            false => price_in - price_out,
         };
 
-        let price_out = match trade_type.is_long() {
-            true => pricing.bid(),
-            false => pricing.ask(),
+        let is_profitable = match profit {
+            _ if profit > 0. => true,
+            _ => false,
         };
 
-        let now = Local::now();
-
-        log::info!("{:?} accepted at {}", order.order_type, price_out);
-
-        let trade_out = TradeOut {
-            id: uuid::generate_ts_id(now),
-            trade_type,
-            index_in: order.index_created,
-            price_in: order.origin_price,
-            ask: pricing.ask(),
-            spread_in: spread,
-            date_in: order.full_filled_at.unwrap(),
-            index_out: order.index_fulfilled,
-            price_origin: order.origin_price,
-            price_out,
-            bid: pricing.bid(),
-            spread_out: spread,
-            date_out: to_dbtime(now),
-            profit: 0.,
-            profit_per: 0.,
-            run_up: 0.,
-            run_up_per: 0.,
-            draw_down: 0.,
-            draw_down_per: 0.,
+        let accepted = match trade_type.is_stop() {
+            true => true,
+            false => match non_profitable_outs {
+                true => true,
+                false => is_profitable,
+            },
         };
+
+        let str_accepted = match accepted {
+            true => "accepted",
+            false => "NOT accepted",
+        };
+
+        log::info!(
+            "{:?} {} {} with profit {}",
+            order_type,
+            trade.symbol,
+            str_accepted,
+            profit
+        );
+
+        trade_data.id = uuid::generate_ts_id(Local::now());
+        trade_data.price_out = price_out;
+        trade_data.date_out = to_dbtime(Local::now());
+        trade_data.bid = bid;
+        trade_data.ask = ask;
+        trade_data.spread_out = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::ExecuteTradeIn,
+            response: ResponseType::ExecuteTradeOut,
             payload: Some(TradeResponse {
-                symbol: symbol.clone(),
-                accepted: true,
-                data: trade_out,
+                symbol: trade.symbol,
+                accepted,
+                data: trade_data,
             }),
         };
-
         Ok(txt_msg)
     }
 

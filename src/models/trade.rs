@@ -101,6 +101,7 @@ impl TradeType {
         match *self {
             TradeType::MarketInLong
             | TradeType::MarketOutLong
+            | TradeType::StopLossLong
             | TradeType::OrderInLong
             | TradeType::OrderOutLong => true,
             _ => false,
