@@ -457,7 +457,7 @@ impl Instrument {
 
         if candle.is_closed() {
             self.close_last_candle();
-            self.next_update_indicators(&last_candle);
+            self.next_close_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
@@ -487,7 +487,7 @@ impl Instrument {
     //     let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
     //     if candle.is_closed() {
     //         self.close_last_candle();
-    //         self.next_update_indicators(&last_candle);
+    //         self.next_close_indicators(&last_candle);
     //     } else {
     //         self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
     //     }
@@ -512,7 +512,7 @@ impl Instrument {
         }
     }
 
-    pub fn next_update_indicators(&mut self, candle: &Candle) {
+    pub fn next_close_indicators(&mut self, candle: &Candle) {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()

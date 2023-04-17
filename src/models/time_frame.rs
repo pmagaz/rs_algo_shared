@@ -1,3 +1,7 @@
+use super::{
+    mode::{self, ExecutionMode},
+    trade::TradeDirection,
+};
 use crate::{
     helpers::{
         calc::get_prev_index,
@@ -8,8 +12,7 @@ use crate::{
 
 use chrono::Timelike;
 use serde::{Deserialize, Serialize};
-
-use super::{mode::ExecutionMode, trade::TradeDirection};
+use std::env;
 
 type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
 type DOHLCC = (DateTime<Local>, f64, f64, f64, f64, f64, bool);
@@ -328,17 +331,15 @@ pub fn adapt_to_timeframe(data: DOHLC, time_frame: &TimeFrameType, next: bool) -
     adapted
 }
 
-pub fn get_htf_data<F>(
+fn get_htf_indexes<'a>(
     index: usize,
-    instrument: &Instrument,
-    htf_instrument: &HTFInstrument,
-    mut callback: F,
-) -> bool
-where
-    F: Send + FnMut((usize, usize, &Instrument)) -> bool,
-{
+    instrument: &'a Instrument,
+    htf_instrument: &'a HTFInstrument,
+) -> (usize, usize, &'a Instrument) {
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
     let base_date = &instrument.data.get(index).unwrap().date;
-    let upper_tf_data = match htf_instrument {
+    match htf_instrument {
         HTFInstrument::HTFInstrument(htf_instrument) => {
             let upper_indexes: Vec<usize> = htf_instrument
                 .data
@@ -348,17 +349,34 @@ where
                 .map(|(id, _x)| id)
                 .collect();
 
-            let upper_tf_indx = match upper_indexes.last() {
-                Some(val) => *val,
-                _ => 0,
-            };
+            let upper_tf_indx = upper_indexes
+                .last()
+                .and_then(|val| match execution_mode.is_back_test() {
+                    //TO SIMULATE THE LACK OF NOT CLOSED INDICATORS IN BOT
+                    true => val.checked_sub(1),
+                    false => Some(*val),
+                })
+                .unwrap_or(0);
 
             let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
 
             (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
         }
         _ => (0, 0, instrument),
-    };
+    }
+}
+pub fn get_htf_data<F>(
+    index: usize,
+    instrument: &Instrument,
+    htf_instrument: &HTFInstrument,
+    mut callback: F,
+) -> bool
+where
+    F: Send + FnMut((usize, usize, &Instrument)) -> bool,
+{
+    let upper_tf_data: (usize, usize, &Instrument) =
+        get_htf_indexes(index, instrument, htf_instrument);
+
     callback(upper_tf_data)
 }
 
@@ -371,27 +389,8 @@ pub fn get_htf_trading_direction<F>(
 where
     F: Send + FnMut((usize, usize, &Instrument)) -> TradeDirection,
 {
-    let base_date = &instrument.data.get(index).unwrap().date;
-    let upper_tf_data = match htf_instrument {
-        HTFInstrument::HTFInstrument(htf_instrument) => {
-            let upper_indexes: Vec<usize> = htf_instrument
-                .data
-                .iter()
-                .enumerate()
-                .filter(|(_id, x)| &x.date <= base_date)
-                .map(|(id, _x)| id)
-                .collect();
+    let upper_tf_data: (usize, usize, &Instrument) =
+        get_htf_indexes(index, instrument, htf_instrument);
 
-            let upper_tf_indx = match upper_indexes.last() {
-                Some(val) => *val,
-                _ => 0,
-            };
-
-            let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
-
-            (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
-        }
-        _ => (0, 0, instrument),
-    };
     callback(upper_tf_data)
 }
