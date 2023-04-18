@@ -53,11 +53,11 @@ pub trait BrokerStream {
         &mut self,
         trade_out: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn order_in(
+    async fn open_order(
         &mut self,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn order_out(
+    async fn close_order(
         &mut self,
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
@@ -243,10 +243,10 @@ impl BrokerStream for Xtb {
                     let to = obj["toT"].as_i64().unwrap() as u32 / 3600 / 1000;
 
                     //NAPA
-                    let from = match date::is_dst(&current_date) {
-                        false => from + 1,
-                        true => from,
-                    };
+                    // let from = match date::is_dst(&current_date) {
+                    //     false => from + 1,
+                    //     true => from,
+                    // };
 
                     if day == week_day {
                         if current_hours >= from && current_hours <= to {
@@ -256,13 +256,14 @@ impl BrokerStream for Xtb {
                         }
                     };
                     let market_hour = MarketHour { day, from, to };
+
                     result.push(market_hour);
                 }
 
-                match self.get_instrument_pricing(&symbol).await {
-                    Ok(_) => open = true,
-                    Err(_) => open = false,
-                };
+                // match self.get_instrument_pricing(&symbol).await {
+                //     Ok(_) => open = true,
+                //     Err(_) => open = false,
+                // };
 
                 ResponseBody {
                     response: ResponseType::GetMarketHours,
@@ -322,7 +323,7 @@ impl BrokerStream for Xtb {
         data.spread = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::ExecuteTradeIn,
+            response: ResponseType::TradeInAccepted,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted: true,
@@ -391,7 +392,7 @@ impl BrokerStream for Xtb {
         data.spread_out = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::ExecuteTradeOut,
+            response: ResponseType::TradeOutAccepted,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted,
@@ -401,7 +402,7 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn order_in(
+    async fn open_order(
         &mut self,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
@@ -452,7 +453,7 @@ impl BrokerStream for Xtb {
         };
 
         let txt_msg = ResponseBody {
-            response: ResponseType::ExecuteTradeIn,
+            response: ResponseType::TradeInAccepted,
             payload: Some(TradeResponse {
                 symbol: symbol.clone(),
                 accepted: true,
@@ -463,7 +464,7 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn order_out(
+    async fn close_order(
         &mut self,
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
@@ -534,7 +535,7 @@ impl BrokerStream for Xtb {
         trade_data.spread_out = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::ExecuteTradeOut,
+            response: ResponseType::TradeOutAccepted,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted,

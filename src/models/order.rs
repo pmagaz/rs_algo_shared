@@ -511,10 +511,8 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
     let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
 
-    //log::info!("Checking crosses {:?}", (cross_over, cross_bellow));
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
-            //log::info!("Checking order direction {:?}", direction);
             match direction {
                 OrderDirection::Up => cross_over,
                 OrderDirection::Down => cross_bellow,
@@ -590,13 +588,21 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
         .parse::<usize>()
         .unwrap();
 
-    let pending_orders: Vec<Order> = orders
-        .iter()
-        .rev()
-        .take(max_pending_orders)
-        .filter(|x| x.status == OrderStatus::Pending)
-        .cloned()
-        .collect();
+    let len = orders.len();
+
+    let pending_orders = match len > 0 {
+        true => {
+            let pending_orders: Vec<Order> = orders
+                .iter()
+                .skip(len.saturating_sub(max_pending_orders))
+                .filter(|x| x.status == OrderStatus::Pending)
+                .take(max_pending_orders)
+                .cloned()
+                .collect();
+            pending_orders
+        }
+        false => vec![],
+    };
 
     pending_orders
 }

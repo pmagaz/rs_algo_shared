@@ -151,7 +151,7 @@ impl Broker for Xtb {
                 let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
                 let symbol_detail: SymbolPricing = parsed.returnData;
                 ResponseBody {
-                    response: ResponseType::ExecuteTradeIn,
+                    response: ResponseType::TradeInAccepted,
                     payload: Some(symbol_detail),
                 }
             }
