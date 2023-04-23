@@ -529,6 +529,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         OrderType::StopLossShort(_, _) => stop_cross_over,
         _ => todo!(),
     };
+
     activated
 }
 

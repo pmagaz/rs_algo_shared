@@ -20,8 +20,8 @@ impl WebSocket {
     pub async fn connect(url: &str) -> Self {
         let (socket, response) = connect_async(url).await.expect("Can't connect");
 
-        log::info!("[STREAM] Connected to the server");
-        log::info!("[STREAM] Response HTTP code: {}", response.status());
+        log::info!("Connected to the stream server");
+        //log::info!("[STREAM] Response HTTP code: {}", response.status());
 
         let (write, read) = socket.split();
         Self { write, read }

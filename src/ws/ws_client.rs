@@ -15,8 +15,8 @@ impl WebSocket {
     pub async fn connect(url: &str) -> Self {
         let (mut socket, response) = connect(url).expect("Can't connect");
 
-        log::info!("[SOCKET] Connected to the server");
-        log::info!("[SOCKET] Response HTTP code: {}", response.status());
+        log::info!("Connected to the server");
+        //log::info!("Response HTTP code: {}", response.status());
 
         Self {
             url: url.to_string(),
@@ -30,7 +30,7 @@ impl WebSocket {
     }
 
     pub async fn re_connect(&mut self) {
-        log::info!("[SOCKET] Reconnecting to the server");
+        log::info!("Reconnecting to the server...");
         let url = self.url.to_owned();
         let (socket, _response) = connect(url).expect("Can't connect");
         self.socket = socket;

@@ -63,6 +63,7 @@ pub trait BrokerStream {
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
+    async fn is_market_open(&mut self, symbol: &str) -> bool;
     async fn get_instrument_pricing(&mut self, symbol: &str) -> Result<ResponseBody<Pricing>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
@@ -176,7 +177,7 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "[SOCKET] requesting {} data since {:?}",
+            "Requesting {} data since {:?}",
             time_frame,
             date::parse_time(from_date)
         );
@@ -229,6 +230,7 @@ impl BrokerStream for Xtb {
         let txt_msg = match msg {
             Message::Text(txt) => {
                 let data = self.parse_message(&txt).await.unwrap();
+
                 let mut result: Vec<MarketHour> = vec![];
 
                 let current_date = Local::now();
@@ -260,10 +262,10 @@ impl BrokerStream for Xtb {
                     result.push(market_hour);
                 }
 
-                // match self.get_instrument_pricing(&symbol).await {
-                //     Ok(_) => open = true,
-                //     Err(_) => open = false,
-                // };
+                match self.is_market_open(symbol).await {
+                    true => open = true,
+                    false => open = false,
+                };
 
                 ResponseBody {
                     response: ResponseType::GetMarketHours,
@@ -274,6 +276,31 @@ impl BrokerStream for Xtb {
         };
 
         Ok(txt_msg)
+    }
+
+    async fn is_market_open(&mut self, symbol: &str) -> bool {
+        let minutes = 5;
+        let from = (Local::now()).timestamp();
+        let res = self
+            .get_instrument_data(&symbol, minutes as usize, from)
+            .await
+            .unwrap();
+
+        match res.payload {
+            Some(inst) => {
+                if inst.data.len() > 0 {
+                    true
+                } else {
+                    log::warn!(
+                        "No {} data found in last {}. Market not open",
+                        symbol,
+                        minutes
+                    );
+                    false
+                }
+            }
+            None => false,
+        }
     }
 
     async fn open_trade(
