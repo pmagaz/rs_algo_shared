@@ -28,6 +28,7 @@ pub trait Indicator {
     where
         Self: Sized;
     fn next(&mut self, value: f64) -> Result<()>;
+    fn next_tmp(&mut self, value: f64);
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()>;
     fn update(&mut self, value: f64) -> Result<()>;
     fn update_tmp(&mut self, value: f64) -> Result<()>;
@@ -393,110 +394,7 @@ impl Indicators {
 
         Ok(())
     }
-    // pub fn next_delete2(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
-    //     let close = OHLC.3;
 
-    //     if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-    //         self.atr.next(close).unwrap();
-
-    //         if self.atr.get_data_a().len() > 0 {
-    //             self.atr.remove_a(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_MACD")
-    //         .unwrap()
-    //         .parse::<bool>()
-    //         .unwrap()
-    //     {
-    //         self.macd.next(close).unwrap();
-
-    //         if self.macd.get_data_a().len() > 0 {
-    //             self.macd.remove_a(0);
-    //             self.macd.remove_b(0);
-    //         }
-    //     }
-
-    //     // if env::var("INDICATORS_STOCH")
-    //     //     .unwrap()
-    //     //     .parse::<bool>()
-    //     //     .unwrap()
-    //     // {
-    //     //     if self.stoch.get_data_a().len() > 0 {
-    //     //         self.stoch.remove_a(0);
-    //     //         self.stoch.remove_b(0);
-    //     //     }
-    //     //     self.stoch.next(close).unwrap();
-    //     // }
-
-    //     if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-    //         self.rsi.next(close).unwrap();
-
-    //         if self.rsi.get_data_a().len() > 0 {
-    //             self.rsi.remove_a(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-    //         self.bb.next(close).unwrap();
-
-    //         if self.bb.get_data_a().len() > 0 {
-    //             self.bb.remove_a(0);
-    //             self.bb.remove_b(0);
-    //             self.bb.remove_c(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-    //         self.bbw.next(close).unwrap();
-
-    //         if self.bbw.get_data_a().len() > 0 {
-    //             self.bbw.remove_a(0);
-    //             self.bbw.remove_b(0);
-    //             self.bbw.remove_c(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_EMA_A")
-    //         .unwrap()
-    //         .parse::<bool>()
-    //         .unwrap()
-    //     {
-    //         self.ema_a.next(close).unwrap();
-
-    //         if self.ema_a.get_data_a().len() > 0 {
-    //             self.ema_a.remove_a(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_EMA_B")
-    //         .unwrap()
-    //         .parse::<bool>()
-    //         .unwrap()
-    //     {
-    //         self.ema_b.next(close).unwrap();
-
-    //         if self.ema_b.get_data_a().len() > 0 {
-    //             self.ema_b.remove_a(0);
-    //         }
-    //     }
-
-    //     if env::var("INDICATORS_EMA_C")
-    //         .unwrap()
-    //         .parse::<bool>()
-    //         .unwrap()
-    //     {
-    //         self.ema_c.next(close).unwrap();
-
-    //         if self.ema_c.get_data_a().len() > 0 {
-    //             self.ema_c.remove_a(0);
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
-
-    //pub fn update(&mut self, data: (DateTime<Local>, f64, f64, f64, f64, f64, bool)) -> Result<()> {
     pub fn update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
@@ -570,52 +468,62 @@ impl Indicators {
         prev_data: &Vec<Candle>,
     ) -> Result<()> {
         let close = candle.close();
+
+        self.atr.reset_tmp();
         self.ema_a.reset_tmp();
         self.ema_b.reset_tmp();
+        self.ema_c.reset_tmp();
         self.bb.reset_tmp();
+        self.bbw.reset_tmp();
+        self.rsi.reset_tmp();
+        self.macd.reset_tmp();
+        //self.stoch.reset_tmp();
 
-        for c in prev_data {
+        //WARMING
+        for prev_candle in prev_data.iter().filter(|x| x.is_closed == true) {
             if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-                self.atr.update_tmp(c.close()).unwrap();
+                self.atr.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-                self.bb.update_tmp(c.close()).unwrap();
+                self.bb.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-                self.bbw.update_tmp(c.close()).unwrap();
+                self.bbw.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_EMA_A")
                 .unwrap()
                 .parse::<bool>()
                 .unwrap()
             {
-                self.ema_a.update_tmp(c.close()).unwrap();
+                self.ema_a.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_EMA_B")
                 .unwrap()
                 .parse::<bool>()
                 .unwrap()
             {
-                self.ema_b.update_tmp(c.close()).unwrap();
+                self.ema_b.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_EMA_C")
                 .unwrap()
                 .parse::<bool>()
                 .unwrap()
             {
-                self.ema_c.update_tmp(c.close()).unwrap();
+                self.ema_c.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_MACD")
                 .unwrap()
                 .parse::<bool>()
                 .unwrap()
             {
-                self.macd.update_tmp(c.close()).unwrap();
+                self.macd.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-                self.rsi.update_tmp(c.close()).unwrap();
+                self.rsi.next_tmp(prev_candle.close());
             }
         }
+
+        //UPDATING LAST VALUE
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update_tmp(close).unwrap();

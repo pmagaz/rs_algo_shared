@@ -280,7 +280,7 @@ impl BrokerStream for Xtb {
 
     async fn is_market_open(&mut self, symbol: &str) -> bool {
         let minutes = 5;
-        let from = (Local::now()).timestamp();
+        let from = (Local::now() - date::Duration::minutes(minutes)).timestamp();
         let res = self
             .get_instrument_data(&symbol, minutes as usize, from)
             .await

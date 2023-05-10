@@ -59,6 +59,10 @@ impl Indicator for BollingerBW {
         Ok(())
     }
 
+    fn next_tmp(&mut self, value: f64) {
+        self.bb_tmp.next(value);
+    }
+
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
         let w = (a.upper - a.lower) / a.average;

@@ -58,10 +58,12 @@ impl Indicator for Adx {
         Ok(())
     }
 
+    fn next_tmp(&mut self, value: f64) {
+        self.adx_tmp.next(value);
+    }
+
     //FIXME MONEKY PATCHING
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        // let a = self.adx.next(&bar);
-        // self.data_a.push(a);
         Ok(())
     }
 

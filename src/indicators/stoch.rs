@@ -69,6 +69,10 @@ impl Indicator for Stoch {
         Ok(())
     }
 
+    fn next_tmp(&mut self, value: f64) {
+        self.stoch_tmp.next(value);
+    }
+
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.stoch.next(value);
         let b = self.ema.next(a);

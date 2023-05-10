@@ -455,18 +455,18 @@ impl Instrument {
 
         if candle.is_closed() {
             self.close_last_candle();
-            self.next_close_indicators(&last_candle);
+            self.close_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
-            let updated_candle = &self.data().last().unwrap().clone();
-            self.next_update_indicators(&updated_candle);
+            let updated_candle = &self.data.last().unwrap().clone();
+            self.update_indicators(&updated_candle);
         }
 
         Ok(candle)
     }
 
-    pub fn next_close_indicators(&mut self, candle: &Candle) {
+    pub fn close_indicators(&mut self, candle: &Candle) {
         let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
             .unwrap()
             .parse::<bool>()
@@ -483,16 +483,12 @@ impl Instrument {
         }
     }
 
-    pub fn next_update_indicators(&mut self, candle: &Candle) {
+    pub fn update_indicators(&mut self, candle: &Candle) {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
 
         if process_indicators {
-            let previous_bars = 15;
-            let len = self.data.len();
-            let slice = &self.data()[len - previous_bars..len - 1].to_vec();
-
             self.indicators
-                .create_tmp_indicators(candle, slice)
+                .create_tmp_indicators(candle, &self.data)
                 .unwrap();
         }
     }

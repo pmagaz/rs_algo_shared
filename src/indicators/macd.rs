@@ -75,6 +75,11 @@ impl Indicator for Macd {
         Ok(())
     }
 
+    fn next_tmp(&mut self, value: f64) {
+        let a = self.ema_a_tmp.next(value) - self.ema_b_tmp.next(value);
+        self.ema_c_tmp.next(a);
+    }
+
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }

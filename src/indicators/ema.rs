@@ -68,6 +68,10 @@ impl Indicator for Ema {
         Ok(())
     }
 
+    fn next_tmp(&mut self, value: f64) {
+        let leches = self.ema_tmp.next(value);
+    }
+
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
