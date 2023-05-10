@@ -3,13 +3,15 @@ use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
 use ta::indicators::{KeltnerChannel, KeltnerChannelOutput};
-use ta::Next;
+use ta::{Next, Reset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeltnerC {
+    #[serde(skip_deserializing)]
     kc: KeltnerChannel,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
+    data_c: Vec<f64>,
 }
 
 impl Indicator for KeltnerC {
@@ -18,6 +20,7 @@ impl Indicator for KeltnerC {
             kc: KeltnerChannel::new(20, 2.0).unwrap(),
             data_a: vec![],
             data_b: vec![],
+            data_c: vec![],
         })
     }
 
@@ -26,26 +29,23 @@ impl Indicator for KeltnerC {
     }
 
     fn get_current_a(&self) -> &f64 {
-        let max = self.data_a.len() - 1;
-        &self.data_a[max]
+        &self.data_a.last().unwrap()
     }
 
     fn get_data_b(&self) -> &Vec<f64> {
-        &self.data_a
+        &self.data_b
     }
 
     fn get_current_b(&self) -> &f64 {
-        let max = self.data_a.len() - 1;
-        &self.data_a[max]
+        &self.data_b.last().unwrap()
     }
 
     fn get_data_c(&self) -> &Vec<f64> {
-        &self.data_a
+        &self.data_c
     }
 
     fn get_current_c(&self) -> &f64 {
-        let max = self.data_a.len() - 1;
-        &self.data_a[max]
+        &self.data_c.last().unwrap()
     }
 
     fn next(&mut self, value: f64) -> Result<()> {

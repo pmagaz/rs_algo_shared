@@ -290,8 +290,6 @@ impl Instrument {
             .parse::<bool>()
             .unwrap();
 
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         let process_patterns = env::var("PATTERNS").unwrap().parse::<bool>().unwrap();
         let process_divergences = env::var("DIVERGENCES").unwrap().parse::<bool>().unwrap();
@@ -306,7 +304,7 @@ impl Instrument {
             .unwrap();
 
         //FIXME Instrument should be Optional
-        self.reset();
+        self.init();
 
         let candles: Vec<Candle> = data
             .iter()
@@ -461,55 +459,11 @@ impl Instrument {
             //self.next_peaks(&last_candle);
         } else {
             self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
+            let updated_candle = &self.data().last().unwrap().clone();
+            self.next_update_indicators(&updated_candle);
         }
-        // log::info!("CANDLES NEXT SIZE {:?}", self.data().len());
-        // log::info!(
-        //     "INDICATORS NEXT SIZE {:?}",
-        //     self.indicators.ema_a().get_data_a().len()
-        // );
+
         Ok(candle)
-    }
-
-    // pub fn next_stream(
-    //     &mut self,
-    //     data: (DateTime<Local>, f64, f64, f64, f64, f64),
-    // ) -> Result<Candle> {
-    //     let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
-    //         .unwrap()
-    //         .parse::<bool>()
-    //         .unwrap();
-
-    //     let next_id = self.data.len();
-    //     let last_candle = &self.data().last().unwrap().clone();
-    //     let time_frame = &self.time_frame.clone();
-
-    //     let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
-    //     let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
-    //     if candle.is_closed() {
-    //         self.close_last_candle();
-    //         self.next_close_indicators(&last_candle);
-    //     } else {
-    //         self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
-    //     }
-
-    //     Ok(candle)
-    // }
-
-    pub fn next_indicators(&mut self, candle: &Candle) {
-        log::info!("NEXT INDICATORS");
-        let logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap();
-        let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
-        if process_indicators {
-            let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
-            let delete_previous = true;
-            self.indicators
-                .next(ohlc_indicators, delete_previous, &self.time_frame)
-                .unwrap();
-            //self.indicators.update(ohlc_indicators).unwrap();
-        }
     }
 
     pub fn next_close_indicators(&mut self, candle: &Candle) {
@@ -517,26 +471,31 @@ impl Instrument {
             .unwrap()
             .parse::<bool>()
             .unwrap();
+
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
+
             self.indicators
-                .next_update_delete(ohlc_indicators, &self.time_frame().clone())
+                .next_close_delete(ohlc_indicators, &self.time_frame().clone())
                 .unwrap();
             self.indicators.duplicate_last().unwrap();
         }
     }
 
-    // pub fn update_last_candle(&mut self, pricing: &Pricing) {
-    //     let last_candle = self.data.last_mut().unwrap();
-    //     if !last_candle.is_closed() {
-    //         let bid = pricing.bid();
-    //         let previous_open = last_candle.open();
-    //         let previous_high = last_candle.high();
-    //         self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
-    //         //last_candle.set_close(pricing.bid());
-    //     }
-    // }
+    pub fn next_update_indicators(&mut self, candle: &Candle) {
+        let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
+
+        if process_indicators {
+            let previous_bars = 25;
+            let len = self.data.len();
+            let slice = &self.data()[len - previous_bars..len - 1].to_vec();
+
+            self.indicators
+                .create_tmp_indicators(candle, slice)
+                .unwrap();
+        }
+    }
 
     pub fn next_peaks(&mut self, candle: &Candle) {
         let _logarithmic_scanner = env::var("LOGARITHMIC_SCANNER")
@@ -630,7 +589,7 @@ impl Instrument {
         self.data.push(candle);
     }
 
-    pub fn reset(&mut self) {
+    pub fn init(&mut self) {
         self.data = vec![];
         self.peaks = Peaks::new();
         self.horizontal_levels = HorizontalLevels::new();

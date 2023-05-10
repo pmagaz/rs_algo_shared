@@ -489,6 +489,7 @@ pub fn resolve_active_orders(
 }
 
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
 
     let data = &instrument.data;
@@ -759,24 +760,29 @@ fn get_order_activation_price(
     prev_candle: &Candle,
     activation_source: &str,
 ) -> (f64, f64, f64, f64) {
-    match activation_source.as_ref() {
-        "highs_lows" => (
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
+
+    match order_engine.as_ref() {
+        "broker" => (
             candle.high(),
             candle.low(),
             prev_candle.high(),
             prev_candle.low(),
         ),
-        "close" => (
-            candle.close(),
-            candle.close(),
-            prev_candle.close(),
-            prev_candle.close(),
-        ),
-        _ => (
-            candle.close(),
-            candle.close(),
-            prev_candle.close(),
-            prev_candle.close(),
-        ),
+        "bot" => match activation_source.as_ref() {
+            "highs_lows" => (
+                candle.high(),
+                candle.low(),
+                prev_candle.high(),
+                prev_candle.low(),
+            ),
+            _ => (
+                candle.close(),
+                candle.close(),
+                prev_candle.close(),
+                prev_candle.close(),
+            ),
+        },
+        _ => panic!("ORDER_ENGINE not found!"),
     }
 }

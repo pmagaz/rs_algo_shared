@@ -262,6 +262,7 @@ pub fn resolve_trade_in(
     order: Option<&Order>,
 ) -> TradeResult {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let index = calculate_trade_index(index, order, &execution_mode);
 
     if trade_type.is_entry() {
@@ -270,9 +271,12 @@ pub fn resolve_trade_in(
         let current_date = current_candle.date();
         let id = uuid::generate_ts_id(current_date);
 
-        let price = match order {
-            Some(order) => order.target_price,
-            None => current_candle.open(),
+        let price = match order_engine.as_ref() {
+            "broker" => match order {
+                Some(order) => order.target_price,
+                None => current_candle.open(),
+            },
+            _ => current_candle.open(),
         };
 
         let ask = match trade_type.is_long() {
@@ -327,6 +331,7 @@ pub fn resolve_trade_out(
         .unwrap()
         .parse::<bool>()
         .unwrap();
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
 
     let index = calculate_trade_index(index, order, &execution_mode);
     let current_candle = instrument.data.get(index).unwrap();
@@ -338,9 +343,12 @@ pub fn resolve_trade_out(
         _ => current_candle.open(),
     };
 
-    let price_out = match order {
-        Some(order) => order.target_price,
-        None => close_trade_price,
+    let price_out = match order_engine.as_ref() {
+        "broker" => match order {
+            Some(order) => order.target_price,
+            None => close_trade_price,
+        },
+        _ => close_trade_price,
     };
 
     let (price_in, price_out) = match execution_mode.is_back_test() {
@@ -368,8 +376,8 @@ pub fn resolve_trade_out(
     };
 
     if trade_type.is_stop() && profit > 0. {
-        panic!(
-            "[PANIC] Profitable stop loss! {} @ {:?} {} ",
+        log::error!(
+            "Profitable stop loss! {} @ {:?} {} ",
             index,
             (price_in, price_out),
             profit
@@ -452,10 +460,7 @@ pub fn calculate_trade_index(
     execution_mode: &ExecutionMode,
 ) -> usize {
     match execution_mode.is_back_test() {
-        true => match order {
-            Some(_order) => index,
-            None => index + 1,
-        },
+        true => index + 1,
         false => index,
     }
 }

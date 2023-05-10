@@ -3,11 +3,14 @@ use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
 use ta::indicators::BollingerBands;
-use ta::Next;
+use ta::{Next, Reset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BollingerBW {
+    #[serde(skip_deserializing)]
     bb: BollingerBands,
+    #[serde(skip_deserializing)]
+    bb_tmp: BollingerBands,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
     data_c: Vec<f64>,
@@ -17,6 +20,7 @@ impl Indicator for BollingerBW {
     fn new() -> Result<Self> {
         Ok(Self {
             bb: BollingerBands::new(20, 2.0).unwrap(),
+            bb_tmp: BollingerBands::new(20, 2.0).unwrap(),
             data_a: vec![],
             data_b: vec![],
             data_c: vec![],
@@ -28,8 +32,7 @@ impl Indicator for BollingerBW {
     }
 
     fn get_current_a(&self) -> &f64 {
-        let max = self.data_a.len() - 1;
-        &self.data_a[max]
+        &self.data_a.last().unwrap()
     }
 
     fn get_data_b(&self) -> &Vec<f64> {
@@ -37,8 +40,7 @@ impl Indicator for BollingerBW {
     }
 
     fn get_current_b(&self) -> &f64 {
-        let max = self.data_a.len() - 1;
-        &self.data_a[max]
+        &self.data_b.last().unwrap()
     }
 
     fn get_data_c(&self) -> &Vec<f64> {
@@ -46,8 +48,7 @@ impl Indicator for BollingerBW {
     }
 
     fn get_current_c(&self) -> &f64 {
-        let max = self.data_c.len() - 1;
-        &self.data_c[max]
+        &self.data_c.last().unwrap()
     }
 
     //FIXME return self to get values from other indicators
@@ -55,9 +56,6 @@ impl Indicator for BollingerBW {
         let a = self.bb.next(value);
         let w = (a.upper - a.lower) / a.average;
         self.data_a.push(w);
-        // self.data_a.push(a.upper);
-        // self.data_b.push(a.lower);
-        // self.data_c.push(a.average);
         Ok(())
     }
 
@@ -67,6 +65,18 @@ impl Indicator for BollingerBW {
         let last_a = self.data_a.last_mut().unwrap();
         *last_a = w;
         Ok(())
+    }
+
+    fn update_tmp(&mut self, value: f64) -> Result<()> {
+        let a = self.bb_tmp.next(value);
+        let w = (a.upper - a.lower) / a.average;
+        let last_a = self.data_a.last_mut().unwrap();
+        *last_a = w;
+        Ok(())
+    }
+
+    fn reset_tmp(&mut self) {
+        self.bb_tmp.reset();
     }
 
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {

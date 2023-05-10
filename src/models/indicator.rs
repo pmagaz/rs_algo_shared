@@ -103,6 +103,8 @@ pub struct CompactStoch {
 pub struct Ema {
     #[serde(skip_deserializing)]
     pub ema: ExponentialMovingAverage,
+    #[serde(skip_deserializing)]
+    pub ema_tmp: ExponentialMovingAverage,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
@@ -112,6 +114,8 @@ pub struct Ema {
 pub struct Atr {
     #[serde(skip_deserializing)]
     pub atr: AverageTrueRange,
+    #[serde(skip_deserializing)]
+    pub atr_tmp: AverageTrueRange,
     pub data_a: Vec<f64>,
     #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,

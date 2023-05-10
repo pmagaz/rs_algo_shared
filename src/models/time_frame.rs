@@ -353,7 +353,7 @@ fn get_htf_indexes<'a>(
                 .last()
                 .and_then(|val| match execution_mode.is_back_test() {
                     //TO SIMULATE THE LACK OF NOT CLOSED INDICATORS IN BOT
-                    true => val.checked_sub(1),
+                    true => Some(*val),
                     false => Some(*val),
                 })
                 .unwrap_or(0);
