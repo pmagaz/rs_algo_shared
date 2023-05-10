@@ -487,7 +487,7 @@ impl Instrument {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
 
         if process_indicators {
-            let previous_bars = 25;
+            let previous_bars = 15;
             let len = self.data.len();
             let slice = &self.data()[len - previous_bars..len - 1].to_vec();
 
