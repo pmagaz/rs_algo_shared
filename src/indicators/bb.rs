@@ -83,9 +83,11 @@ impl Indicator for BollingerB {
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
         let last_c = self.data_c.last_mut().unwrap();
+
         *last_a = a.upper;
         *last_b = a.lower;
         *last_c = a.average;
+
         Ok(())
     }
 

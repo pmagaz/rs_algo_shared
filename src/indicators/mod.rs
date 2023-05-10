@@ -480,7 +480,13 @@ impl Indicators {
         //self.stoch.reset_tmp();
 
         //WARMING
-        for prev_candle in prev_data.iter().filter(|x| x.is_closed == true) {
+        for prev_candle in prev_data
+            .iter()
+            .rev()
+            .take(50)
+            .rev()
+            .filter(|x| x.is_closed == true)
+        {
             if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
                 self.atr.next_tmp(prev_candle.close());
             }
