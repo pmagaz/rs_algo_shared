@@ -575,8 +575,8 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.stoch.update_tmp(close).unwrap();
-            self.stoch.reset_tmp();
+            //self.stoch.update_tmp(close).unwrap();
+            //self.stoch.reset_tmp();
         }
 
         Ok(())
