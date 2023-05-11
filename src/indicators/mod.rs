@@ -469,16 +469,6 @@ impl Indicators {
     ) -> Result<()> {
         let close = candle.close();
 
-        self.atr.reset_tmp();
-        self.ema_a.reset_tmp();
-        self.ema_b.reset_tmp();
-        self.ema_c.reset_tmp();
-        self.bb.reset_tmp();
-        self.bbw.reset_tmp();
-        self.rsi.reset_tmp();
-        self.macd.reset_tmp();
-        //self.stoch.reset_tmp();
-
         //WARMING
         for prev_candle in prev_data
             .iter()
@@ -529,16 +519,19 @@ impl Indicators {
             }
         }
 
-        //UPDATING LAST VALUE
+        //UPDATING LAST VALUE & RESET
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update_tmp(close).unwrap();
+            self.atr.reset_tmp();
         }
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
             self.bb.update_tmp(close).unwrap();
+            self.bb.reset_tmp();
         }
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
             self.bbw.update_tmp(close).unwrap();
+            self.bbw.reset_tmp();
         }
         if env::var("INDICATORS_EMA_A")
             .unwrap()
@@ -546,6 +539,7 @@ impl Indicators {
             .unwrap()
         {
             self.ema_a.update_tmp(close).unwrap();
+            self.ema_a.reset_tmp();
         }
         if env::var("INDICATORS_EMA_B")
             .unwrap()
@@ -553,6 +547,7 @@ impl Indicators {
             .unwrap()
         {
             self.ema_b.update_tmp(close).unwrap();
+            self.ema_b.reset_tmp();
         }
         if env::var("INDICATORS_EMA_C")
             .unwrap()
@@ -560,6 +555,7 @@ impl Indicators {
             .unwrap()
         {
             self.ema_c.update_tmp(close).unwrap();
+            self.ema_c.reset_tmp();
         }
         if env::var("INDICATORS_MACD")
             .unwrap()
@@ -567,9 +563,20 @@ impl Indicators {
             .unwrap()
         {
             self.macd.update_tmp(close).unwrap();
+            self.macd.reset_tmp();
         }
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
             self.rsi.update_tmp(close).unwrap();
+            self.rsi.reset_tmp();
+        }
+
+        if env::var("INDICATORS_STOCH")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+        {
+            self.stoch.update_tmp(close).unwrap();
+            self.stoch.reset_tmp();
         }
 
         Ok(())

@@ -349,7 +349,7 @@ fn get_htf_indexes<'a>(
                 .map(|(id, _x)| id)
                 .collect();
 
-            let upper_tf_indx = upper_indexes
+            let upper_tf_idx = upper_indexes
                 .last()
                 .and_then(|val| match execution_mode.is_back_test() {
                     //TO SIMULATE THE LACK OF NOT CLOSED INDICATORS IN BOT
@@ -358,9 +358,9 @@ fn get_htf_indexes<'a>(
                 })
                 .unwrap_or(0);
 
-            let prev_upper_tf_indx = get_prev_index(upper_tf_indx);
+            let prev_upper_tf_idx = get_prev_index(upper_tf_idx);
 
-            (upper_tf_indx, prev_upper_tf_indx, htf_instrument)
+            (upper_tf_idx, prev_upper_tf_idx, htf_instrument)
         }
         _ => (0, 0, instrument),
     }
