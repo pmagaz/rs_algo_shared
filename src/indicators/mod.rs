@@ -6,9 +6,11 @@ pub mod ema;
 pub mod macd;
 pub mod rsi;
 //pub mod sd;
+pub mod dmi;
 pub mod stoch;
 
 use crate::error::Result;
+use crate::indicators::adx::Adx;
 use crate::indicators::atr::Atr;
 use crate::indicators::bb::BollingerB;
 use crate::indicators::bbw::BollingerBW;
@@ -18,7 +20,6 @@ use crate::indicators::rsi::Rsi;
 use crate::models::time_frame::TimeFrameType;
 use crate::scanner::candle::Candle;
 
-use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::marker::Sized;
@@ -57,7 +58,7 @@ pub struct Indicators {
     pub macd: Macd,
     //pub stoch: Stoch,
     pub atr: Atr,
-    // //pub adx: Adx,
+    pub adx: Adx,
     pub rsi: Rsi,
     pub bb: BollingerB,
     pub bbw: BollingerBW,
@@ -77,7 +78,7 @@ impl Indicators {
             rsi: Rsi::new().unwrap(),
             //stoch: Stoch::new().unwrap(),
             atr: Atr::new().unwrap(),
-            //adx: Adx::new().unwrap(),
+            adx: Adx::new().unwrap(),
             bb: BollingerB::new().unwrap(),
             bbw: BollingerBW::new().unwrap(),
             ema_a: Ema::new_ema(*ema_a).unwrap(),
@@ -90,9 +91,9 @@ impl Indicators {
         &self.atr
     }
 
-    // pub fn adx(&self) -> &Adx {
-    //     &self.adx
-    // }
+    pub fn adx(&self) -> &Adx {
+        &self.adx
+    }
 
     pub fn bb(&self) -> &BollingerB {
         &self.bb
@@ -132,6 +133,15 @@ impl Indicators {
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
         //log::info!("INDICATORS  SIZE {:?}", self.ema_a().get_data_a().len());
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            self.adx.next_OHLC(OHLC).unwrap();
+
+            if delete && self.adx.get_data_a().len() > max_bars {
+                self.adx.remove_a(0);
+                self.adx.remove_b(0);
+                self.adx.remove_c(0);
+            }
+        }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
@@ -236,10 +246,9 @@ impl Indicators {
     ) -> Result<()> {
         let close = OHLC.3;
 
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            self.adx.update(close).unwrap();
+        }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update(close).unwrap();
@@ -310,10 +319,12 @@ impl Indicators {
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
 
         self.next_update(OHLC, time_frame).unwrap();
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
+
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            if self.adx.get_data_a().len() > max_bars {
+                self.adx.remove_a(0);
+            }
+        }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             if self.atr.get_data_a().len() > max_bars {
@@ -398,10 +409,9 @@ impl Indicators {
     pub fn update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let close = OHLC.3;
 
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            self.adx.update_tmp(close).unwrap();
+        }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update_tmp(close).unwrap();
@@ -477,6 +487,9 @@ impl Indicators {
             .rev()
             .filter(|x| x.is_closed == true)
         {
+            if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+                self.adx.next_tmp(prev_candle.close());
+            }
             if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
                 self.atr.next_tmp(prev_candle.close());
             }
@@ -520,6 +533,11 @@ impl Indicators {
         }
 
         //UPDATING LAST VALUE & RESET
+
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            self.adx.update_tmp(close).unwrap();
+            self.adx.reset_tmp();
+        }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.update_tmp(close).unwrap();
@@ -583,10 +601,10 @@ impl Indicators {
     }
 
     pub fn duplicate_last(&mut self) -> Result<()> {
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
+        if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+            self.adx.duplicate_last();
+        }
+
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.duplicate_last();
         }
