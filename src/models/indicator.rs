@@ -47,8 +47,8 @@ pub struct Indicators {
 pub struct CompactIndicators {
     pub macd: CompactIndicator,
     //pub stoch: CompactIndicator,
-    pub adx: CompactIndicator,
     pub atr: CompactIndicator,
+    //pub adx: CompactIndicator,
     pub bb: CompactIndicator,
     pub bbw: CompactIndicator,
     pub rsi: CompactIndicator,
@@ -126,6 +126,7 @@ pub struct Adx {
     #[serde(skip_deserializing)]
     pub adx: AverageDirectionalIndex,
     pub data_a: Vec<f64>,
+    #[serde(skip_deserializing)]
     pub data_b: Vec<f64>,
 }
 

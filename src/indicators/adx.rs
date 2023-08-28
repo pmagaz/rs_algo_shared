@@ -1,14 +1,16 @@
 use super::Indicator;
 use crate::error::Result;
-use crate::indicators::dmi::Dmi;
+
 use serde::{Deserialize, Serialize};
+use ta::indicators::AverageDirectionalIndex;
+use ta::{Next, Reset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Adx {
     #[serde(skip_deserializing)]
-    adx: Dmi,
+    adx: AverageDirectionalIndex,
     #[serde(skip_deserializing)]
-    adx_tmp: Dmi,
+    adx_tmp: AverageDirectionalIndex,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
     data_c: Vec<f64>,
@@ -17,8 +19,8 @@ pub struct Adx {
 impl Indicator for Adx {
     fn new() -> Result<Self> {
         Ok(Self {
-            adx: Dmi::new(14),
-            adx_tmp: Dmi::new(14),
+            adx: AverageDirectionalIndex::new(14).unwrap(),
+            adx_tmp: AverageDirectionalIndex::new(14).unwrap(),
             data_a: vec![],
             data_b: vec![],
             data_c: vec![],
@@ -38,7 +40,8 @@ impl Indicator for Adx {
     }
 
     fn get_current_b(&self) -> &f64 {
-        &self.data_b.last().unwrap()
+        let max = self.data_a.len() - 1;
+        &self.data_b[max]
     }
 
     fn get_data_c(&self) -> &Vec<f64> {
@@ -50,27 +53,24 @@ impl Indicator for Adx {
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
+        let a = self.adx.next(value);
+        self.data_a.push(a);
         Ok(())
     }
 
     fn next_tmp(&mut self, value: f64) {
-        //self.adx_tmp.next(value);
+        self.adx_tmp.next(value);
     }
 
     //FIXME MONEKY PATCHING
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        let (adx, pos, neg) = self.adx.next(OHLC).unwrap();
-        self.data_a.push(pos);
-        self.data_b.push(neg);
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 
     fn update(&mut self, value: f64) -> Result<()> {
-        // let (adx, pos, neg) = self.adx.next(value).unwrap();
-        // let last_a = self.data_a.last_mut().unwrap();
-        // let last_b = self.data_b.last_mut().unwrap();
-        // *last_a = pos;
-        // *last_b = neg;
+        let a = self.adx.next(value);
+        let last = self.data_a.last_mut().unwrap();
+        *last = a;
         Ok(())
     }
 
@@ -79,11 +79,9 @@ impl Indicator for Adx {
     }
 
     fn update_tmp(&mut self, value: f64) -> Result<()> {
-        // let (pos, neg) = self.adx_tmp.next(value).unwrap();
-        // let last_a = self.data_a.last_mut().unwrap();
-        // let last_b = self.data_b.last_mut().unwrap();
-        // *last_a = pos;
-        // *last_b = neg;
+        let a = self.adx_tmp.next(value);
+        let last = self.data_a.last_mut().unwrap();
+        *last = a;
         Ok(())
     }
 
@@ -101,8 +99,6 @@ impl Indicator for Adx {
 
     fn duplicate_last(&mut self) {
         let a = self.data_a.last().unwrap();
-        let b = self.data_b.last().unwrap();
-        self.data_a.push(*a);
-        self.data_b.push(*b);
+        self.data_a.insert(0, 0.);
     }
 }

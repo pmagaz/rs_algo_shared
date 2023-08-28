@@ -8,5 +8,4 @@ pub mod regression;
 pub mod slope_intercept;
 pub mod status;
 pub mod symbols;
-pub mod trend;
 pub mod uuid;
