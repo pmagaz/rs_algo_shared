@@ -263,6 +263,7 @@ pub fn resolve_trade_in(
 ) -> TradeResult {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
+    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let index = calculate_trade_index(index, order, &execution_mode);
 
     if trade_type.is_entry() {
@@ -276,7 +277,13 @@ pub fn resolve_trade_in(
                 Some(order) => order.target_price,
                 None => current_candle.open(),
             },
-            _ => current_candle.open(),
+            "bot" | _ => match order {
+                Some(order) => match activation_source.as_ref() {
+                    "close" => current_candle.open(),
+                    "highs_lows" | _ => order.target_price,
+                },
+                None => current_candle.open(),
+            },
         };
 
         let ask = match trade_type.is_long() {
