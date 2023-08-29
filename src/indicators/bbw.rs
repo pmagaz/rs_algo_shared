@@ -51,11 +51,11 @@ impl Indicator for BollingerBW {
         &self.data_c.last().unwrap()
     }
 
-    //FIXME return self to get values from other indicators
     fn next(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-        let w = (a.upper - a.lower) / a.average;
-        self.data_a.push(w);
+        self.data_a.push(a.upper);
+        self.data_b.push(a.lower);
+        self.data_c.push(a.average);
         Ok(())
     }
 
@@ -63,28 +63,36 @@ impl Indicator for BollingerBW {
         self.bb_tmp.next(value);
     }
 
+    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
+        Ok(())
+    }
+
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-        let w = (a.upper - a.lower) / a.average;
         let last_a = self.data_a.last_mut().unwrap();
-        *last_a = w;
+        let last_b = self.data_b.last_mut().unwrap();
+        let last_c = self.data_c.last_mut().unwrap();
+        *last_a = a.upper;
+        *last_b = a.lower;
+        *last_c = a.average;
         Ok(())
     }
 
     fn update_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.bb_tmp.next(value);
-        let w = (a.upper - a.lower) / a.average;
         let last_a = self.data_a.last_mut().unwrap();
-        *last_a = w;
+        let last_b = self.data_b.last_mut().unwrap();
+        let last_c = self.data_c.last_mut().unwrap();
+
+        *last_a = a.upper;
+        *last_b = a.lower;
+        *last_c = a.average;
+
         Ok(())
     }
 
     fn reset_tmp(&mut self) {
         self.bb_tmp.reset();
-    }
-
-    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        Ok(())
     }
 
     fn remove_a(&mut self, index: usize) -> f64 {
