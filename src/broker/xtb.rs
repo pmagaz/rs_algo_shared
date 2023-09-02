@@ -400,7 +400,7 @@ impl Xtb {
             };
 
             //FILTER ONLY AMERICAN STOCKS AND FX, CRYPTO
-            if symbol.contains(".US") || !element.contains(".") {
+            if symbol.contains(".US") || !symbol.contains(".") {
 
                 result.push(Symbol {
                     symbol,
