@@ -35,11 +35,6 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Crypto"
     },
     {
-        "symbol": "BINANCECOIN",
-        "name": "BINANCECOIN",
-        "sector": "Crypto"
-    },
-    {
         "symbol": "BITCOINCASH",
         "name": "BITCOINCASH",
         "sector": "Crypto"

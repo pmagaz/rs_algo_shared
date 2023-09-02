@@ -399,12 +399,17 @@ impl Xtb {
                 _ => panic!("Description parse error"),
             };
 
-            result.push(Symbol {
-                symbol,
-                currency,
-                category,
-                description,
-            });
+            //FILTER ONLY AMERICAN STOCKS AND FX, CRYPTO
+            if symbol.contains(".US") || !element.contains(".") {
+
+                result.push(Symbol {
+                    symbol,
+                    currency,
+                    category,
+                    description,
+                });
+
+            }
         }
         Ok(result)
     }
