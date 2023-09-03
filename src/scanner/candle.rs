@@ -254,6 +254,7 @@ impl CandleBuilder {
             && ((open - low) / (0.001 + high - low) >= 0.7)
             && prev_close < prev_open
             && prev_high > high
+            && prev_low > low
     }
 
     fn is_bearish_karakasa(&self) -> bool {
