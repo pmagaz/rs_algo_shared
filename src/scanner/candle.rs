@@ -249,16 +249,16 @@ impl CandleBuilder {
         // ((H-L)>3*(O-C)AND((C-L)/(.001+H-L)>0.6)AND((O-L)/(.001+H-L)>0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
         (high - low) > 3. * (open - close)
-            && ((close - low) / (0.001 + high - low) > 0.6)
-            && ((open - low) / (0.001 + high - low) > 0.6)
+            && ((close - low) / (0.001 + high - low) >= 0.7)
+            && ((open - low) / (0.001 + high - low) >= 0.7)
     }
 
     fn is_bearish_karakasa(&self) -> bool {
         // (((H – L) > 3 * (O – C)) AND ((H – C) / (.001 + H – L) > 0.6) AND ((H – O) / (.001 + H – L) > 0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
         ((high - low) > 3. * (open - close))
-            && ((high - close) / (0.001 + high - low) > 0.6)
-            && ((high - open) / (0.001 + high - low) > 0.6)
+            && ((high - close) / (0.001 + high - low) >= 0.7)
+            && ((high - open) / (0.001 + high - low) >= 0.7)
     }
 
     fn is_bullish_star(&self) -> bool {
