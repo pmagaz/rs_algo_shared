@@ -316,11 +316,11 @@ impl CandleBuilder {
     fn is_engulfing(&self) -> bool {
         //(O1 > C1) AND (C > O) AND (C >= O1) AND (C1 >= O) AND ((C – O) > (O1 – C1))
         let (open, _high, _low, close) = &self.get_current_ohlc();
-        let (prev_open, _prev_high, _prev_low, prev_close) = &self.get_previous_ohlc(0);
+        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
         (prev_open > prev_close)
             && (close > open)
-            && (close >= prev_open)
-            && (prev_close >= open)
+            && (close >= prev_high)
+            && (open <= prev_low)
             && ((close - open) > (prev_open - prev_close))
     }
 
@@ -330,8 +330,8 @@ impl CandleBuilder {
         let (prev_open, _prev_high, _prev_low, prev_close) = &self.get_previous_ohlc(0);
         (prev_close > prev_open)
             && (open > close)
-            && (open >= prev_close)
-            && (prev_open >= close)
+            && (close <= prev_low)
+            && (open >= prev_high)
             && ((open - close) > (prev_close - prev_open))
     }
 
