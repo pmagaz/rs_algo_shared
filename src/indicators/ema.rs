@@ -107,8 +107,8 @@ impl Indicator for Ema {
     }
 
     fn duplicate_last(&mut self) {
-        let a = self.data_a.last().unwrap();
-        //log::info!("7777777777 {:?}", self.data_a.len());
-        self.data_a.push(*a);
+        if let Some(&a) = self.data_a.last() {
+            self.data_a.push(a);
+        }
     }
 }

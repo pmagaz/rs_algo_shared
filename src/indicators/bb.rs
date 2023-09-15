@@ -108,11 +108,14 @@ impl Indicator for BollingerB {
     }
 
     fn duplicate_last(&mut self) {
-        let a = self.data_a.last().unwrap();
-        let b = self.data_b.last().unwrap();
-        let c = self.data_c.last().unwrap();
-        self.data_a.push(*a);
-        self.data_b.push(*b);
-        self.data_c.push(*c);
+        if let Some(&a) = self.data_a.last() {
+            self.data_a.push(a);
+        }
+        if let Some(&b) = self.data_b.last() {
+            self.data_b.push(b);
+        }
+        if let Some(&c) = self.data_c.last() {
+            self.data_c.push(c);
+        }
     }
 }

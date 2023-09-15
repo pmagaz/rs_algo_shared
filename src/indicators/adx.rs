@@ -98,7 +98,8 @@ impl Indicator for Adx {
     }
 
     fn duplicate_last(&mut self) {
-        let a = self.data_a.last().unwrap();
-        self.data_a.insert(0, 0.);
+        if let Some(&a) = self.data_a.last() {
+            self.data_a.insert(0, 0.);
+        }
     }
 }
