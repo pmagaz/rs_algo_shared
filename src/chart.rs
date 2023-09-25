@@ -36,7 +36,7 @@ impl Chart {
             ".png",
         ]
         .concat();
-        println!("CHART PATH {}", output_file);
+        log::info!("CHART PATH {}", output_file);
         let min_price = instrument.min_price;
         let max_price = instrument.max_price;
 
@@ -448,7 +448,7 @@ impl Chart {
             .unwrap();
 
         root.present().expect("[Chart] Error. Can't save file!");
-        println!("[Chart] File saved in {}", output_file);
+        log::info!("[Chart] File saved in {}", output_file);
         Ok(())
     }
 }

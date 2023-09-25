@@ -345,7 +345,7 @@ impl Xtb {
             },
 
             _ => {
-                println!("[Error] {:?}", msg);
+                log::error!("[Error] {:?}", msg);
                 Response {
                     msg_type: MessageType::Other,
                     symbol: "".to_owned(),

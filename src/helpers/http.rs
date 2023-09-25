@@ -1,6 +1,8 @@
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::time::Duration;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpMethod {
@@ -21,22 +23,25 @@ pub async fn request<T>(url: &str, data: &T, method: HttpMethod) -> Result<Respo
 where
     T: Serialize + Deserialize<'static> + Debug,
 {
-    // Serialize the data to JSON and calculate the size of the request body
     let request_body = serde_json::to_string(data).unwrap();
     let request_size = request_body.len();
 
-    println!(
-        "[HTTP] {:?} request to {} with request size: {} bytes",
+    log::info!(
+        "[HTTP] {:?} request to {}. Size: {} bytes",
         method, url, request_size
     );
 
-    let client = Client::new();
+    let client = Client::builder()
+        .timeout(Duration::from_secs(15))
+        .user_agent("rs-algo-scanner")
+        .build()?;
+
     let result = match method {
-        HttpMethod::Post => Client::builder().build()?.post(url),
-        HttpMethod::Put => Client::builder().build()?.put(url),
-        HttpMethod::Get => Client::builder().build()?.get(url),
-        HttpMethod::Patch => Client::builder().build()?.patch(url),
-        HttpMethod::Delete => Client::builder().build()?.delete(url),
+        HttpMethod::Post => client.post(url),
+        HttpMethod::Put => client.put(url),
+        HttpMethod::Get => client.get(url),
+        HttpMethod::Patch => client.patch(url),
+        HttpMethod::Delete => client.delete(url),
     };
 
     result
@@ -45,8 +50,3 @@ where
         .send()
         .await
 }
-
-
-
-
-
