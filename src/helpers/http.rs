@@ -28,7 +28,7 @@ where
 
     log::info!(
         "HTTP {:?} request to {}. Size: {} bytes",
-        method.to_uppercase(), url, request_size
+        method , url, request_size
     );
 
     let client = Client::builder()
