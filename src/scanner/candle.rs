@@ -27,6 +27,7 @@ pub enum CandleType {
     BearishCrows,
     BullishGap,
     BearishGap,
+    Reversal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -245,6 +246,38 @@ impl CandleBuilder {
         (open.floor() == close.floor()) || (open - close).abs() <= ((high - low) * 0.1)
     }
 
+    fn is_reversal(&self) -> bool {
+        //PREVIUS WAS KARAKASA
+        let (open, high, low, close) = &self.get_previous_ohlc(0);
+        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(1);
+        let previous_was_karakasa = (high - low) > 3. * (open - close)
+            && ((close - low) / (0.001 + high - low) >= 0.7)
+            && ((open - low) / (0.001 + high - low) >= 0.7)
+            //&& prev_close < prev_open
+            && prev_high > high
+            && prev_low > low;
+
+        //CURRENT
+        let (open, high, low, close) = &self.get_current_ohlc();
+
+        //MARUBOZU
+        let high_shadow = (high - close) / close;
+        let low_shadow = (low - open) / open;
+        let is_marubozu = (open <= low && low_shadow < 0.1) && (high >= close && high_shadow < 0.1);
+
+        //ENGULFING
+        let (open, high, low, close) = &self.get_current_ohlc();
+        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
+        let is_engulfing = (prev_open > prev_close)
+            && (close > open)
+            && (close >= prev_high)
+            && (open <= prev_low)
+            && ((close - open) > (prev_open - prev_close));
+
+        //MARUBOZU
+        previous_was_karakasa && (is_marubozu || is_engulfing)
+    }
+
     fn is_karakasa(&self) -> bool {
         // ((H-L)>3*(O-C)AND((C-L)/(.001+H-L)>0.6)AND((O-L)/(.001+H-L)>0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
@@ -425,7 +458,9 @@ impl CandleBuilder {
 
         match candle_types {
             true => {
-                if self.is_bullish_gap() {
+                if self.is_reversal() {
+                    CandleType::Reversal
+                } else if self.is_bullish_gap() {
                     CandleType::BullishGap
                 } else if self.is_karakasa() {
                     CandleType::Karakasa
