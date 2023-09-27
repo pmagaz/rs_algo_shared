@@ -205,42 +205,8 @@ impl Patterns {
                 match iter.next() {
                     Some(window) => {
                         let mut data_points = window.to_vec();
-                        //Rectangle
-                        //let data_points = vec![(1, 100.), (1, 75.), (1, 99.), (1, 74.), (1, 99.9)];
-                        //Triangle descendant
-                        //let data_points = vec![(1, 100.), (1, 75.), (1, 90.), (1, 75.), (1, 85.)];
-                        //Triangle Ascenandt
-                        //let data_points = vec![(1, 100.), (1, 75.), (1, 99.), (1, 88.), (1, 100.)];
-                        //Channel up
-                        //let data_points =
-                        // vec![(1, 285.), (1, 189.), (1, 306.), (1, 201.), (1, 329.)];
-                        //Channel Down Top
-                        // let mut data_points =
-                        //     vec![(3, 174.), (4, 133.), (5, 164.), (6, 121.), (500, 155.)];
-                        // //Channel Down Bottom
-                        // // let data_points = vec![
-                        // //     (3, 143.),
-                        // //     (3, 174.),
-                        // //     (4, 133.),
-                        // //     (5, 164.),
-                        // //     (6, 121.),
-                        // //     (5, 155.),
-                        // // ];
-                        // data_points.reverse();
-                        //Broadening
-                        // let mut data_points =
-                        //     vec![(1, 100.), (1, 90.), (1, 120.), (1, 80.), (1, 130.)];
-                        //Triangle symetrical
-                        // let mut data_points =
-                        //     vec![(1, 100.), (1, 90.), (1, 120.), (1, 80.), (1, 130.)];
-                        // data_points.reverse();
-                        //Double Bottom
-                        // let mut data_points =
-                        //     vec![(1, 100.), (1, 80.), (1, 90.), (1, 79.), (1, 99.)];
                         let last_index = data_points.last().unwrap().0;
                         let candle_date = candles.get(last_index).unwrap().date();
-
-                        //let change = self.calculate_change(&data_points);
 
                         if rectangle::is_renctangle_top(&data_points) {
                             data_points = add_next_top_points(data_points);

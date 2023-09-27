@@ -257,8 +257,8 @@ impl CandleBuilder {
             && prev_high > high
             && prev_low > low;
 
-        //CURRENT
         let (open, high, low, close) = &self.get_current_ohlc();
+        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
 
         //MARUBOZU
         let high_shadow = (high - close) / close;
@@ -266,16 +266,19 @@ impl CandleBuilder {
         let is_marubozu = (open <= low && low_shadow < 0.1) && (high >= close && high_shadow < 0.1);
 
         //ENGULFING
-        let (open, high, low, close) = &self.get_current_ohlc();
-        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
         let is_engulfing = (prev_open > prev_close)
             && (close > open)
             && (close >= prev_high)
             && (open <= prev_low)
             && ((close - open) > (prev_open - prev_close));
 
-        //MARUBOZU
-        previous_was_karakasa && (is_marubozu || is_engulfing)
+        let percentage_diff = percentage_change(*prev_high, *open);
+        let is_bullish_gap = open > prev_high && percentage_diff > 2.5 && close > prev_high;
+
+        //OPEN HIGHER AND CLOSE HIGHER
+        let percentage_diff = percentage_change(*prev_close, *close);
+        let is_good_close = close > prev_high && high >= prev_high && percentage_diff > 1.;
+        previous_was_karakasa && (is_marubozu || is_engulfing || is_bullish_gap || is_good_close)
     }
 
     fn is_karakasa(&self) -> bool {
@@ -403,7 +406,7 @@ impl CandleBuilder {
         let (open, _high, _low, close) = &self.get_current_ohlc();
         let (_prev_open, prev_high, _prev_low, _prev_close) = &self.get_previous_ohlc(0);
         let percentage_diff = percentage_change(*prev_high, *open);
-        open > prev_high && percentage_diff > 3. && close > prev_high
+        open > prev_high && percentage_diff > 2.5 && close > prev_high
     }
 
     fn is_bearish_gap(&self) -> bool {
@@ -412,7 +415,7 @@ impl CandleBuilder {
         let (open, _high, _low, close) = &self.get_current_ohlc();
         let (_a, _prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(0);
         let percentage_diff = percentage_change(*prev_low, *open);
-        open < prev_low && percentage_diff > 3. && close < prev_low
+        open < prev_low && percentage_diff > 2.5 && close < prev_low
     }
 
     fn is_bullish_crows(&self) -> bool {

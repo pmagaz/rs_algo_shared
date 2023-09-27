@@ -1,5 +1,6 @@
 pub mod broadening;
 pub mod channel;
+pub mod smc;
 //pub mod divergences;
 pub mod double;
 pub mod head_shoulders;
