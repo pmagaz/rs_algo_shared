@@ -277,7 +277,7 @@ impl CandleBuilder {
 
         //OPEN HIGHER AND CLOSE HIGHER
         let percentage_diff = percentage_change(*prev_close, *close);
-        let is_good_close = close > prev_high && high >= prev_high && percentage_diff > 1.;
+        let is_good_close = close > prev_high && high >= prev_high; // && percentage_diff > 0.5;
         previous_was_karakasa && (is_marubozu || is_engulfing || is_bullish_gap || is_good_close)
     }
 
