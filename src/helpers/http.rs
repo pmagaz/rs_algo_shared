@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::time::Duration;
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpMethod {
     Post,
@@ -28,11 +27,13 @@ where
 
     log::info!(
         "HTTP {:?} request to {}. Size: {} bytes",
-        method , url, request_size
+        method,
+        url,
+        request_size
     );
 
     let client = Client::builder()
-        .timeout(Duration::from_secs(15))
+        .timeout(Duration::from_secs(60))
         .user_agent("rs-algo-scanner")
         .build()?;
 

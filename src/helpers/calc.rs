@@ -35,6 +35,10 @@ pub fn to_pips(pips: f64, pricing: &Pricing) -> f64 {
     pricing.pip_size() * pips
 }
 
+pub fn from_pips(pips: f64, pricing: &Pricing) -> f64 {
+    pricing.pip_size() / pips
+}
+
 pub fn calculate_profit_per(price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {
     match trade_type.is_long() {
         true => ((price_out - price_in) / price_in) * 100.,

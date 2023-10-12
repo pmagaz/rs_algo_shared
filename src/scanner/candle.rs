@@ -27,7 +27,6 @@ pub enum CandleType {
     BearishCrows,
     BullishGap,
     BearishGap,
-    Reversal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -109,15 +108,17 @@ impl Candle {
     }
 
     pub fn is_bullish(&self) -> bool {
-        self.candle_type == CandleType::Engulfing
-            || self.candle_type == CandleType::Karakasa
-            || self.candle_type == CandleType::MorningStar
+        // self.candle_type == CandleType::Engulfing
+        //     || self.candle_type == CandleType::Karakasa
+        //     || self.candle_type == CandleType::MorningStar
+        self.close > self.open
     }
 
     pub fn is_bearish(&self) -> bool {
-        self.candle_type == CandleType::BearishEngulfing
-            || self.candle_type == CandleType::BearishKarakasa
-            || self.candle_type == CandleType::BearishStar
+        // self.candle_type == CandleType::BearishEngulfing
+        //     || self.candle_type == CandleType::BearishKarakasa
+        //     || self.candle_type == CandleType::BearishStar
+        self.close < self.open
     }
 
     pub fn from_logarithmic_values(&self) -> Self {
@@ -244,41 +245,6 @@ impl CandleBuilder {
         // (O = C ) || (ABS(O – C ) <= ((H – L ) * 0.1))
         let (open, high, low, close) = &self.get_current_ohlc();
         (open.floor() == close.floor()) || (open - close).abs() <= ((high - low) * 0.1)
-    }
-
-    fn is_reversal(&self) -> bool {
-        //PREVIUS WAS KARAKASA
-        let (open, high, low, close) = &self.get_previous_ohlc(0);
-        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(1);
-        let previous_was_karakasa = (high - low) > 3. * (open - close)
-            && ((close - low) / (0.001 + high - low) >= 0.7)
-            && ((open - low) / (0.001 + high - low) >= 0.7)
-            //&& prev_close < prev_open
-            && prev_high > high
-            && prev_low > low;
-
-        let (open, high, low, close) = &self.get_current_ohlc();
-        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
-
-        //MARUBOZU
-        let high_shadow = (high - close) / close;
-        let low_shadow = (low - open) / open;
-        let is_marubozu = (open <= low && low_shadow < 0.1) && (high >= close && high_shadow < 0.1);
-
-        //ENGULFING
-        let is_engulfing = (prev_open > prev_close)
-            && (close > open)
-            && (close >= prev_high)
-            && (open <= prev_low)
-            && ((close - open) > (prev_open - prev_close));
-
-        let percentage_diff = percentage_change(*prev_high, *open);
-        let is_bullish_gap = open > prev_high && percentage_diff > 2.5 && close > prev_high;
-
-        //OPEN HIGHER AND CLOSE HIGHER
-        let percentage_diff = percentage_change(*prev_close, *close);
-        let is_good_close = close > prev_high && high >= prev_high; // && percentage_diff > 0.5;
-        previous_was_karakasa && (is_marubozu || is_engulfing || is_bullish_gap || is_good_close)
     }
 
     fn is_karakasa(&self) -> bool {
@@ -461,9 +427,7 @@ impl CandleBuilder {
 
         match candle_types {
             true => {
-                if self.is_reversal() {
-                    CandleType::Reversal
-                } else if self.is_bullish_gap() {
+                if self.is_bullish_gap() {
                     CandleType::BullishGap
                 } else if self.is_karakasa() {
                     CandleType::Karakasa

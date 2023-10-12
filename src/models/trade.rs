@@ -268,7 +268,10 @@ pub fn resolve_trade_in(
 
     if trade_type.is_entry() {
         let spread = pricing.spread();
-        let current_candle = instrument.data.get(index).unwrap();
+        let current_candle = match execution_mode.is_back_test() {
+            true => instrument.data().get(index).unwrap(),
+            false => instrument.data().last().unwrap(),
+        };
         let current_date = current_candle.date();
         let id = uuid::generate_ts_id(current_date);
 
@@ -381,14 +384,14 @@ pub fn resolve_trade_out(
         _ if profit > 0. => true,
         _ => false,
     };
-
     if trade_type.is_stop() && profit > 0. {
         log::error!(
             "Profitable stop loss! {} @ {:?} {} ",
             index,
             (price_in, price_out),
             profit
-        )
+        );
+        //panic!();
     }
 
     let profit_check = match non_profitable_outs {

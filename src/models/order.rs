@@ -218,7 +218,6 @@ pub fn prepare_orders(
             | OrderType::TakeProfitLong(direction, order_size, target_price)
             | OrderType::TakeProfitShort(direction, order_size, target_price) => {
                 if validate_target_price(order_type, direction, &close_price, target_price) {
-                    //log::info!("{:?} validated", &order_type,);
                     let order = create_order(
                         index,
                         trade_id,
@@ -239,6 +238,7 @@ pub fn prepare_orders(
                             }
                         }
                         false => {
+                            buy_order_target = order.origin_price;
                             sell_order_target = match order_type.is_long() {
                                 true => order.target_price,
                                 false => match order_with_spread {
@@ -259,12 +259,17 @@ pub fn prepare_orders(
             | OrderType::StopLossShort(direction, stop_loss_type) => {
                 is_stop_loss = true;
 
-                let target_price = match orders.first() {
+                let stop_loss_order = orders
+                    .iter()
+                    .filter(|&order| order.order_type.is_stop())
+                    .next();
+
+                let target_price = match stop_loss_order {
                     Some(order) => order.target_price,
                     None => next_candle.open(),
                 };
 
-                let order_size = match orders.first() {
+                let order_size = match stop_loss_order {
                     Some(order) => order.size,
                     None => std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap(),
                 };
@@ -297,7 +302,7 @@ pub fn prepare_orders(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    panic!();
+                    //panic!();
                 }
             }
             false => {
@@ -306,33 +311,11 @@ pub fn prepare_orders(
                         "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    panic!();
+                    //panic!();
                 }
             }
         }
     };
-
-    // //CHECK STOP LOSS
-    // if is_stop_loss {
-    //     match stop_loss_direction == OrderDirection::Up {
-    //         true => {
-    //             if stop_order_target <= buy_order_target && buy_order_target > 0. {
-    //                 log::error!(
-    //                     "Stop loss can't be placed higher than buy level {:?}",
-    //                     (buy_order_target, stop_order_target)
-    //                 );
-    //             }
-    //         }
-    //         false => {
-    //             if stop_order_target <= buy_order_target && buy_order_target > 0. {
-    //                 log::error!(
-    //                     "Stop loss can't be placed lower than buy level {:?}",
-    //                     (buy_order_target, stop_order_target)
-    //                 );
-    //             }
-    //         }
-    //     }
-    // };
 
     //CHECK SELL ORDER VALUE
     match trade_type.is_long() {
@@ -343,6 +326,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
+                //panic!();
             }
         }
         false => {
@@ -351,7 +335,8 @@ pub fn prepare_orders(
                 log::error!(
                     "Sell Order can't be placed higher than buy level {:?}",
                     (buy_order_target, sell_order_target)
-                )
+                );
+                //panic!();
             }
         }
     };
@@ -375,7 +360,6 @@ pub fn validate_target_price(
                     close_price,
                 );
                 panic!();
-                false
             } else {
                 true
             }
@@ -389,7 +373,6 @@ pub fn validate_target_price(
                     close_price,
                 );
                 panic!();
-                false
             } else {
                 true
             }
@@ -405,16 +388,19 @@ pub fn create_order(
     target_price: &f64,
     order_size: &f64,
 ) -> Order {
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let execution_mode: mode::ExecutionMode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let current_candle = match execution_mode.is_back_test() {
-        true => instrument.data().get(index).unwrap(),
+        true => instrument.data().get(index + 1).unwrap(),
         false => instrument.data().last().unwrap(),
     };
 
-    //let next_index = index + 1;
+    let origin_price = match execution_mode.is_back_test() {
+        true => current_candle.open(),
+        false => current_candle.close(),
+    };
+
     let current_date = &current_candle.date();
-    let origin_price = current_candle.close();
     let time_frame = instrument.time_frame();
     let valid_until_bars = &env::var("VALID_UNTIL_BARS")
         .unwrap()
@@ -450,7 +436,7 @@ pub fn resolve_active_orders(
     _pricing: &Pricing,
 ) -> Position {
     let mut order_position: Position = Position::None;
-    let mut orders_activated = vec![];
+    let mut orders_activated = Vec::<Position>::new();
 
     for (_id, order) in orders
         .iter()
@@ -480,7 +466,45 @@ pub fn resolve_active_orders(
             }
             false => (),
         }
+
+        // let mut orders_activated = Vec::<Position>::new();
+        // let mut orders_iter = orders.iter().enumerate();
+        // let mut condition_met = false;
+
+        //    while let Some((_id, order)) = orders_iter.next() {
+        //     if condition_met {
+        //         log::info!("xxxxxxxx");
+        //         break; // Stop the loop
+        //     }
+
+        //     if order.status == OrderStatus::Pending {
+        //         // Skip orders with status Pending
+        //         continue;
     }
+
+    //     if order_activated(index, order, instrument) {
+    //         condition_met = true; // Set the flag to true to stop further processing
+
+    //         match order.order_type {
+    //             OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
+    //                 let order_position = Position::MarketInOrder(order.clone());
+    //                 orders_activated.push(order_position.clone());
+    //             }
+    //             OrderType::SellOrderLong(_, _, _)
+    //             | OrderType::SellOrderShort(_, _, _)
+    //             | OrderType::TakeProfitLong(_, _, _)
+    //             | OrderType::TakeProfitShort(_, _, _) => {
+    //                 let order_position = Position::MarketOutOrder(order.clone());
+    //                 orders_activated.push(order_position.clone());
+    //             }
+    //             OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
+    //                 let order_position = Position::MarketOutOrder(order.clone());
+    //                 orders_activated.push(order_position.clone());
+    //             }
+    //             _ => todo!(),
+    //         };
+    //     }
+    // }
 
     match has_executed_buy_order(orders, &order_position) {
         true => order_position,
@@ -491,10 +515,15 @@ pub fn resolve_active_orders(
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
-    let current_candle = data.get(index).unwrap();
+    //let current_candle = data.get(index).unwrap();
+    let current_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index).unwrap(),
+        false => instrument.data().last().unwrap(),
+    };
     let candle_ts = uuid::generate_ts_id(current_candle.date());
     let prev_candle = data.get(prev_index).unwrap();
     let is_next_bar = candle_ts > order.id;
@@ -506,11 +535,11 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         "close" => current_candle.is_closed(),
         _ => true,
     };
-
+    //CONTINUE HERE WINRATE???
     let cross_over = current_price_over >= order.target_price && is_next_bar && is_closed;
     let cross_bellow = current_price_bellow <= order.target_price && is_next_bar && is_closed;
-    let stop_cross_over = current_candle.high() >= order.target_price && is_next_bar;
-    let stop_cross_bellow = current_candle.low() <= order.target_price && is_next_bar;
+    let stop_cross_over = current_candle.high() >= order.target_price;
+    let stop_cross_bellow = current_candle.low() <= order.target_price;
 
     let activated = match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
@@ -530,7 +559,6 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         OrderType::StopLossShort(_, _) => stop_cross_over,
         _ => todo!(),
     };
-
     activated
 }
 
@@ -695,7 +723,7 @@ pub fn extend_all_pending_orders(orders: &mut Vec<Order>) {
         if order.status == OrderStatus::Pending {
             let current_valid = from_dbtime(&order.valid_until.unwrap());
             let new_valid_date = current_valid + date::Duration::days(365);
-            log::info!("Extending StopLoss order to {:?}", new_valid_date);
+            //log::info!("Extending StopLoss order to {:?}", new_valid_date);
             order.set_valid_until(to_dbtime(new_valid_date));
         }
     }
