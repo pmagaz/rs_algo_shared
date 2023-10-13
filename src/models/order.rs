@@ -249,6 +249,7 @@ pub fn prepare_orders(
                         }
                     };
 
+                    //log::info!("22222222 {:?}", buy_order_target);
                     orders.push(order);
                 } else {
                     is_valid_buy_sell_order = false;
@@ -259,20 +260,22 @@ pub fn prepare_orders(
             | OrderType::StopLossShort(direction, stop_loss_type) => {
                 is_stop_loss = true;
 
-                let stop_loss_order = orders
-                    .iter()
-                    .filter(|&order| order.order_type.is_stop())
-                    .next();
+                // let stop_loss_order = orders
+                //     .iter()
+                //     .filter(|&order| order.order_type.is_stop())
+                //     .next();
 
-                let target_price = match stop_loss_order {
-                    Some(order) => order.target_price,
-                    None => next_candle.open(),
-                };
+                // log::info!("55555555 {:?}", (stop_loss_order));
 
-                let order_size = match stop_loss_order {
-                    Some(order) => order.size,
-                    None => std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap(),
-                };
+                // let target_price = match stop_loss_order {
+                //     Some(order) => order.target_price,
+                //     None => next_candle.open(),
+                // };
+
+                // let order_size = match stop_loss_order {
+                //     Some(order) => order.size,
+                //     None => std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap(),
+                // };
 
                 if is_valid_buy_sell_order {
                     let stop_loss = create_stop_loss_order(
@@ -282,9 +285,11 @@ pub fn prepare_orders(
                         pricing,
                         direction,
                         stop_loss_type,
-                        target_price,
-                        order_size,
+                        // target_price,
+                        // order_size,
                     );
+                    //log::info!("333333333 {:?}", (target_price, stop_loss.target_price));
+
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
                     orders.push(stop_loss);
@@ -302,7 +307,6 @@ pub fn prepare_orders(
                         "Stop loss can't be placed higher than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    //panic!();
                 }
             }
             false => {
@@ -311,7 +315,6 @@ pub fn prepare_orders(
                         "Stop loss can't be placed lower than buy level {:?}",
                         (buy_order_target, stop_order_target)
                     );
-                    //panic!();
                 }
             }
         }
@@ -326,7 +329,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
-                //panic!();
+                panic!();
             }
         }
         false => {
@@ -336,7 +339,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed higher than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
-                //panic!();
+                panic!();
             }
         }
     };
@@ -388,7 +391,7 @@ pub fn create_order(
     target_price: &f64,
     order_size: &f64,
 ) -> Order {
-    let execution_mode: mode::ExecutionMode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let current_candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index + 1).unwrap(),
@@ -466,45 +469,7 @@ pub fn resolve_active_orders(
             }
             false => (),
         }
-
-        // let mut orders_activated = Vec::<Position>::new();
-        // let mut orders_iter = orders.iter().enumerate();
-        // let mut condition_met = false;
-
-        //    while let Some((_id, order)) = orders_iter.next() {
-        //     if condition_met {
-        //         log::info!("xxxxxxxx");
-        //         break; // Stop the loop
-        //     }
-
-        //     if order.status == OrderStatus::Pending {
-        //         // Skip orders with status Pending
-        //         continue;
     }
-
-    //     if order_activated(index, order, instrument) {
-    //         condition_met = true; // Set the flag to true to stop further processing
-
-    //         match order.order_type {
-    //             OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
-    //                 let order_position = Position::MarketInOrder(order.clone());
-    //                 orders_activated.push(order_position.clone());
-    //             }
-    //             OrderType::SellOrderLong(_, _, _)
-    //             | OrderType::SellOrderShort(_, _, _)
-    //             | OrderType::TakeProfitLong(_, _, _)
-    //             | OrderType::TakeProfitShort(_, _, _) => {
-    //                 let order_position = Position::MarketOutOrder(order.clone());
-    //                 orders_activated.push(order_position.clone());
-    //             }
-    //             OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
-    //                 let order_position = Position::MarketOutOrder(order.clone());
-    //                 orders_activated.push(order_position.clone());
-    //             }
-    //             _ => todo!(),
-    //         };
-    //     }
-    // }
 
     match has_executed_buy_order(orders, &order_position) {
         true => order_position,
@@ -519,7 +484,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
 
     let data = &instrument.data;
     let prev_index = get_prev_index(index);
-    //let current_candle = data.get(index).unwrap();
+
     let current_candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index).unwrap(),
         false => instrument.data().last().unwrap(),

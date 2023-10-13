@@ -1,3 +1,6 @@
+use std::env;
+
+use super::mode;
 use super::order::{self, Order, OrderDirection, OrderType};
 use super::pricing::Pricing;
 
@@ -43,10 +46,14 @@ pub fn create_stop_loss_order(
     pricing: &Pricing,
     order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
-    target_price: f64,
-    order_size: f64,
+    // _target_price: f64,
+    // _order_size: f64,
 ) -> Order {
     let spread = pricing.spread();
+
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+    let order_size = std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap();
 
     let stop_loss_spread = std::env::var("STOP_LOSS_SPREAD")
         .unwrap()
@@ -64,21 +71,27 @@ pub fn create_stop_loss_order(
     };
     let current_atr_value =
         instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
-    let _current_close = instrument.data().get(index).unwrap().close();
+
+    let current_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index + 1).unwrap(),
+        false => instrument.data().last().unwrap(),
+    };
+
+    let current_open = current_candle.open();
 
     let target_price = match stop_loss_type {
         StopLossType::Atr(atr_value) => match order_direction {
-            OrderDirection::Up => (target_price + spread) + (atr_value * current_atr_value),
+            OrderDirection::Up => (current_open + spread) + (atr_value * current_atr_value),
 
-            OrderDirection::Down => (target_price + spread) - (atr_value * current_atr_value),
+            OrderDirection::Down => (current_open + spread) - (atr_value * current_atr_value),
         },
         StopLossType::Price(target_price) => match order_direction {
             OrderDirection::Up => *target_price,
             OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (target_price + spread) + calc::to_pips(*pips, pricing),
-            OrderDirection::Down => (target_price + spread) - calc::to_pips(*pips, pricing),
+            OrderDirection::Up => (current_open + spread) + calc::to_pips(*pips, pricing),
+            OrderDirection::Down => (current_open + spread) - calc::to_pips(*pips, pricing),
         },
         StopLossType::None => todo!(),
     };

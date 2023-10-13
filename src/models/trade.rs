@@ -272,6 +272,7 @@ pub fn resolve_trade_in(
             true => instrument.data().get(index).unwrap(),
             false => instrument.data().last().unwrap(),
         };
+
         let current_date = current_candle.date();
         let id = uuid::generate_ts_id(current_date);
 
