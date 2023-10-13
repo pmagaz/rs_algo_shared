@@ -236,30 +236,31 @@ impl Patterns {
                             target: 0.,
                         },
                     );
-                } else if smc::is_bullish_reversal(window) {
-                    self.set_pattern(
-                        PatternType::BullishFairValueGap,
-                        PatternDirection::Top,
-                        &pattern_size,
-                        vec![
-                            (index, window[0].high),
-                            (index + 10, window[2].low),
-                            (index + 10, window[0].high),
-                            (index + 20, window[2].low),
-                        ],
-                        window[1].date,
-                        PatternActive {
-                            active: false,
-                            completed: false,
-                            index: 0,
-                            date: to_dbtime(window[1].date),
-                            price: window[2].close,
-                            status: Status::Bullish,
-                            break_direction: PatternDirection::None,
-                            target: 0.,
-                        },
-                    );
                 }
+                // } else if smc::is_bullish_reversal(window) {
+                //     self.set_pattern(
+                //         PatternType::BullishFairValueGap,
+                //         PatternDirection::Top,
+                //         &pattern_size,
+                //         vec![
+                //             (index, window[0].high),
+                //             (index + 10, window[2].low),
+                //             (index + 10, window[0].high),
+                //             (index + 20, window[2].low),
+                //         ],
+                //         window[1].date,
+                //         PatternActive {
+                //             active: false,
+                //             completed: false,
+                //             index: 0,
+                //             date: to_dbtime(window[1].date),
+                //             price: window[2].close,
+                //             status: Status::Bullish,
+                //             break_direction: PatternDirection::None,
+                //             target: 0.,
+                //         },
+                //     );
+                // }
             }
 
             //DATAPOINTS BASED PATTERNS

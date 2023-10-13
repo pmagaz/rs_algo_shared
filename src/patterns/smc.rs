@@ -31,34 +31,3 @@ pub fn is_bullish_fair_value_gap(candles: &[Candle]) -> bool {
         false
     }
 }
-
-pub fn is_bullish_reversal(candles: &[Candle]) -> bool {
-    let min_diff_size = 0.1;
-
-    let left_candle = &candles[0];
-    let middle_candle = &candles[1];
-    let right_candle = &candles[2];
-    // log::info!(
-    //     "aaaa: {} {} {}",
-    //     left_candle.date,
-    //     middle_candle.date,
-    //     right_candle.date,
-    // );
-    let diff_size = (left_candle.close - right_candle.close).abs();
-    let diff_size_percentage = (diff_size / right_candle.close) * 100.0;
-
-    if left_candle.candle_type() == &CandleType::Karakasa
-        && (middle_candle.close() > left_candle.close()
-            && right_candle.close > middle_candle.close()
-            && diff_size_percentage > min_diff_size)
-    {
-        // log::info!(
-        //     "Reversal detected: {} {}",
-        //     left_candle.date,
-        //     diff_size_percentage,
-        // );
-        true
-    } else {
-        false
-    }
-}

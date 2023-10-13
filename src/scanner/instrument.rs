@@ -199,15 +199,10 @@ impl Instrument {
 
         let (open, high, low, close) = self.get_scale_ohlc(adapted, logarithmic_scanner);
 
-        let pre_0 = match id {
-            0 => id,
-            _ => id - 1,
-        };
-
-        let prev_1 = match pre_0 {
-            0 => id,
-            _ => id - 1,
-        };
+        let prev_0 = id.saturating_sub(1);
+        let prev_1 = prev_0.saturating_sub(1);
+        let prev_2 = prev_1.saturating_sub(1);
+        let prev_3 = prev_2.saturating_sub(1);
 
         Candle::new()
             .date(date)
@@ -217,7 +212,7 @@ impl Instrument {
             .close(close)
             .volume(volume)
             .is_closed(is_closed)
-            .previous_candles(vec![data[pre_0], data[prev_1]])
+            .previous_candles(vec![data[prev_0], data[prev_1], data[prev_2], data[prev_3]])
             .logarithmic(logarithmic_scanner)
             .build()
             .unwrap()

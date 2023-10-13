@@ -27,6 +27,8 @@ pub enum CandleType {
     BearishCrows,
     BullishGap,
     BearishGap,
+    Reversal,
+    ThreeInRow,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -227,18 +229,64 @@ impl CandleBuilder {
     fn get_previous_ohlc(&self, index: usize) -> OHLCV {
         match self.logarithmic.unwrap() {
             true => (
-                self.previous_candles.as_ref().unwrap()[index].1,
-                self.previous_candles.as_ref().unwrap()[index].2,
-                self.previous_candles.as_ref().unwrap()[index].3,
-                self.previous_candles.as_ref().unwrap()[index].4,
-            ),
-            false => (
                 self.previous_candles.as_ref().unwrap()[index].1.exp(),
                 self.previous_candles.as_ref().unwrap()[index].2.exp(),
                 self.previous_candles.as_ref().unwrap()[index].3.exp(),
                 self.previous_candles.as_ref().unwrap()[index].4.exp(),
             ),
+            false => (
+                self.previous_candles.as_ref().unwrap()[index].1,
+                self.previous_candles.as_ref().unwrap()[index].2,
+                self.previous_candles.as_ref().unwrap()[index].3,
+                self.previous_candles.as_ref().unwrap()[index].4,
+            ),
         }
+    }
+
+    pub fn is_bullish_reversal(&self) -> bool {
+        let min_diff_size = 0.1;
+
+        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
+        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
+        let (open, high, low, close) = &self.get_current_ohlc();
+
+        let diff_size = (left_close - close).abs();
+        let diff_size_percentage = (diff_size / close) * 100.0;
+
+        let left_is_karakasa = {
+            let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(2);
+            let (open, high, low, close) = &self.get_previous_ohlc(1);
+
+            (high - low) > 3. * (open - close)
+                && ((close - low) / (0.001 + high - low) >= 0.7)
+                && ((open - low) / (0.001 + high - low) >= 0.7)
+                && prev_high > high
+                && prev_low > low
+        };
+
+        if left_is_karakasa
+            && (mid_close > left_close && close > mid_close && diff_size_percentage > min_diff_size)
+        {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_three_in_row(&self) -> bool {
+        let min_diff_size = 0.1;
+        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
+        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
+        let (open, high, low, close) = &self.get_current_ohlc();
+
+        let diff_size = (left_close - close).abs();
+        let diff_size_percentage = (diff_size / close) * 100.0;
+
+        close > open
+            && mid_close > mid_open
+            && left_close > left_open
+            && close > mid_close
+            && mid_close > left_close
     }
 
     fn is_doji(&self) -> bool {
@@ -251,10 +299,10 @@ impl CandleBuilder {
         // ((H-L)>3*(O-C)AND((C-L)/(.001+H-L)>0.6)AND((O-L)/(.001+H-L)>0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
         let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
+
         (high - low) > 3. * (open - close)
             && ((close - low) / (0.001 + high - low) >= 0.7)
             && ((open - low) / (0.001 + high - low) >= 0.7)
-            //&& prev_close < prev_open
             && prev_high > high
             && prev_low > low
     }
@@ -427,8 +475,12 @@ impl CandleBuilder {
 
         match candle_types {
             true => {
-                if self.is_bullish_gap() {
+                if self.is_bullish_reversal() {
+                    CandleType::Reversal
+                } else if self.is_bullish_gap() {
                     CandleType::BullishGap
+                } else if self.is_three_in_row() {
+                    CandleType::ThreeInRow
                 } else if self.is_karakasa() {
                     CandleType::Karakasa
                 } else if self.is_bullish_star() {
