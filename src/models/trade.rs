@@ -395,9 +395,15 @@ pub fn resolve_trade_out(
         //panic!();
     }
 
-    let profit_check = match non_profitable_outs {
-        true => true || trade_type.is_stop(),
-        false => is_profitable || trade_type.is_stop(),
+    // let profit_check = match non_profitable_outs {
+    //     true => true || trade_type.is_stop(),
+    //     false => is_profitable || trade_type.is_stop(),
+    // };
+
+    let profit_check = if *non_profitable_outs {
+        true
+    } else {
+        is_profitable || trade_type.is_stop()
     };
 
     if profit_check {

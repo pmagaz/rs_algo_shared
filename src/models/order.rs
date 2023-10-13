@@ -329,7 +329,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed lower than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
-                panic!();
+                //panic!();
             }
         }
         false => {
@@ -339,7 +339,7 @@ pub fn prepare_orders(
                     "Sell Order can't be placed higher than buy level {:?}",
                     (buy_order_target, sell_order_target)
                 );
-                panic!();
+                //panic!();
             }
         }
     };
