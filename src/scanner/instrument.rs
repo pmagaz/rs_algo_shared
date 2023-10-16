@@ -222,7 +222,7 @@ impl Instrument {
         &self,
         id: usize,
         data: (DateTime<Local>, f64, f64, f64, f64, f64, bool),
-        candle: &Vec<Candle>,
+        candles: &Vec<Candle>,
         logarithmic_scanner: bool,
     ) -> Candle {
         let date = data.0;
@@ -230,36 +230,53 @@ impl Instrument {
         let is_closed = data.6;
         let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
 
-        let pre_0 = match id {
-            0 => id,
-            _ => id - 1,
-        };
+        //let (date_time, open, high, low, close, volume, _) = tuple;
 
-        let prev_1 = match pre_0 {
-            0 => id,
-            _ => id - 1,
-        };
+        let prev_0 = id.saturating_sub(1);
+        let prev_1 = prev_0.saturating_sub(1);
+        let prev_2 = prev_1.saturating_sub(1);
+        let prev_3 = prev_2.saturating_sub(1);
 
-        let last = candle[pre_0].clone();
-        let last_candle = (
-            last.date(),
-            last.open(),
-            last.high(),
-            last.low(),
-            last.close(),
-            last.volume(),
+        let candle_0 = candles[prev_0].clone();
+        let candle_1 = candles[prev_1].clone();
+        let candle_2 = candles[prev_2].clone();
+        let candle_3 = candles[prev_3].clone();
+
+        let data_0 = (
+            candle_0.date(),
+            candle_0.open(),
+            candle_0.high(),
+            candle_0.low(),
+            candle_0.close(),
+            candle_0.volume(),
         );
 
-        let second_last = candle[prev_1].clone();
-        let second_last_candle = (
-            second_last.date(),
-            second_last.open(),
-            second_last.high(),
-            second_last.low(),
-            second_last.close(),
-            second_last.volume(),
+        let data_1 = (
+            candle_1.date(),
+            candle_1.open(),
+            candle_1.high(),
+            candle_1.low(),
+            candle_1.close(),
+            candle_1.volume(),
         );
-        //DOHLCV
+
+        let data_2 = (
+            candle_2.date(),
+            candle_2.open(),
+            candle_2.high(),
+            candle_2.low(),
+            candle_2.close(),
+            candle_2.volume(),
+        );
+
+        let data_3 = (
+            candle_3.date(),
+            candle_3.open(),
+            candle_3.high(),
+            candle_3.low(),
+            candle_3.close(),
+            candle_3.volume(),
+        );
 
         Candle::new()
             .date(date)
@@ -269,7 +286,7 @@ impl Instrument {
             .close(close)
             .volume(volume)
             .is_closed(is_closed)
-            .previous_candles(vec![last_candle, second_last_candle])
+            .previous_candles(vec![data_0, data_1, data_2, data_3])
             .logarithmic(logarithmic_scanner)
             .build()
             .unwrap()

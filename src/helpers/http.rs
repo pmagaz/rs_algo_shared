@@ -18,6 +18,18 @@ pub enum Format {
     String,
 }
 
+fn method_to_uppercase(method: &HttpMethod) -> String {
+    match method {
+        HttpMethod::Get => "GET",
+        HttpMethod::Post => "POST",
+        HttpMethod::Put => "PUT",
+        HttpMethod::Delete => "DELETE",
+        _ => "UNKNOWN",
+    }
+    .to_string()
+    .to_uppercase()
+}
+
 pub async fn request<T>(url: &str, data: &T, method: HttpMethod) -> Result<Response, Error>
 where
     T: Serialize + Deserialize<'static> + Debug,
@@ -26,8 +38,8 @@ where
     let request_size = request_body.len();
 
     log::info!(
-        "HTTP {:?} request to {}. Size: {} bytes",
-        method,
+        "HTTP {:?} {}. Size: {} bytes",
+        method_to_uppercase(&method),
         url,
         request_size
     );

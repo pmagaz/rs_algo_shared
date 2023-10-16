@@ -29,6 +29,7 @@ pub enum CandleType {
     BearishGap,
     Reversal,
     ThreeInRow,
+    BearishThreeInRow,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -289,10 +290,20 @@ impl CandleBuilder {
             && mid_close > left_close
     }
 
-    fn is_doji(&self) -> bool {
-        // (O = C ) || (ABS(O – C ) <= ((H – L ) * 0.1))
+    pub fn is_bearish_three_in_row(&self) -> bool {
+        let min_diff_size = 0.1;
+        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
+        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
         let (open, high, low, close) = &self.get_current_ohlc();
-        (open.floor() == close.floor()) || (open - close).abs() <= ((high - low) * 0.1)
+
+        let diff_size = (left_close - close).abs();
+        let diff_size_percentage = (diff_size / close) * 100.0;
+
+        close < open
+            && mid_close < mid_open
+            && left_close < left_open
+            && close < mid_close
+            && mid_close < left_close
     }
 
     fn is_karakasa(&self) -> bool {
@@ -470,53 +481,76 @@ impl CandleBuilder {
                 && ((prev_close1 - prev_low1) / (prev_high1 - prev_low1) < 0.2))
     }
 
+    fn is_doji(&self) -> bool {
+        // (O = C ) || (ABS(O – C ) <= ((H – L ) * 0.1))
+        let (open, high, low, close) = &self.get_current_ohlc();
+        (open.floor() == close.floor()) || (open - close).abs() <= ((high - low) * 0.1)
+    }
+
     fn identify_candle_type(&self) -> CandleType {
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
 
-        match candle_types {
-            true => {
-                if self.is_bullish_reversal() {
-                    CandleType::Reversal
-                } else if self.is_bullish_gap() {
-                    CandleType::BullishGap
-                } else if self.is_three_in_row() {
-                    CandleType::ThreeInRow
-                } else if self.is_karakasa() {
-                    CandleType::Karakasa
-                } else if self.is_bullish_star() {
-                    CandleType::MorningStar
-                } else if self.is_bullish_crows() {
-                    CandleType::BullishCrows
-                } else if self.is_marubozu() {
-                    CandleType::Marubozu
-                } else if self.is_engulfing() {
-                    CandleType::Engulfing
-                } else if self.is_bearish_karakasa() {
-                    CandleType::BearishKarakasa
-                } else if self.is_bearish_star() {
-                    CandleType::BearishStar
-                } else if self.is_hanging_man() {
-                    CandleType::HangingMan
-                } else if self.is_bearish_gap() {
-                    CandleType::BearishGap
-                } else if self.is_bearish_crows() {
-                    CandleType::BearishCrows
-                } else if self.is_bearish_marubozu() {
-                    CandleType::BearishMarubozu
-                } else if self.is_bearish_engulfing() {
-                    CandleType::BearishEngulfing
-                } else if self.is_harami() {
-                    CandleType::Harami
-                } else if self.is_bearish_harami() {
-                    CandleType::BearishHarami
-                } else if self.is_doji() {
-                    CandleType::Doji
-                } else {
-                    CandleType::Default
-                }
+        if candle_types {
+            if self.is_bullish_reversal() {
+                return CandleType::Reversal;
             }
-            false => CandleType::Default,
+            if self.is_bullish_gap() {
+                return CandleType::BullishGap;
+            }
+            if self.is_three_in_row() {
+                return CandleType::ThreeInRow;
+            }
+            if self.is_bearish_three_in_row() {
+                return CandleType::BearishThreeInRow;
+            }
+            if self.is_karakasa() {
+                return CandleType::Karakasa;
+            }
+            if self.is_bearish_karakasa() {
+                return CandleType::BearishKarakasa;
+            }
+            if self.is_engulfing() {
+                return CandleType::Engulfing;
+            }
+            if self.is_bullish_star() {
+                return CandleType::MorningStar;
+            }
+            if self.is_bullish_crows() {
+                return CandleType::BullishCrows;
+            }
+            if self.is_marubozu() {
+                return CandleType::Marubozu;
+            }
+            if self.is_bearish_star() {
+                return CandleType::BearishStar;
+            }
+            if self.is_hanging_man() {
+                return CandleType::HangingMan;
+            }
+            if self.is_bearish_gap() {
+                return CandleType::BearishGap;
+            }
+            if self.is_bearish_crows() {
+                return CandleType::BearishCrows;
+            }
+            if self.is_bearish_marubozu() {
+                return CandleType::BearishMarubozu;
+            }
+            if self.is_bearish_engulfing() {
+                return CandleType::BearishEngulfing;
+            }
+            if self.is_harami() {
+                return CandleType::Harami;
+            }
+            if self.is_bearish_harami() {
+                return CandleType::BearishHarami;
+            }
+            if self.is_doji() {
+                return CandleType::Doji;
+            }
         }
+
+        CandleType::Default
     }
 
     pub fn build(self) -> Result<Candle> {

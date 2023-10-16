@@ -179,8 +179,8 @@ pub fn total_runup(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
             max_acc_equity += x.profit;
             max_acc_equity
         })
-        .fold(f64::NEG_INFINITY, f64::max);
-    //.fold(0. / 0., f64::max);
+        //.fold(f64::NEG_INFINITY, f64::max);
+        .fold(0. / 0., f64::max);
 
     let min_equity = trades_out
         .iter()
@@ -189,8 +189,8 @@ pub fn total_runup(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
             min_acc_equity += x.profit;
             min_acc_equity
         })
-        .fold(f64::NEG_INFINITY, f64::min);
-    // .fold(0. / 0., f64::min);
+        //.fold(f64::NEG_INFINITY, f64::min);
+        .fold(0. / 0., f64::min);
 
     ((max_equity - min_equity) / min_equity * 100.).abs() * 100.
 }

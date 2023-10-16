@@ -115,8 +115,8 @@ pub fn get_symbols() -> Vec<String> {
         "sector": "Currency"
     },
     {
-        "symbol": "USDCAD",
-        "name": "USDCAD",
+        "symbol": "AUDCHF",
+        "name": "AUDCHF",
         "sector": "Currency"
     }
 ]}"#;
