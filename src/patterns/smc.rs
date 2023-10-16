@@ -1,4 +1,4 @@
-use crate::helpers::comp::percentage_change;
+
 use crate::scanner::candle::{Candle, CandleType};
 
 pub fn is_bullish_fair_value_gap(candles: &[Candle]) -> bool {

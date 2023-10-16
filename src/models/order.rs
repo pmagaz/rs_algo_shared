@@ -146,7 +146,7 @@ impl Order {
 
     pub fn is_full_filled(&self) -> bool {
         match self.full_filled_at {
-            Some(x) => true,
+            Some(_x) => true,
             None => false,
         }
     }
@@ -260,23 +260,6 @@ pub fn prepare_orders(
             | OrderType::StopLossShort(direction, stop_loss_type) => {
                 is_stop_loss = true;
 
-                // let stop_loss_order = orders
-                //     .iter()
-                //     .filter(|&order| order.order_type.is_stop())
-                //     .next();
-
-                // log::info!("55555555 {:?}", (stop_loss_order));
-
-                // let target_price = match stop_loss_order {
-                //     Some(order) => order.target_price,
-                //     None => next_candle.open(),
-                // };
-
-                // let order_size = match stop_loss_order {
-                //     Some(order) => order.size,
-                //     None => std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap(),
-                // };
-
                 if is_valid_buy_sell_order {
                     let stop_loss = create_stop_loss_order(
                         index,
@@ -285,10 +268,7 @@ pub fn prepare_orders(
                         pricing,
                         direction,
                         stop_loss_type,
-                        // target_price,
-                        // order_size,
                     );
-                    //log::info!("333333333 {:?}", (target_price, stop_loss.target_price));
 
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
@@ -478,7 +458,7 @@ pub fn resolve_active_orders(
 }
 
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
-    let order_engine = &env::var("ORDER_ENGINE").unwrap();
+    let _order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
@@ -506,7 +486,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
     let stop_cross_over = current_candle.high() >= order.target_price;
     let stop_cross_bellow = current_candle.low() <= order.target_price;
 
-    let activated = match &order.order_type {
+    match &order.order_type {
         OrderType::BuyOrderLong(direction, _, _) | OrderType::BuyOrderShort(direction, _, _) => {
             match direction {
                 OrderDirection::Up => cross_over,
@@ -523,8 +503,7 @@ fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool
         OrderType::StopLossLong(_, _) => stop_cross_bellow,
         OrderType::StopLossShort(_, _) => stop_cross_over,
         _ => todo!(),
-    };
-    activated
+    }
 }
 
 pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
@@ -762,7 +741,7 @@ fn get_order_activation_price(
             prev_candle.high(),
             prev_candle.low(),
         ),
-        "bot" => match activation_source.as_ref() {
+        "bot" => match activation_source {
             "highs_lows" => (
                 candle.high(),
                 candle.low(),

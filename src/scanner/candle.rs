@@ -247,15 +247,15 @@ impl CandleBuilder {
     pub fn is_bullish_reversal(&self) -> bool {
         let min_diff_size = 0.1;
 
-        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
-        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
-        let (open, high, low, close) = &self.get_current_ohlc();
+        let (_left_open, _left_high, _left_low, left_close) = &self.get_previous_ohlc(1);
+        let (_mid_open, _mid_high, _mid_low, mid_close) = &self.get_previous_ohlc(0);
+        let (_open, _high, _low, close) = &self.get_current_ohlc();
 
         let diff_size = (left_close - close).abs();
         let diff_size_percentage = (diff_size / close) * 100.0;
 
         let left_is_karakasa = {
-            let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(2);
+            let (_prev_open, prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(2);
             let (open, high, low, close) = &self.get_previous_ohlc(1);
 
             (high - low) > 3. * (open - close)
@@ -265,23 +265,17 @@ impl CandleBuilder {
                 && prev_low > low
         };
 
-        if left_is_karakasa
-            && (mid_close > left_close && close > mid_close && diff_size_percentage > min_diff_size)
-        {
-            true
-        } else {
-            false
-        }
+        left_is_karakasa && (mid_close > left_close && close > mid_close && diff_size_percentage > min_diff_size)
     }
 
     pub fn is_three_in_row(&self) -> bool {
-        let min_diff_size = 0.1;
-        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
-        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
-        let (open, high, low, close) = &self.get_current_ohlc();
+        let _min_diff_size = 0.1;
+        let (left_open, _left_high, _left_low, left_close) = &self.get_previous_ohlc(1);
+        let (mid_open, _mid_high, _mid_low, mid_close) = &self.get_previous_ohlc(0);
+        let (open, _high, _low, close) = &self.get_current_ohlc();
 
         let diff_size = (left_close - close).abs();
-        let diff_size_percentage = (diff_size / close) * 100.0;
+        let _diff_size_percentage = (diff_size / close) * 100.0;
 
         close > open
             && mid_close > mid_open
@@ -291,13 +285,13 @@ impl CandleBuilder {
     }
 
     pub fn is_bearish_three_in_row(&self) -> bool {
-        let min_diff_size = 0.1;
-        let (left_open, left_high, left_low, left_close) = &self.get_previous_ohlc(1);
-        let (mid_open, mid_high, mid_low, mid_close) = &self.get_previous_ohlc(0);
-        let (open, high, low, close) = &self.get_current_ohlc();
+        let _min_diff_size = 0.1;
+        let (left_open, _left_high, _left_low, left_close) = &self.get_previous_ohlc(1);
+        let (mid_open, _mid_high, _mid_low, mid_close) = &self.get_previous_ohlc(0);
+        let (open, _high, _low, close) = &self.get_current_ohlc();
 
         let diff_size = (left_close - close).abs();
-        let diff_size_percentage = (diff_size / close) * 100.0;
+        let _diff_size_percentage = (diff_size / close) * 100.0;
 
         close < open
             && mid_close < mid_open
@@ -309,7 +303,7 @@ impl CandleBuilder {
     fn is_karakasa(&self) -> bool {
         // ((H-L)>3*(O-C)AND((C-L)/(.001+H-L)>0.6)AND((O-L)/(.001+H-L)>0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
-        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
+        let (_prev_open, prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(0);
 
         (high - low) > 3. * (open - close)
             && ((close - low) / (0.001 + high - low) >= 0.7)
@@ -321,7 +315,7 @@ impl CandleBuilder {
     fn is_bearish_karakasa(&self) -> bool {
         // (((H – L) > 3 * (O – C)) AND ((H – C) / (.001 + H – L) > 0.6) AND ((H – O) / (.001 + H – L) > 0.6))
         let (open, high, low, close) = &self.get_current_ohlc();
-        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
+        let (_prev_open, prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(0);
         ((high - low) > 3. * (open - close))
             && ((high - close) / (0.001 + high - low) >= 0.7)
             && ((high - open) / (0.001 + high - low) >= 0.7)

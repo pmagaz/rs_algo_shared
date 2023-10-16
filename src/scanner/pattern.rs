@@ -1,5 +1,5 @@
 use crate::helpers::poly::poly_fit;
-use crate::helpers::slope_intercept::{add_next_bottom_points, add_next_top_points};
+
 use crate::patterns::*;
 use crate::scanner::candle::Candle;
 use crate::scanner::prices::calculate_price_target;
@@ -170,7 +170,7 @@ impl Patterns {
             .parse::<usize>()
             .unwrap();
 
-        let window_size = env::var("PATTERNS_WINDOW_SIZE")
+        let _window_size = env::var("PATTERNS_WINDOW_SIZE")
             .unwrap()
             .parse::<usize>()
             .unwrap();
@@ -207,8 +207,8 @@ impl Patterns {
             // ...
 
             let window_size = 4;
-            let mut not_found: bool = true;
-            let mut index = 0;
+            let _not_found: bool = true;
+            let _index = 0;
 
             for index in 0..candles.len() - window_size + 1 {
                 let window = &candles[index..index + window_size];
@@ -264,8 +264,8 @@ impl Patterns {
             }
 
             //DATAPOINTS BASED PATTERNS
-            let mut iter = locals.windows(window_size);
-            let mut not_found = true;
+            let _iter = locals.windows(window_size);
+            let _not_found = true;
 
             // while not_found {
             //     match iter.next() {

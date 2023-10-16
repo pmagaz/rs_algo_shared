@@ -351,10 +351,10 @@ fn get_htf_indexes<'a>(
 
             let upper_tf_idx = upper_indexes
                 .last()
-                .and_then(|val| match execution_mode.is_back_test() {
+                .map(|val| match execution_mode.is_back_test() {
                     //TO SIMULATE THE LACK OF NOT CLOSED INDICATORS IN BOT
-                    true => Some(*val),
-                    false => Some(*val),
+                    true => *val,
+                    false => *val,
                 })
                 .unwrap_or(0);
 

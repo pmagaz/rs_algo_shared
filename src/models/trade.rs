@@ -473,7 +473,7 @@ pub fn resolve_trade_out(
 
 pub fn calculate_trade_index(
     index: usize,
-    order: Option<&Order>,
+    _order: Option<&Order>,
     execution_mode: &ExecutionMode,
 ) -> usize {
     match execution_mode.is_back_test() {

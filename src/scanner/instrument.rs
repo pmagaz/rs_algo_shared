@@ -4,7 +4,7 @@ use crate::helpers::date::*;
 use crate::indicators::{Indicator, Indicators};
 use crate::models::indicator::CompactIndicators;
 use crate::models::mode::ExecutionMode;
-use crate::models::pricing::Pricing;
+
 use crate::models::time_frame::*;
 use crate::models::{market::*, mode};
 use crate::scanner::candle::{Candle, CandleType};
@@ -324,7 +324,7 @@ impl Instrument {
             .map(|(id, x)| {
                 let adapted_dohlcc = adapt_to_timeframe(*x, &self.time_frame, false);
                 let candle = self.process_candle(id, &data, adapted_dohlcc, logarithmic_scanner);
-                let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+                let _num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
 
                 let low = candle.low();
                 let high = candle.high();
@@ -347,10 +347,8 @@ impl Instrument {
 
                 avg_volume.push(volume);
 
-                if process_patterns {
-                    if candle.is_closed() {
-                        self.peaks.next(&candle);
-                    }
+                if process_patterns && candle.is_closed() {
+                    self.peaks.next(&candle);
                 }
 
                 if process_indicators {
@@ -419,7 +417,7 @@ impl Instrument {
             self.data = candles
                 .into_iter()
                 .map(|candle| {
-                    let mut data = match logarithmic_scanner {
+                    let data = match logarithmic_scanner {
                         true => candle.from_logarithmic_values(),
                         false => candle,
                     };
@@ -467,12 +465,12 @@ impl Instrument {
 
         if candle.is_closed() {
             self.close_last_candle();
-            self.close_indicators(&last_candle);
+            self.close_indicators(last_candle);
             //self.next_peaks(&last_candle);
         } else {
-            self.adapt_last_candle_tf(candle.clone(), &last_candle, time_frame);
+            self.adapt_last_candle_tf(candle.clone(), last_candle, time_frame);
             let updated_candle = &self.data.last().unwrap().clone();
-            self.update_indicators(&updated_candle);
+            self.update_indicators(updated_candle);
         }
 
         Ok(candle)

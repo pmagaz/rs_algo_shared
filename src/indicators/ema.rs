@@ -43,7 +43,7 @@ impl Indicator for Ema {
     }
 
     fn get_current_a(&self) -> &f64 {
-        &self.data_a.last().unwrap()
+        self.data_a.last().unwrap()
     }
 
     fn get_data_b(&self) -> &Vec<f64> {
@@ -51,7 +51,7 @@ impl Indicator for Ema {
     }
 
     fn get_current_b(&self) -> &f64 {
-        &self.data_b.last().unwrap()
+        self.data_b.last().unwrap()
     }
 
     fn get_data_c(&self) -> &Vec<f64> {
@@ -59,7 +59,7 @@ impl Indicator for Ema {
     }
 
     fn get_current_c(&self) -> &f64 {
-        &self.data_c.last().unwrap()
+        self.data_c.last().unwrap()
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
@@ -69,7 +69,7 @@ impl Indicator for Ema {
     }
 
     fn next_tmp(&mut self, value: f64) {
-        let leches = self.ema_tmp.next(value);
+        let _leches = self.ema_tmp.next(value);
     }
 
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {

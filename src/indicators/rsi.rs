@@ -32,7 +32,7 @@ impl Indicator for Rsi {
     }
 
     fn get_current_a(&self) -> &f64 {
-        &self.data_a.last().unwrap()
+        self.data_a.last().unwrap()
     }
 
     fn get_data_b(&self) -> &Vec<f64> {
@@ -40,7 +40,7 @@ impl Indicator for Rsi {
     }
 
     fn get_current_b(&self) -> &f64 {
-        &self.data_b.last().unwrap()
+        self.data_b.last().unwrap()
     }
 
     fn get_data_c(&self) -> &Vec<f64> {
@@ -48,7 +48,7 @@ impl Indicator for Rsi {
     }
 
     fn get_current_c(&self) -> &f64 {
-        &self.data_c.last().unwrap()
+        self.data_c.last().unwrap()
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
@@ -67,7 +67,7 @@ impl Indicator for Rsi {
 
     fn update(&mut self, value: f64) -> Result<()> {
         let a = self.rsi.next(value);
-        let last_index = self.data_a.len() - 1;
+        let _last_index = self.data_a.len() - 1;
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())

@@ -32,7 +32,7 @@ impl Indicator for Adx {
     }
 
     fn get_current_a(&self) -> &f64 {
-        &self.data_a.last().unwrap()
+        self.data_a.last().unwrap()
     }
 
     fn get_data_b(&self) -> &Vec<f64> {
@@ -49,7 +49,7 @@ impl Indicator for Adx {
     }
 
     fn get_current_c(&self) -> &f64 {
-        &self.data_c.last().unwrap()
+        self.data_c.last().unwrap()
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
@@ -98,7 +98,7 @@ impl Indicator for Adx {
     }
 
     fn duplicate_last(&mut self) {
-        if let Some(&a) = self.data_a.last() {
+        if let Some(&_a) = self.data_a.last() {
             self.data_a.insert(0, 0.);
         }
     }

@@ -18,7 +18,7 @@ use crate::indicators::rsi::Rsi;
 use crate::models::time_frame::TimeFrameType;
 use crate::scanner::candle::Candle;
 
-use chrono::{DateTime, Local};
+
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::marker::Sized;
@@ -232,7 +232,7 @@ impl Indicators {
     pub fn next_update(
         &mut self,
         OHLC: (f64, f64, f64, f64),
-        time_frame: &TimeFrameType,
+        _time_frame: &TimeFrameType,
     ) -> Result<()> {
         let close = OHLC.3;
 
@@ -305,7 +305,7 @@ impl Indicators {
         OHLC: (f64, f64, f64, f64),
         time_frame: &TimeFrameType,
     ) -> Result<()> {
-        let close = OHLC.3;
+        let _close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
 
@@ -315,21 +315,16 @@ impl Indicators {
         //     self.adx.next(close).unwrap();
         // }
 
-        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            if self.atr.get_data_a().len() > max_bars {
-                self.atr.remove_a(0);
-            }
+        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() && self.atr.get_data_a().len() > max_bars {
+            self.atr.remove_a(0);
         }
 
         if env::var("INDICATORS_MACD")
             .unwrap()
             .parse::<bool>()
-            .unwrap()
-        {
-            if self.macd.get_data_a().len() > max_bars {
-                self.macd.remove_a(0);
-                self.macd.remove_b(0);
-            }
+            .unwrap() && self.macd.get_data_a().len() > max_bars {
+            self.macd.remove_a(0);
+            self.macd.remove_b(0);
         }
 
         // if env::var("INDICATORS_STOCH")
@@ -340,56 +335,41 @@ impl Indicators {
         //     self.stoch.update(close).unwrap();
         // }
 
-        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            if self.rsi.get_data_a().len() > max_bars {
-                self.rsi.remove_a(0);
-            }
+        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() && self.rsi.get_data_a().len() > max_bars {
+            self.rsi.remove_a(0);
         }
 
-        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            if self.bb.get_data_a().len() > max_bars {
-                self.bb.remove_a(0);
-                self.bb.remove_b(0);
-                self.bb.remove_c(0);
-            }
+        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() && self.bb.get_data_a().len() > max_bars {
+            self.bb.remove_a(0);
+            self.bb.remove_b(0);
+            self.bb.remove_c(0);
         }
 
-        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            if self.bbw.get_data_a().len() > max_bars {
-                self.bbw.remove_a(0);
-                self.bbw.remove_b(0);
-                self.bbw.remove_c(0);
-            }
+        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() && self.bbw.get_data_a().len() > max_bars {
+            self.bbw.remove_a(0);
+            self.bbw.remove_b(0);
+            self.bbw.remove_c(0);
         }
 
         if env::var("INDICATORS_EMA_A")
             .unwrap()
             .parse::<bool>()
-            .unwrap()
-        {
-            if self.ema_a.get_data_a().len() > max_bars {
-                self.ema_a.remove_a(0);
-            }
+            .unwrap() && self.ema_a.get_data_a().len() > max_bars {
+            self.ema_a.remove_a(0);
         }
 
         if env::var("INDICATORS_EMA_B")
             .unwrap()
             .parse::<bool>()
-            .unwrap()
-        {
-            if self.ema_b.get_data_a().len() > max_bars {
-                self.ema_b.remove_a(0);
-            }
+            .unwrap() && self.ema_b.get_data_a().len() > max_bars {
+            self.ema_b.remove_a(0);
         }
 
         if env::var("INDICATORS_EMA_C")
             .unwrap()
             .parse::<bool>()
-            .unwrap()
-        {
-            if self.ema_c.get_data_a().len() > max_bars {
-                self.ema_c.remove_a(0);
-            }
+            .unwrap() && self.ema_c.get_data_a().len() > max_bars {
+            self.ema_c.remove_a(0);
         }
 
         Ok(())
@@ -475,7 +455,7 @@ impl Indicators {
             .rev()
             .take(50)
             .rev()
-            .filter(|x| x.is_closed == true)
+            .filter(|x| x.is_closed)
         {
             if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
                 self.atr.next_tmp(prev_candle.close());
