@@ -255,8 +255,8 @@ impl CandleBuilder {
         let diff_size_percentage = (diff_size / close) * 100.0;
 
         let left_is_karakasa = {
-            let (_prev_open, prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(2);
-            let (open, high, low, close) = &self.get_previous_ohlc(1);
+            let (_prev_open, prev_high, prev_low, _prev_close) = &self.get_previous_ohlc(3);
+            let (open, high, low, close) = &self.get_previous_ohlc(2);
 
             (high - low) > 3. * (open - close)
                 && ((close - low) / (0.001 + high - low) >= 0.7)
@@ -265,7 +265,8 @@ impl CandleBuilder {
                 && prev_low > low
         };
 
-        left_is_karakasa && (mid_close > left_close && close > mid_close && diff_size_percentage > min_diff_size)
+        left_is_karakasa
+            && (mid_close > left_close && close > mid_close && diff_size_percentage > min_diff_size)
     }
 
     pub fn is_three_in_row(&self) -> bool {
@@ -276,7 +277,19 @@ impl CandleBuilder {
 
         let diff_size = (left_close - close).abs();
         let _diff_size_percentage = (diff_size / close) * 100.0;
-
+        // log::info!(
+        //     "1111111 {:?}",
+        //     (
+        //         close > open
+        //             && mid_close > mid_open
+        //             && left_close > left_open
+        //             && close > mid_close
+        //             && mid_close > left_close,
+        //         left_open,
+        //         mid_open,
+        //         open
+        //     )
+        // );
         close > open
             && mid_close > mid_open
             && left_close > left_open
@@ -289,6 +302,20 @@ impl CandleBuilder {
         let (left_open, _left_high, _left_low, left_close) = &self.get_previous_ohlc(1);
         let (mid_open, _mid_high, _mid_low, mid_close) = &self.get_previous_ohlc(0);
         let (open, _high, _low, close) = &self.get_current_ohlc();
+
+        // log::info!(
+        //     "22222222 {:?}",
+        //     (
+        //         close < open
+        //             && mid_close < mid_open
+        //             && left_close < left_open
+        //             && close < mid_close
+        //             && mid_close < left_close,
+        //         left_open,
+        //         mid_open,
+        //         open
+        //     )
+        // );
 
         let diff_size = (left_close - close).abs();
         let _diff_size_percentage = (diff_size / close) * 100.0;
@@ -485,6 +512,12 @@ impl CandleBuilder {
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
 
         if candle_types {
+            if self.is_bullish_crows() {
+                return CandleType::BullishCrows;
+            }
+            if self.is_bearish_crows() {
+                return CandleType::BearishCrows;
+            }
             if self.is_bullish_reversal() {
                 return CandleType::Reversal;
             }
@@ -509,9 +542,6 @@ impl CandleBuilder {
             if self.is_bullish_star() {
                 return CandleType::MorningStar;
             }
-            if self.is_bullish_crows() {
-                return CandleType::BullishCrows;
-            }
             if self.is_marubozu() {
                 return CandleType::Marubozu;
             }
@@ -523,9 +553,6 @@ impl CandleBuilder {
             }
             if self.is_bearish_gap() {
                 return CandleType::BearishGap;
-            }
-            if self.is_bearish_crows() {
-                return CandleType::BearishCrows;
             }
             if self.is_bearish_marubozu() {
                 return CandleType::BearishMarubozu;

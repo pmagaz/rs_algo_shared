@@ -204,6 +204,8 @@ impl Instrument {
         let prev_2 = prev_1.saturating_sub(1);
         let prev_3 = prev_2.saturating_sub(1);
 
+        // log::info!("7777777 {:?}" ,(date, data[prev_0].0,data[prev_1].0, data[prev_2].0, data[prev_3].0));
+
         Candle::new()
             .date(date)
             .open(open)
@@ -230,9 +232,7 @@ impl Instrument {
         let is_closed = data.6;
         let (open, high, low, close) = self.get_scale_ohlc(data, logarithmic_scanner);
 
-        //let (date_time, open, high, low, close, volume, _) = tuple;
-
-        let prev_0 = id.saturating_sub(1);
+        let prev_0 = id.saturating_sub(2);
         let prev_1 = prev_0.saturating_sub(1);
         let prev_2 = prev_1.saturating_sub(1);
         let prev_3 = prev_2.saturating_sub(1);
@@ -278,6 +278,8 @@ impl Instrument {
             candle_3.volume(),
         );
 
+
+        // log::info!("999999999 {:?}" ,(date, data_0.0,data_1.0));
         Candle::new()
             .date(date)
             .open(open)
@@ -461,6 +463,8 @@ impl Instrument {
         let time_frame = &self.time_frame.clone();
 
         let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
+
+        //log::info!("66666666 {:?}", (last_candle.date(), data.0, adapted_dohlcc.0));
         let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
 
         if candle.is_closed() {
