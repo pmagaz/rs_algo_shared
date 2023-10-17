@@ -3,9 +3,9 @@ use std::env;
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
 use super::pricing::Pricing;
-use crate::helpers::calc;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
+use crate::helpers::{calc, date};
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
@@ -468,6 +468,102 @@ pub fn resolve_trade_out(
     } else {
         log::warn!("Non profitable {:?} exit", trade_type);
         TradeResult::None
+    }
+}
+
+pub fn wait_for_new_trade(
+    index: usize,
+    instrument: &Instrument,
+    trades_out: &Vec<TradeOut>,
+) -> bool {
+    let wait_for_new_entry = env::var("WAIT_FOR_NEW_ENTRY")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
+
+    match wait_for_new_entry {
+        true => {
+            let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+            let candles_until_new_operation = env::var("CANDLES_UNTIL_NEW_ENTRY")
+                .unwrap()
+                .parse::<i64>()
+                .unwrap();
+
+            let time_frame = instrument.time_frame();
+
+            let current_date = match execution_mode.is_back_test() {
+                true => instrument.data().get(index).unwrap().date(),
+                false => Local::now(),
+            };
+
+            match trades_out.last() {
+                Some(trade_out) => {
+                    let next_entry_date = match instrument.time_frame().is_minutely_time_frame() {
+                        true => {
+                            date::from_dbtime(&trade_out.date_out)
+                                + date::Duration::minutes(
+                                    candles_until_new_operation * time_frame.to_minutes(),
+                                )
+                        }
+                        false => {
+                            date::from_dbtime(&trade_out.date_out)
+                                + date::Duration::hours(
+                                    candles_until_new_operation * time_frame.to_hours(),
+                                )
+                        }
+                    };
+
+                    if current_date >= next_entry_date {
+                        false
+                    } else {
+                        true
+                    }
+                }
+                None => false,
+            }
+        }
+        false => false,
+    }
+}
+
+pub fn wait_for_closing_trade(index: usize, instrument: &Instrument, trade_in: &TradeIn) -> bool {
+    let wait_for_new_exit = env::var("WAIT_FOR_NEW_EXIT")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
+
+    match wait_for_new_exit {
+        true => {
+            let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+            let candles_until_new_operation = env::var("CANDLES_UNTIL_NEW_ENTRY")
+                .unwrap()
+                .parse::<i64>()
+                .unwrap();
+
+            let time_frame = instrument.time_frame();
+
+            let current_date = match execution_mode.is_back_test() {
+                true => instrument.data().get(index).unwrap().date(),
+                false => Local::now(),
+            };
+
+            let next_entry_date = match instrument.time_frame().is_minutely_time_frame() {
+                true => {
+                    date::from_dbtime(&trade_in.date_in)
+                        + date::Duration::minutes(
+                            candles_until_new_operation * time_frame.to_minutes(),
+                        )
+                }
+                false => {
+                    date::from_dbtime(&trade_in.date_in)
+                        + date::Duration::hours(candles_until_new_operation * time_frame.to_hours())
+                }
+            };
+            next_entry_date <= current_date
+        }
+        false => true,
     }
 }
 
