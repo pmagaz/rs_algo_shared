@@ -249,7 +249,10 @@ pub fn prepare_orders(
                         }
                     };
 
-                    //log::info!("22222222 {:?}", buy_order_target);
+                    log::info!(
+                        "22222222 {:?}",
+                        (buy_order_target, sell_order_target, "->", pricing.spread())
+                    );
                     orders.push(order);
                 } else {
                     is_valid_buy_sell_order = false;
@@ -395,6 +398,11 @@ pub fn create_order(
         false => *current_date + date::Duration::hours(valid_until_bars * time_frame.to_hours()),
     };
 
+    // log::info!(
+    //     "11111111 creating order {:?}",
+    //     (current_candle, origin_price, target_price)
+    // );
+
     Order {
         id: uuid::generate_ts_id(*current_date),
         index_created: index,
@@ -458,7 +466,6 @@ pub fn resolve_active_orders(
 }
 
 fn order_activated(index: usize, order: &Order, instrument: &Instrument) -> bool {
-    let _order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 

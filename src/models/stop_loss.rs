@@ -60,17 +60,12 @@ pub fn create_stop_loss_order(
         .parse::<bool>()
         .unwrap();
 
-    let atr_multiplier = std::env::var("ATR_STOP_LOSS")
-        .unwrap()
-        .parse::<f64>()
-        .unwrap();
-
-    let spread = match stop_loss_spread {
+    let spread_value = match stop_loss_spread {
         true => spread,
         false => 0.,
     };
-    let current_atr_value =
-        instrument.indicators.atr.get_data_a().get(index).unwrap() * atr_multiplier;
+
+    let atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap();
 
     let current_candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index + 1).unwrap(),
@@ -80,18 +75,17 @@ pub fn create_stop_loss_order(
     let current_open = current_candle.open();
 
     let target_price = match stop_loss_type {
-        StopLossType::Atr(atr_value) => match order_direction {
-            OrderDirection::Up => (current_open + spread) + (atr_value * current_atr_value),
-
-            OrderDirection::Down => (current_open + spread) - (atr_value * current_atr_value),
+        StopLossType::Atr(atr_stop_value) => match order_direction {
+            OrderDirection::Up => (current_open + spread_value) + (atr_stop_value * atr_value),
+            OrderDirection::Down => (current_open - spread_value) - (atr_stop_value * atr_value),
         },
         StopLossType::Price(target_price) => match order_direction {
             OrderDirection::Up => *target_price,
             OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (current_open + spread) + calc::to_pips(*pips, pricing),
-            OrderDirection::Down => (current_open + spread) - calc::to_pips(*pips, pricing),
+            OrderDirection::Up => (current_open + spread_value) + calc::to_pips(*pips, pricing),
+            OrderDirection::Down => (current_open - spread_value) - calc::to_pips(*pips, pricing),
         },
         StopLossType::None => todo!(),
     };
