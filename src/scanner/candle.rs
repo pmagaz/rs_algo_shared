@@ -509,7 +509,6 @@ impl CandleBuilder {
     }
 
     fn identify_candle_type(&self) -> CandleType {
-
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
 
         if candle_types {
@@ -572,7 +571,6 @@ impl CandleBuilder {
             }
         }
 
-
         CandleType::Default
     }
 
@@ -598,9 +596,6 @@ impl CandleBuilder {
             self.previous_candles.as_ref(),
             self.logarithmic,
         ) {
-
-            //log::info!("44444444 {:?}", (date, self.identify_candle_type()));
-
             Ok(Candle {
                 candle_type: self.identify_candle_type(),
                 date,

@@ -204,8 +204,6 @@ impl Instrument {
         let prev_2 = prev_1.saturating_sub(1);
         let prev_3 = prev_2.saturating_sub(1);
 
-        // log::info!("7777777 {:?}" ,(date, data[prev_0].0,data[prev_1].0, data[prev_2].0, data[prev_3].0));
-
         Candle::new()
             .date(date)
             .open(open)
@@ -278,8 +276,6 @@ impl Instrument {
             candle_3.volume(),
         );
 
-
-        // log::info!("999999999 {:?}" ,(date, data_0.0,data_1.0));
         Candle::new()
             .date(date)
             .open(open)
@@ -464,7 +460,6 @@ impl Instrument {
 
         let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
 
-        //log::info!("66666666 {:?}", (last_candle.date(), data.0, adapted_dohlcc.0));
         let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
 
         if candle.is_closed() {
@@ -561,8 +556,6 @@ impl Instrument {
             candle.set_open(previous_open);
             candle.set_high(higher_value);
             candle.set_low(lower_value);
-
-            // log::info!("Adapting HTF Candle {:?}", candle);
         }
 
         *self.data.last_mut().unwrap() = candle.clone();

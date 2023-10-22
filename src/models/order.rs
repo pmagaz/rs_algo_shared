@@ -249,10 +249,6 @@ pub fn prepare_orders(
                         }
                     };
 
-                    log::info!(
-                        "22222222 {:?}",
-                        (buy_order_target, sell_order_target, "->", pricing.spread())
-                    );
                     orders.push(order);
                 } else {
                     is_valid_buy_sell_order = false;
