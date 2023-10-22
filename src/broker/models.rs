@@ -24,7 +24,7 @@ pub struct Symbol {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SymbolPricing {
+pub struct SymbolInstrumentTick {
     pub symbol: String,
     pub time: f64,
     pub ask: f64,
@@ -42,9 +42,9 @@ pub struct SymbolPricing {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SymbolPricingResponse {
+pub struct SymbolInstrumentTickResponse {
     pub status: bool,
-    pub returnData: SymbolPricing,
+    pub returnData: SymbolInstrumentTick,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

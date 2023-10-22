@@ -32,8 +32,10 @@ pub trait Broker {
         period: usize,
         start: i64,
     ) -> Result<Response<VEC_DOHLC>>;
-    async fn get_instrument_pricing(&mut self, symbol: &str)
-        -> Result<ResponseBody<SymbolPricing>>;
+    async fn get_instrument_tick(
+        &mut self,
+        symbol: &str,
+    ) -> Result<ResponseBody<SymbolInstrumentTick>>;
     async fn get_tick_prices(
         &mut self,
         symbol: &str,
@@ -133,10 +135,10 @@ impl Broker for Xtb {
         Ok(res)
     }
 
-    async fn get_instrument_pricing(
+    async fn get_instrument_tick(
         &mut self,
         symbol: &str,
-    ) -> Result<ResponseBody<SymbolPricing>> {
+    ) -> Result<ResponseBody<SymbolInstrumentTick>> {
         let symbol_command = Command {
             command: "getSymbol".to_owned(),
             arguments: SymbolArg {
@@ -148,8 +150,8 @@ impl Broker for Xtb {
         let msg = self.websocket.read().await.unwrap();
         let txt_msg = match msg {
             Message::Text(txt) => {
-                let parsed: SymbolPricingResponse = serde_json::from_str(&txt).unwrap();
-                let symbol_detail: SymbolPricing = parsed.returnData;
+                let parsed: SymbolInstrumentTickResponse = serde_json::from_str(&txt).unwrap();
+                let symbol_detail: SymbolInstrumentTick = parsed.returnData;
                 ResponseBody {
                     response: ResponseType::TradeInAccepted,
                     payload: Some(symbol_detail),
@@ -401,14 +403,12 @@ impl Xtb {
 
             //FILTER ONLY AMERICAN STOCKS AND FX, CRYPTO
             if symbol.contains(".US") || !symbol.contains(".") {
-
                 result.push(Symbol {
                     symbol,
                     currency,
                     category,
                     description,
                 });
-
             }
         }
         Ok(result)

@@ -1,7 +1,7 @@
 use std::env;
 
 use super::mode;
-use super::pricing::Pricing;
+use super::tick::InstrumentTick;
 use super::trade::{Trade, TradeType};
 
 use crate::helpers::calc::*;
@@ -127,7 +127,7 @@ impl Order {
         self.size
     }
 
-    pub fn update_pricing(&mut self, origin_price: f64, target_price: f64) {
+    pub fn update_tick(&mut self, origin_price: f64, target_price: f64) {
         self.origin_price = origin_price;
         self.target_price = target_price;
     }
@@ -182,7 +182,7 @@ impl Order {
 pub fn prepare_orders(
     index: usize,
     instrument: &Instrument,
-    pricing: &Pricing,
+    tick: &InstrumentTick,
     trade_type: &TradeType,
     order_types: &Vec<OrderType>,
 ) -> Vec<Order> {
@@ -232,7 +232,7 @@ pub fn prepare_orders(
                             buy_order_target = match order_type.is_long() {
                                 true => match order_with_spread {
                                     true => order.target_price,
-                                    false => order.target_price + pricing.spread(),
+                                    false => order.target_price + tick.spread(),
                                 },
                                 false => order.target_price,
                             }
@@ -243,7 +243,7 @@ pub fn prepare_orders(
                                 true => order.target_price,
                                 false => match order_with_spread {
                                     true => order.target_price,
-                                    false => order.target_price + pricing.spread(),
+                                    false => order.target_price + tick.spread(),
                                 },
                             }
                         }
@@ -264,7 +264,7 @@ pub fn prepare_orders(
                         index,
                         trade_id,
                         instrument,
-                        pricing,
+                        tick,
                         direction,
                         stop_loss_type,
                     );
@@ -420,7 +420,7 @@ pub fn resolve_active_orders(
     index: usize,
     instrument: &Instrument,
     orders: &Vec<Order>,
-    _pricing: &Pricing,
+    _tick: &InstrumentTick,
 ) -> Position {
     let mut order_position: Position = Position::None;
     let mut orders_activated = Vec::<Position>::new();

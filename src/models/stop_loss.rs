@@ -2,7 +2,7 @@ use std::env;
 
 use super::mode;
 use super::order::{self, Order, OrderDirection, OrderType};
-use super::pricing::Pricing;
+use super::tick::InstrumentTick;
 
 use crate::helpers::{calc, date::*};
 use crate::indicators::Indicator;
@@ -43,13 +43,13 @@ pub fn create_stop_loss_order(
     index: usize,
     trade_id: usize,
     instrument: &Instrument,
-    pricing: &Pricing,
+    tick: &InstrumentTick,
     order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
     // _target_price: f64,
     // _order_size: f64,
 ) -> Order {
-    let spread = pricing.spread();
+    let spread = tick.spread();
 
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
@@ -84,8 +84,8 @@ pub fn create_stop_loss_order(
             OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (current_open + spread_value) + calc::to_pips(*pips, pricing),
-            OrderDirection::Down => (current_open - spread_value) - calc::to_pips(*pips, pricing),
+            OrderDirection::Up => (current_open + spread_value) + calc::to_pips(*pips, tick),
+            OrderDirection::Down => (current_open - spread_value) - calc::to_pips(*pips, tick),
         },
         StopLossType::None => todo!(),
     };

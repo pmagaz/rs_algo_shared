@@ -6,8 +6,8 @@ use crate::broker::{DOHLC, VEC_DOHLC};
 use crate::models::bot::BotData;
 use crate::models::market::MarketHours;
 use crate::models::order::Order;
-use crate::models::pricing::Pricing;
 use crate::models::strategy::StrategyType;
+use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::TimeFrameType;
 use crate::models::trade::{TradeIn, TradeOut};
 
@@ -18,7 +18,7 @@ pub enum CommandType {
     InitSession,
     GetCurrentState,
     GetInstrumentData,
-    GetInstrumentPricing,
+    GetInstrumentTick,
     GetMarketHours,
     UpdateBotData,
     ExecuteTrade,
@@ -38,7 +38,7 @@ pub enum ResponseType {
     Error,
     Reconnect,
     GetInstrumentData,
-    GetInstrumentPricing,
+    GetInstrumentTick,
     GetMarketHours,
     TradeInAccepted,
     TradeOutAccepted,
@@ -115,12 +115,6 @@ pub struct TradeResponse<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PricingData {
-    pub symbol: String,
-    pub data: Pricing,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct ConnectedData {
     pub session_id: Uuid,
 }
@@ -145,9 +139,9 @@ pub struct ReconnectOptions {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MessageType {
     StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
-    StreamPricingResponse(ResponseBody<Pricing>),
+    StreamTickResponse(ResponseBody<InstrumentTick>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
-    PricingData(ResponseBody<Pricing>),
+    InstrumentTick(ResponseBody<InstrumentTick>),
     MarketHours(ResponseBody<MarketHours>),
     InitSession(ResponseBody<BotData>),
     TradeInAccepted(ResponseBody<TradeResponse<TradeIn>>),

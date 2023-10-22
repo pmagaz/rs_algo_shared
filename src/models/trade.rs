@@ -2,7 +2,7 @@ use std::env;
 
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
-use super::pricing::Pricing;
+use super::tick::InstrumentTick;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::helpers::{calc, date};
@@ -257,7 +257,7 @@ pub fn resolve_trade_in(
     index: usize,
     trade_size: f64,
     instrument: &Instrument,
-    pricing: &Pricing,
+    tick: &InstrumentTick,
     trade_type: &TradeType,
     order: Option<&Order>,
 ) -> TradeResult {
@@ -267,7 +267,7 @@ pub fn resolve_trade_in(
     let index = calculate_trade_index(index, order, &execution_mode);
 
     if trade_type.is_entry() {
-        let spread = pricing.spread();
+        let spread = tick.spread();
         let current_candle = match execution_mode.is_back_test() {
             true => instrument.data().get(index).unwrap(),
             false => instrument.data().last().unwrap(),
@@ -326,14 +326,14 @@ pub fn resolve_trade_in(
 pub fn resolve_trade_out(
     index: usize,
     instrument: &Instrument,
-    pricing: &Pricing,
+    tick: &InstrumentTick,
     trade_in: &TradeIn,
     trade_type: &TradeType,
     order: Option<&Order>,
 ) -> TradeResult {
     let quantity = trade_in.quantity;
     let data = &instrument.data;
-    let spread = pricing.spread();
+    let spread = tick.spread();
     let trade_in_type = &trade_in.trade_type;
     let index_in = trade_in.index_in;
     let spread_in = trade_in.spread;
@@ -456,7 +456,7 @@ pub fn resolve_trade_out(
             price_origin,
             price_out,
             bid,
-            spread_out: pricing.spread(),
+            spread_out: tick.spread(),
             date_out,
             profit,
             profit_per,

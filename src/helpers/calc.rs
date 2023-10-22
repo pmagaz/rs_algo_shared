@@ -1,5 +1,5 @@
 use crate::helpers::comp::*;
-use crate::models::pricing::Pricing;
+use crate::models::tick::InstrumentTick;
 use crate::models::trade::*;
 use crate::scanner::candle::Candle;
 use round::round;
@@ -31,12 +31,12 @@ pub fn calculate_profit(size: f64, price_in: f64, price_out: f64, trade_type: &T
     }
 }
 
-pub fn to_pips(pips: f64, pricing: &Pricing) -> f64 {
-    pricing.pip_size() * pips
+pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
+    tick.pip_size() * pips
 }
 
-pub fn from_pips(pips: f64, pricing: &Pricing) -> f64 {
-    pricing.pip_size() / pips
+pub fn from_pips(pips: f64, tick: &InstrumentTick) -> f64 {
+    tick.pip_size() / pips
 }
 
 pub fn calculate_profit_per(price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {

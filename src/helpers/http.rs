@@ -45,8 +45,8 @@ where
     );
 
     let client = Client::builder()
-        .timeout(Duration::from_secs(60))
-        .user_agent("rs-algo-scanner")
+        // .timeout(Duration::from_secs(60))
+        // .user_agent("rs-algo-scanner")
         .build()?;
 
     let result = match method {
