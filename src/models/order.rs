@@ -394,11 +394,6 @@ pub fn create_order(
         false => *current_date + date::Duration::hours(valid_until_bars * time_frame.to_hours()),
     };
 
-    // log::info!(
-    //     "11111111 creating order {:?}",
-    //     (current_candle, origin_price, target_price)
-    // );
-
     Order {
         id: uuid::generate_ts_id(*current_date),
         index_created: index,

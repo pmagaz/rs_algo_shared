@@ -242,18 +242,18 @@ impl BrokerStream for Xtb {
                     let to = obj["toT"].as_i64().unwrap() as u32 / 3600 / 1000;
 
                     //NAPA
-                    // let from = match date::is_dst(&current_date) {
-                    //     false => from + 1,
-                    //     true => from,
-                    // };
-
-                    if day == week_day {
-                        if current_hours >= from && current_hours <= to {
-                            open = true
-                        } else {
-                            open = false
-                        }
+                    let (from, to) = match date::is_dst(&current_date) {
+                        true => (23, 22),
+                        false => (22, 21),
                     };
+
+                    // if day == week_day {
+                    //     if current_hours >= from_hours && current_hours <= to_hours {
+                    //         open = true
+                    //     } else {
+                    //         open = false
+                    //     }
+                    // };
                     let market_hour = MarketHour { day, from, to };
 
                     result.push(market_hour);
@@ -276,7 +276,7 @@ impl BrokerStream for Xtb {
     }
 
     async fn is_market_open(&mut self, symbol: &str) -> bool {
-        let minutes = 5;
+        let minutes = 3;
         let from = (Local::now() - date::Duration::minutes(minutes)).timestamp();
         let res = self
             .get_instrument_data(&symbol, minutes as usize, from)
