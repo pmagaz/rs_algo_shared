@@ -50,12 +50,10 @@ impl MarketHours {
         let week_day = date::get_week_day(current_date);
         let mut open = false;
         for key in &self.data {
-            if key.day == week_day {
+            if key.day == week_day && week_day != 6 {
                 open = current_hours >= key.from && current_hours <= key.to;
             } else {
-                if week_day == 6 {
-                    open = false;
-                }
+                open = false;
             }
         }
         open
@@ -71,6 +69,7 @@ impl MarketHours {
         let opening_hours = sunday.from;
         let diff_days = 7 - weekday as i64;
         let mut opening_date = current_date + Duration::days(diff_days);
+
         opening_date = opening_date
             .with_hour(opening_hours)
             .unwrap()
