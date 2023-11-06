@@ -34,9 +34,6 @@ impl MarketHours {
         }
     }
 
-    // pub fn open(&self) -> bool {
-    //     self.open
-    // }
     pub fn symbol(&self) -> String {
         self.symbol.to_owned()
     }
@@ -49,9 +46,11 @@ impl MarketHours {
         let current_hours = current_date.hour();
         let week_day = date::get_week_day(current_date);
         let mut open = false;
+
         for key in &self.data {
             if key.day == week_day && week_day != 6 {
                 open = current_hours >= key.from && current_hours <= key.to;
+                break;
             } else {
                 open = false;
             }
