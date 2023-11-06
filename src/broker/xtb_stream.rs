@@ -63,7 +63,8 @@ pub trait BrokerStream {
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
-    async fn is_market_open(&mut self, symbol: &str) -> bool;
+    async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
+    async fn is_market_available(&mut self, symbol: &str) -> bool;
     async fn get_instrument_tick(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
@@ -228,45 +229,23 @@ impl BrokerStream for Xtb {
             Message::Text(txt) => {
                 let data = self.parse_message(&txt).await.unwrap();
 
-                let mut result: Vec<MarketHour> = vec![];
+                let mut market_hours: Vec<MarketHour> = vec![];
 
-                let current_date = Local::now();
-
-                let current_hours = current_date.hour();
-
-                let week_day = date::get_week_day(current_date);
-                let mut open = false;
                 for obj in data["returnData"][0]["trading"].as_array().unwrap() {
                     let day = obj["day"].as_i64().unwrap() as u32;
                     let from = obj["fromT"].as_i64().unwrap() as u32 / 3600 / 1000;
                     let to = obj["toT"].as_i64().unwrap() as u32 / 3600 / 1000;
 
-                    //NAPA
-                    let (from, to) = match date::is_dst(&current_date) {
-                        true => (23, 22),
-                        false => (22, 21),
-                    };
-
-                    // if day == week_day {
-                    //     if current_hours >= from_hours && current_hours <= to_hours {
-                    //         open = true
-                    //     } else {
-                    //         open = false
-                    //     }
-                    // };
                     let market_hour = MarketHour { day, from, to };
 
-                    result.push(market_hour);
+                    market_hours.push(market_hour);
                 }
 
-                match self.is_market_open(symbol).await {
-                    true => open = true,
-                    false => open = false,
-                };
+                market_hours.sort_by(|a, b| a.day.cmp(&b.day));
 
                 ResponseBody {
                     response: ResponseType::GetMarketHours,
-                    payload: Some(MarketHours::new(open, symbol.to_owned(), result)),
+                    payload: Some(MarketHours::new(symbol.to_owned(), market_hours)),
                 }
             }
             _ => panic!(),
@@ -275,7 +254,20 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
-    async fn is_market_open(&mut self, symbol: &str) -> bool {
+    async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>> {
+        match self.is_market_available(symbol).await {
+            true => Ok(ResponseBody {
+                response: ResponseType::IsMarketOpen,
+                payload: Some(true),
+            }),
+            false => Ok(ResponseBody {
+                response: ResponseType::IsMarketOpen,
+                payload: Some(false),
+            }),
+        }
+    }
+
+    async fn is_market_available(&mut self, symbol: &str) -> bool {
         let minutes = 5;
         let from = (Local::now() - date::Duration::minutes(minutes)).timestamp();
         let res = self

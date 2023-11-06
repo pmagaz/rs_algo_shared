@@ -298,3 +298,26 @@ pub fn calculate_trade_profit_per(price_in: f64, price_out: f64, trade_type: &Tr
 pub fn calculate_quantity(order_size: f64, price: f64) -> f64 {
     round(order_size / price, 3)
 }
+
+pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
+    if data.is_empty() {
+        return 0.0; // Or a default value, as needed for an empty dataset
+    }
+
+    let mut sorted_data = data.to_vec();
+    sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    let rank = (percentile * sorted_data.len() as f64 - 1.0).round() as usize;
+
+    if rank < 1 {
+        return sorted_data[0];
+    } else if rank >= sorted_data.len() {
+        return sorted_data[sorted_data.len() - 1];
+    }
+
+    let lower = sorted_data[rank];
+    let upper = sorted_data[rank + 1];
+    let fraction = percentile * sorted_data.len() as f64 - 1.0 - rank as f64;
+
+    lower + (upper - lower) * fraction
+}
