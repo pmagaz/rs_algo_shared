@@ -52,8 +52,10 @@ impl MarketHours {
         for key in &self.data {
             if key.day == week_day {
                 open = current_hours >= key.from && current_hours <= key.to;
-            } else if week_day == 6 {
-                open = false
+            } else {
+                if week_day == 6 {
+                    open = false;
+                }
             }
         }
         open
