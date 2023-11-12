@@ -221,6 +221,19 @@ impl std::fmt::Display for TimeFrameType {
     }
 }
 
+pub fn get_open_until_tick(candle_open: DateTime<Local>, timeframe: i64) -> DateTime<Local> {
+    let fixed_time = candle_open.with_second(0).unwrap();
+    let current_minute = fixed_time.minute();
+    let minute_remainder = current_minute % timeframe as u32;
+    let closing_minute = if minute_remainder == 0 {
+        current_minute
+    } else {
+        current_minute + (timeframe as u32 - minute_remainder)
+    };
+
+    fixed_time.with_minute(closing_minute).unwrap()
+}
+
 pub fn get_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DateTime<Local> {
     let date = data.0;
     let candle_minute = date.minute() as i64 + 1;

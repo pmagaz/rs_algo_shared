@@ -2,7 +2,7 @@ use super::*;
 use crate::error::Result;
 use crate::ws::ws_client::WebSocket;
 
-use crate::helpers::date::parse_time;
+use crate::helpers::date::parse_time_seconds;
 use crate::models::time_frame::*;
 
 use futures_util::Future;
@@ -367,7 +367,7 @@ impl Xtb {
         let pow = x.powf(digits);
         for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
             //FIXME!!
-            let date = parse_time(obj["ctm"].as_i64().unwrap() / 1000);
+            let date = parse_time_seconds(obj["ctm"].as_i64().unwrap() / 1000);
             let open = obj["open"].as_f64().unwrap() / pow;
             let high = open + obj["high"].as_f64().unwrap() / pow;
             let low = open + obj["low"].as_f64().unwrap() / pow;

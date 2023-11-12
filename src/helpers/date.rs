@@ -5,8 +5,13 @@ use regex::Regex;
 
 pub use chrono::{DateTime, Datelike, Duration, NaiveDateTime, NaiveTime, Timelike};
 
-pub fn parse_time(date: i64) -> DateTime<Local> {
+pub fn parse_time_seconds(date: i64) -> DateTime<Local> {
     let ts = chrono::NaiveDateTime::from_timestamp(date, 0);
+    Local.from_utc_datetime(&ts)
+}
+
+pub fn parse_time_milliseconds(date: i64) -> DateTime<Local> {
+    let ts = NaiveDateTime::from_timestamp(date / 1000, 0);
     Local.from_utc_datetime(&ts)
 }
 

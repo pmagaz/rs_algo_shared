@@ -2,7 +2,7 @@ use super::*;
 use crate::error::Result;
 use crate::helpers::calc;
 use crate::helpers::date;
-use crate::helpers::date::parse_time;
+use crate::helpers::date::parse_time_seconds;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::models::market::*;
@@ -180,7 +180,7 @@ impl BrokerStream for Xtb {
         log::info!(
             "Requesting {} data since {:?}",
             time_frame,
-            date::parse_time(from_date)
+            date::parse_time_seconds(from_date)
         );
 
         self.send(&instrument_command).await.unwrap();
@@ -615,7 +615,7 @@ impl BrokerStream for Xtb {
                 let command = &obj["command"];
                 let data = &obj["data"];
                 if command == "candle" {
-                    let date = parse_time(data["ctm"].as_i64().unwrap() / 1000);
+                    let date = parse_time_seconds(data["ctm"].as_i64().unwrap() / 1000);
                     let open = data["open"].as_f64().unwrap();
                     let high = data["high"].as_f64().unwrap();
                     let low = data["low"].as_f64().unwrap();
@@ -771,7 +771,7 @@ impl Xtb {
         let pow = x.powf(digits);
         for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
             //FIXME!!
-            let date = parse_time(obj["ctm"].as_i64().unwrap() / 1000);
+            let date = parse_time_seconds(obj["ctm"].as_i64().unwrap() / 1000);
             let open = obj["open"].as_f64().unwrap() / pow;
             let high = open + obj["high"].as_f64().unwrap() / pow;
             let low = open + obj["low"].as_f64().unwrap() / pow;
