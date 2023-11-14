@@ -268,6 +268,7 @@ pub fn resolve_trade_in(
 
     if trade_type.is_entry() {
         let spread = tick.spread();
+
         let current_candle = match execution_mode.is_back_test() {
             true => instrument.data().get(index).unwrap(),
             false => instrument.data().last().unwrap(),

@@ -6,6 +6,7 @@ use crate::helpers::date::parse_time_seconds;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::models::market::*;
+use crate::models::mode;
 use crate::models::order::*;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
@@ -196,7 +197,6 @@ impl BrokerStream for Xtb {
                 symbol: symbol.to_owned(),
             },
         };
-
         self.send(&tick_command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
         let txt_msg = match msg {
@@ -313,12 +313,33 @@ impl BrokerStream for Xtb {
         };
 
         let symbol = &trade.symbol;
-        let tick = self.get_instrument_tick(&symbol).await.unwrap();
-        let tick = tick.payload.unwrap();
+        let mut data = trade.data;
+
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => InstrumentTick::new()
+                .symbol(symbol.clone())
+                .ask(data.price_in + data.spread)
+                .bid(data.price_in)
+                .high(0.0)
+                .low(0.0)
+                .spread(data.spread)
+                .pip_size(0.0)
+                .time(0)
+                .build()
+                .unwrap(),
+        };
+
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-        let mut data = trade.data;
         let trade_type = data.trade_type.clone();
 
         let price_in = match trade_type.is_long() {
@@ -355,12 +376,32 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
-        let tick = self.get_instrument_tick(&symbol).await.unwrap();
-        let tick = tick.payload.unwrap();
+        let mut data = trade.data;
+
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => InstrumentTick::new()
+                .symbol(symbol.clone())
+                .ask(data.price_in + data.spread_out)
+                .bid(data.price_in)
+                .high(0.0)
+                .low(0.0)
+                .spread(data.spread_out)
+                .pip_size(0.0)
+                .time(0)
+                .build()
+                .unwrap(),
+        };
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-        let mut data = trade.data;
 
         let trade_type = data.trade_type.clone();
 
@@ -683,6 +724,7 @@ impl BrokerStream for Xtb {
     }
 
     async fn disconnect(&mut self) -> Result<()> {
+        log::info!("Disconnecting from broker");
         self.socket.disconnect().await.unwrap();
         self.stream.disconnect().await.unwrap();
         Ok(())

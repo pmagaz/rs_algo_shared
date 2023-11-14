@@ -4,6 +4,7 @@ pub enum ExecutionMode {
     ScannerBackTest,
     BackTest,
     Bot,
+    BotBackTest,
 }
 
 impl ExecutionMode {
@@ -22,12 +23,16 @@ impl ExecutionMode {
     }
 }
 
-pub fn from_str(strategy: &str) -> ExecutionMode {
-    match strategy {
+pub fn from_str(execution_mode: &str) -> ExecutionMode {
+    match execution_mode {
         "Scanner" => ExecutionMode::Scanner,
         "BackTest" => ExecutionMode::BackTest,
         "ScannerBackTest" => ExecutionMode::ScannerBackTest,
         "Bot" => ExecutionMode::Bot,
-        _ => ExecutionMode::Bot,
+        "BotBackTest" => ExecutionMode::BotBackTest,
+        _ => {
+            log::error!("No {} EXECUTION_MODE found!", &execution_mode);
+            panic!();
+        }
     }
 }

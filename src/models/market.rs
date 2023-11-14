@@ -62,7 +62,6 @@ impl MarketHours {
         let current_date = Local::now();
         let weekday = date::get_week_day(current_date);
 
-        //let friday = &self.data.get(4).unwrap();
         let sunday = &self.data.last().unwrap();
 
         let opening_hours = sunday.from;
@@ -72,9 +71,9 @@ impl MarketHours {
         opening_date = opening_date
             .with_hour(opening_hours)
             .unwrap()
-            .with_minute(5)
+            .with_minute(4)
             .unwrap()
-            .with_second(5)
+            .with_second(0)
             .unwrap();
 
         opening_date

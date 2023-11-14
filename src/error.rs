@@ -13,6 +13,8 @@ pub enum RsAlgoErrorKind {
     InvalidPeak,
     #[error("Error on Request!")]
     RequestError,
+    #[error("Connection Error!")]
+    ConnectionError,
 }
 
 #[derive(Debug, Error)]
@@ -29,6 +31,15 @@ impl RsAlgoError {
 impl From<RsAlgoErrorKind> for RsAlgoError {
     fn from(kind: RsAlgoErrorKind) -> RsAlgoError {
         RsAlgoError { err: kind }
+    }
+}
+
+impl From<tungstenite::Error> for RsAlgoError {
+    fn from(error: tungstenite::Error) -> Self {
+        log::error!("Error sending {:?}", error);
+        RsAlgoError {
+            err: RsAlgoErrorKind::ConnectionError,
+        }
     }
 }
 

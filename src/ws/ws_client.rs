@@ -25,8 +25,13 @@ impl WebSocket {
     }
 
     pub async fn send(&mut self, msg: &str) -> Result<()> {
-        self.socket.write_message(Message::text(msg)).unwrap();
-        Ok(())
+        match self.socket.write_message(Message::text(msg)) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                log::error!("Error sending message: {} {}", err, msg);
+                Err(err.into())
+            }
+        }
     }
 
     pub async fn re_connect(&mut self) {
@@ -48,16 +53,14 @@ impl WebSocket {
             .unwrap();
     }
 
-    pub async fn read(&mut self) -> Result<Message> {
-        let msg = self.socket.read_message().unwrap();
-
-        Ok(msg)
-    }
-
-    pub async fn read_msg(
-        &mut self,
-    ) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
-        self.socket.read_message()
+    pub async fn read(&mut self) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
+        match self.socket.read_message() {
+            Ok(msg) => Ok(msg),
+            Err(err) => {
+                log::error!("Error reading msg: {}", err);
+                Err(err)
+            }
+        }
     }
 
     pub async fn disconnect(&mut self) -> Result<()> {
