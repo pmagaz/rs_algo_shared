@@ -28,7 +28,7 @@ impl WebSocket {
         match self.socket.write_message(Message::text(msg)) {
             Ok(_) => Ok(()),
             Err(err) => {
-                log::error!("Error sending message: {}", msg);
+                log::error!("Error sending message: {}", err);
                 Err(RsAlgoError {
                     err: RsAlgoErrorKind::SendingAfter,
                 })
