@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::ws::message::*;
 
 use std::net::TcpStream;
@@ -29,7 +29,9 @@ impl WebSocket {
             Ok(_) => Ok(()),
             Err(err) => {
                 log::error!("Error sending message: {}", msg);
-                Err(err.into())
+                Err(RsAlgoError {
+                    err: RsAlgoErrorKind::SendingAfter,
+                })
             }
         }
     }
