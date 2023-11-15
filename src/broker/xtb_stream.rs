@@ -4,6 +4,8 @@ use crate::helpers::calc;
 use crate::helpers::date;
 use crate::helpers::date::parse_time_seconds;
 use crate::helpers::date::*;
+use crate::helpers::http::request;
+use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
 use crate::models::market::*;
 use crate::models::mode;
@@ -67,6 +69,11 @@ pub trait BrokerStream {
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
     async fn is_market_available(&mut self, symbol: &str) -> bool;
     async fn get_instrument_tick(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentTick>>;
+    async fn get_instrument_tick_test(
+        &mut self,
+        symbol: &str,
+        price: f64,
+    ) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
@@ -214,6 +221,41 @@ impl BrokerStream for Xtb {
         Ok(txt_msg)
     }
 
+    async fn get_instrument_tick_test(
+        &mut self,
+        symbol: &str,
+        price: f64,
+    ) -> Result<ResponseBody<InstrumentTick>> {
+        let tick_url = &format!(
+            "{}{}",
+            env::var("BACKEND_BACKTEST_PRICING_ENDPOINT").unwrap(),
+            symbol
+        );
+        let tick: InstrumentTick = request(&tick_url, &String::from("all"), HttpMethod::Get)
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+
+        let tick = InstrumentTick::new()
+            .symbol(symbol.to_string())
+            .ask(price + tick.spread())
+            .bid(price)
+            .high(0.0)
+            .low(0.0)
+            .spread(tick.spread())
+            .pip_size(tick.pip_size())
+            .time(0)
+            .build()
+            .unwrap();
+
+        Ok(ResponseBody {
+            response: ResponseType::GetInstrumentTick,
+            payload: Some(tick),
+        })
+    }
+
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
         let trading_hours_command = Command {
             command: "getTradingHours".to_owned(),
@@ -316,7 +358,6 @@ impl BrokerStream for Xtb {
         let mut data = trade.data;
 
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -324,16 +365,11 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => InstrumentTick::new()
-                .symbol(symbol.clone())
-                .ask(data.price_in + data.spread)
-                .bid(data.price_in)
-                .high(0.0)
-                .low(0.0)
-                .spread(data.spread)
-                .pip_size(0.0)
-                .time(0)
-                .build()
+            _ => self
+                .get_instrument_tick_test(&symbol, data.price_in)
+                .await
+                .unwrap()
+                .payload
                 .unwrap(),
         };
 
@@ -364,7 +400,6 @@ impl BrokerStream for Xtb {
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted: true,
-                //time_frame: trade.time_frame,
                 data: data,
             }),
         };
@@ -379,7 +414,6 @@ impl BrokerStream for Xtb {
         let mut data = trade.data;
 
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -387,18 +421,14 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => InstrumentTick::new()
-                .symbol(symbol.clone())
-                .ask(data.price_in + data.spread_out)
-                .bid(data.price_in)
-                .high(0.0)
-                .low(0.0)
-                .spread(data.spread_out)
-                .pip_size(0.0)
-                .time(0)
-                .build()
+            _ => self
+                .get_instrument_tick_test(&symbol, data.price_in)
+                .await
+                .unwrap()
+                .payload
                 .unwrap(),
         };
+
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
@@ -481,8 +511,22 @@ impl BrokerStream for Xtb {
 
         let symbol = &order.symbol;
         let order = order.data;
-        let tick = self.get_instrument_tick(&symbol).await.unwrap();
-        let tick = tick.payload.unwrap();
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => self
+                .get_instrument_tick_test(&symbol, order.target_price)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+        };
+
         let spread = tick.spread();
 
         let trade_type = match order.order_type.is_long() {
@@ -527,25 +571,38 @@ impl BrokerStream for Xtb {
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
-        let tick = self.get_instrument_tick(&symbol).await.unwrap();
-        let tick = tick.payload.unwrap();
+        let mut trade_data = trade.data;
+        let order = order.data;
+
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => self
+                .get_instrument_tick_test(&symbol, order.target_price)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+        };
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
 
-        let mut trade_data = trade.data;
-        let order_data = order.data;
-
         let trade_type = trade_data.trade_type.clone();
-        let order_type = order_data.order_type;
+        let order_type = order.order_type;
 
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = trade_data.price_in;
 
         let price_out = match trade_type.is_stop() {
             true => match trade_type.is_long() {
-                true => order_data.target_price,
-                false => order_data.target_price + spread,
+                true => order.target_price,
+                false => order.target_price + spread,
             },
             false => match trade_type.is_long() {
                 true => bid,

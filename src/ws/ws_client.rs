@@ -28,7 +28,7 @@ impl WebSocket {
         match self.socket.write_message(Message::text(msg)) {
             Ok(_) => Ok(()),
             Err(err) => {
-                log::error!("Error sending message: {} {}", err, msg);
+                log::error!("Error sending message: {}", msg);
                 Err(err.into())
             }
         }
