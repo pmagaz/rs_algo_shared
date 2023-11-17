@@ -73,7 +73,7 @@ impl MarketHours {
             .unwrap()
             .with_minute(4)
             .unwrap()
-            .with_second(0)
+            .with_second(30)
             .unwrap();
 
         opening_date
