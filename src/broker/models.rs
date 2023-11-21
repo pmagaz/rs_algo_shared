@@ -115,10 +115,25 @@ pub struct TickerPriceParams {
 pub struct Instrument {
     pub info: InstrumentCandles,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoricInstrument {
+    pub info: HistoricInstrumentCandles,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstrumentCandles {
     pub period: usize,
     pub start: i64,
+    pub symbol: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoricInstrumentCandles {
+    pub period: usize,
+    pub start: i64,
+    pub end: i64,
+    pub ticks: i64,
     pub symbol: String,
 }
 

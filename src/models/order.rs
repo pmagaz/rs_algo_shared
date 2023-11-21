@@ -2,7 +2,7 @@ use std::env;
 
 use super::mode;
 use super::tick::InstrumentTick;
-use super::trade::{Trade, TradeType};
+use super::trade::{PositionResult, Trade, TradeResult, TradeType};
 
 use crate::helpers::calc::*;
 use crate::helpers::uuid;

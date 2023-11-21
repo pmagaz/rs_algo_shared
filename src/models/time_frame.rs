@@ -5,12 +5,11 @@ use super::{
 use crate::{
     helpers::{
         calc::get_prev_index,
-        date::{DateTime, Duration, Local},
+        date::{DateTime, Duration, Local, Timelike},
     },
     scanner::instrument::{HTFInstrument, Instrument},
 };
 
-use chrono::Timelike;
 use serde::{Deserialize, Serialize};
 use std::env;
 

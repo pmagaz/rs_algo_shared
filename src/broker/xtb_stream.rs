@@ -48,6 +48,13 @@ pub trait BrokerStream {
         period: usize,
         start: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
+    async fn get_historic_data(
+        &mut self,
+        symbol: &str,
+        period: usize,
+        start: i64,
+        end: i64,
+    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
     async fn open_trade(
         &mut self,
         trade_in: TradeData<TradeIn>,
@@ -186,7 +193,7 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "Requesting {} data since {:?}",
+            "Requesting data {} since {:?}",
             time_frame,
             date::parse_time_seconds(from_date)
         );
@@ -219,6 +226,43 @@ impl BrokerStream for Xtb {
         };
 
         Ok(txt_msg)
+    }
+
+    async fn get_historic_data(
+        &mut self,
+        symbol: &str,
+        time_frame: usize,
+        from: i64,
+        to: i64,
+    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
+        self.symbol = symbol.to_owned();
+        self.time_frame = time_frame;
+
+        let instrument_command = Command {
+            command: "getChartRangeRequest".to_owned(),
+            arguments: HistoricInstrument {
+                info: HistoricInstrumentCandles {
+                    symbol: symbol.to_owned(),
+                    period: time_frame,
+                    start: from * 1000,
+                    end: to * 1000,
+                    ticks: 0,
+                },
+            },
+        };
+
+        log::info!(
+            "Requesting historic data {} from {} to {}",
+            time_frame,
+            date::parse_time_seconds(from),
+            date::parse_time_seconds(to)
+        );
+
+        self.send(&instrument_command).await.unwrap();
+
+        let res = self.get_response().await?;
+
+        Ok(res)
     }
 
     async fn get_instrument_tick_test(

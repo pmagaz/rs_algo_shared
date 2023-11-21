@@ -445,6 +445,7 @@ impl Instrument {
             self.avg_volume =
                 average_f64(&avg_volume.into_iter().rev().take(avg_volume_days).collect());
         }
+
         Ok(())
     }
 

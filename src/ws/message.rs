@@ -18,6 +18,7 @@ pub enum CommandType {
     InitSession,
     GetCurrentState,
     GetInstrumentData,
+    GetHistoricData,
     GetInstrumentTick,
     GetMarketHours,
     IsMarketOpen,
@@ -68,6 +69,15 @@ pub struct InstrumentDataPayload<'a> {
     pub symbol: &'a str,
     pub strategy: &'a str,
     pub num_bars: i64,
+    pub strategy_type: StrategyType,
+    pub time_frame: TimeFrameType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricDataPayload<'a> {
+    pub symbol: &'a str,
+    pub strategy: &'a str,
+    pub limit: i64,
     pub strategy_type: StrategyType,
     pub time_frame: TimeFrameType,
 }
