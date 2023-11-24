@@ -580,8 +580,8 @@ pub fn calculate_trade_index(
     _order: Option<&Order>,
     execution_mode: &ExecutionMode,
 ) -> usize {
-    match execution_mode.is_back_test() {
-        true => index + 1,
-        false => index,
+    match execution_mode {
+        ExecutionMode::BackTest => index + 1,
+        _ => index,
     }
 }
