@@ -121,53 +121,81 @@ pub fn avg_per_trade(trades_out: &Vec<&TradeOut>) -> f64 {
     }
 }
 
-pub fn total_drawdown(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
-    let mut max_acc_equity = equity;
+pub fn total_drawdown(trades_out: &[TradeOut], initial_equity: f64) -> f64 {
+    let mut max_acc_equity = initial_equity;
     let mut equity_curve: Vec<f64> = vec![];
 
-    for trade in trades_out.iter() {
+    for trade in trades_out {
         max_acc_equity += trade.profit;
         equity_curve.push(max_acc_equity);
     }
 
-    let mut min_equity_peak = equity_curve
-        .iter()
-        .enumerate()
-        .filter(|(i, x)| {
-            if i > &0 {
-                match equity_curve.get(*i - 1) {
-                    Some(prev) => match prev < x {
-                        true => false,
-                        false => true,
-                    },
-                    None => true,
-                }
-            } else {
-                false
-            }
-        })
-        .map(|(_i, x)| *x)
-        .fold(f64::NAN, f64::min);
+    let mut max_peak = initial_equity;
+    let mut min_peak = initial_equity;
 
-    let min_equity_index = equity_curve
-        .iter()
-        .position(|&r| r == min_equity_peak)
-        .unwrap_or(0);
-
-    let mut max_equity_peak = equity_curve
-        .iter()
-        .enumerate()
-        .filter(|(i, _x)| i <= &min_equity_index)
-        .map(|(_i, x)| *x)
-        .fold(f64::NAN, f64::max);
-
-    if min_equity_peak.is_nan() || max_equity_peak.is_nan() {
-        max_equity_peak = equity;
-        min_equity_peak = equity;
+    for equity in &equity_curve {
+        if *equity > max_peak {
+            max_peak = *equity;
+            min_peak = *equity;
+        } else if *equity < min_peak {
+            min_peak = *equity;
+        }
     }
 
-    ((min_equity_peak - max_equity_peak) / max_equity_peak * 100.).abs()
+    if max_peak == 0.0 {
+        0.0
+    } else {
+        ((min_peak - max_peak) / max_peak * 100.0).abs()
+    }
 }
+
+// pub fn total_drawdown(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
+//     let mut max_acc_equity = equity;
+//     let mut equity_curve: Vec<f64> = vec![];
+
+//     for trade in trades_out.iter() {
+//         max_acc_equity += trade.profit;
+//         equity_curve.push(max_acc_equity);
+//     }
+
+//     let mut min_equity_peak = equity_curve
+//         .iter()
+//         .enumerate()
+//         .filter(|(i, x)| {
+//             if i > &0 {
+//                 match equity_curve.get(*i - 1) {
+//                     Some(prev) => match prev < x {
+//                         true => false,
+//                         false => true,
+//                     },
+//                     None => true,
+//                 }
+//             } else {
+//                 false
+//             }
+//         })
+//         .map(|(_i, x)| *x)
+//         .fold(f64::NAN, f64::min);
+
+//     let min_equity_index = equity_curve
+//         .iter()
+//         .position(|&r| r == min_equity_peak)
+//         .unwrap_or(0);
+
+//     let mut max_equity_peak = equity_curve
+//         .iter()
+//         .enumerate()
+//         .filter(|(i, _x)| i <= &min_equity_index)
+//         .map(|(_i, x)| *x)
+//         .fold(f64::NAN, f64::max);
+
+//     if min_equity_peak.is_nan() || max_equity_peak.is_nan() {
+//         max_equity_peak = equity;
+//         min_equity_peak = equity;
+//     }
+
+//     ((min_equity_peak - max_equity_peak) / max_equity_peak * 100.).abs()
+// }
 
 pub fn total_runup(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
     let mut max_acc_equity = equity;
@@ -219,10 +247,22 @@ pub fn total_profit_per(
     trades_out.iter().map(|trade| trade.profit_per).sum()
 }
 
+// pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
+//     match gross_loses {
+//         0.0 => 0.,
+//         _ => (gross_profits / gross_loses).abs(),
+//     }
+// }
+
 pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
-    match gross_loses {
-        0.0 => 0.,
-        _ => (gross_profits / gross_loses).abs(),
+    if gross_loses == 0.0 {
+        if gross_profits > 0.0 {
+            f64::INFINITY // If there are profits and no losses
+        } else {
+            0.0 // If there are neither profits nor losses
+        }
+    } else {
+        gross_profits / gross_loses
     }
 }
 

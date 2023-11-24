@@ -17,7 +17,7 @@ impl ExecutionMode {
 
     pub fn is_back_test(&self) -> bool {
         match *self {
-            ExecutionMode::BackTest => true,
+            ExecutionMode::BackTest | ExecutionMode::BotBackTest => true,
             _ => false,
         }
     }
