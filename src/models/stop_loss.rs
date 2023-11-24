@@ -43,11 +43,9 @@ pub fn create_stop_loss_order(
     index: usize,
     trade_id: usize,
     instrument: &Instrument,
-    tick: &InstrumentTick,
     order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
-    // _target_price: f64,
-    // _order_size: f64,
+    tick: &InstrumentTick,
 ) -> Order {
     let spread = tick.spread();
 

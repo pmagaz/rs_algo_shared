@@ -7,6 +7,7 @@ use crate::helpers::date::*;
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
+use crate::models::environment;
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
@@ -440,7 +441,7 @@ impl BrokerStream for Xtb {
         data.spread = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::TradeInAccepted,
+            response: ResponseType::TradeInFulfilled,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted: true,
@@ -523,7 +524,7 @@ impl BrokerStream for Xtb {
         data.spread_out = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::TradeOutAccepted,
+            response: ResponseType::TradeOutFulfilled,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted,
@@ -598,7 +599,7 @@ impl BrokerStream for Xtb {
         };
 
         let txt_msg = ResponseBody {
-            response: ResponseType::TradeInAccepted,
+            response: ResponseType::TradeInFulfilled,
             payload: Some(TradeResponse {
                 symbol: symbol.clone(),
                 accepted: true,
@@ -693,7 +694,7 @@ impl BrokerStream for Xtb {
         trade_data.spread_out = spread;
 
         let txt_msg = ResponseBody {
-            response: ResponseType::TradeOutAccepted,
+            response: ResponseType::TradeOutFulfilled,
             payload: Some(TradeResponse {
                 symbol: trade.symbol,
                 accepted,
@@ -723,12 +724,19 @@ impl BrokerStream for Xtb {
     }
 
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()> {
+        let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
+
+        let arrival_time = match is_prod {
+            true => 1,
+            false => 10000,
+        };
+
         self.symbol = symbol.to_owned();
         let command = CommandTickStreamParams {
             command: "getTickPrices".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
             symbol: symbol.to_string(),
-            minArrivalTime: 10000,
+            minArrivalTime: arrival_time,
             maxLevel: 0,
         };
 

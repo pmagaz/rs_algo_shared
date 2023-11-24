@@ -153,7 +153,7 @@ impl Broker for Xtb {
                 let parsed: SymbolInstrumentTickResponse = serde_json::from_str(&txt).unwrap();
                 let symbol_detail: SymbolInstrumentTick = parsed.returnData;
                 ResponseBody {
-                    response: ResponseType::TradeInAccepted,
+                    response: ResponseType::TradeInFulfilled,
                     payload: Some(symbol_detail),
                 }
             }

@@ -14,6 +14,7 @@ pub trait Trade {
     fn get_date(&self) -> &DbDateTime;
     fn get_chrono_date(&self) -> DateTime<Local>;
     fn get_price_in(&self) -> &f64;
+    fn get_type(&self) -> &TradeType;
     fn get_price_out(&self) -> &f64;
 }
 
@@ -192,6 +193,9 @@ impl Trade for TradeIn {
     fn get_date(&self) -> &DbDateTime {
         &self.date_in
     }
+    fn get_type(&self) -> &TradeType {
+        &self.trade_type
+    }
     fn get_chrono_date(&self) -> DateTime<Local> {
         from_dbtime(&self.date_in)
     }
@@ -230,6 +234,9 @@ impl Trade for TradeOut {
     fn get_date(&self) -> &DbDateTime {
         &self.date_out
     }
+    fn get_type(&self) -> &TradeType {
+        &self.trade_type
+    }
     fn get_chrono_date(&self) -> DateTime<Local> {
         from_dbtime(&self.date_out)
     }
@@ -257,9 +264,9 @@ pub fn resolve_trade_in(
     index: usize,
     trade_size: f64,
     instrument: &Instrument,
-    tick: &InstrumentTick,
     trade_type: &TradeType,
     order: Option<&Order>,
+    tick: &InstrumentTick,
 ) -> TradeResult {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
@@ -327,10 +334,10 @@ pub fn resolve_trade_in(
 pub fn resolve_trade_out(
     index: usize,
     instrument: &Instrument,
-    tick: &InstrumentTick,
     trade_in: &TradeIn,
     trade_type: &TradeType,
     order: Option<&Order>,
+    tick: &InstrumentTick,
 ) -> TradeResult {
     let quantity = trade_in.quantity;
     let data = &instrument.data;
@@ -457,7 +464,7 @@ pub fn resolve_trade_out(
             price_origin,
             price_out,
             bid,
-            spread_out: tick.spread(),
+            spread_out: spread,
             date_out,
             profit,
             profit_per,

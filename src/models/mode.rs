@@ -10,7 +10,7 @@ pub enum ExecutionMode {
 impl ExecutionMode {
     pub fn is_bot(&self) -> bool {
         match *self {
-            ExecutionMode::Bot => true,
+            ExecutionMode::Bot | ExecutionMode::BotBackTest => true,
             _ => false,
         }
     }
@@ -24,12 +24,12 @@ impl ExecutionMode {
 }
 
 pub fn from_str(execution_mode: &str) -> ExecutionMode {
-    match execution_mode {
-        "Scanner" => ExecutionMode::Scanner,
-        "BackTest" => ExecutionMode::BackTest,
-        "ScannerBackTest" => ExecutionMode::ScannerBackTest,
-        "Bot" => ExecutionMode::Bot,
-        "BotBackTest" => ExecutionMode::BotBackTest,
+    match execution_mode.to_lowercase().as_str() {
+        "scanner" => ExecutionMode::Scanner,
+        "backtest" => ExecutionMode::BackTest,
+        "scannerbacktest" => ExecutionMode::ScannerBackTest,
+        "bot" => ExecutionMode::Bot,
+        "botbacktest" => ExecutionMode::BotBackTest,
         _ => {
             log::error!("No {} EXECUTION_MODE found!", &execution_mode);
             panic!();
