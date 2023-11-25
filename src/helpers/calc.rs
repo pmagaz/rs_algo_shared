@@ -250,7 +250,7 @@ pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
     if gross_loses == 0.0 {
         0.
     } else {
-        gross_profits / gross_loses
+        (gross_profits / gross_loses).abs()
     }
 }
 
