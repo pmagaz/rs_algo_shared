@@ -42,7 +42,9 @@ pub fn from_pips(pips: f64, tick: &InstrumentTick) -> f64 {
 pub fn calculate_profit_per(price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {
     match trade_type.is_long() {
         true => ((price_out - price_in) / price_in) * 100.,
-        false => ((price_in - price_out) / price_out) * 100.,
+        //OJO
+        //false => ((price_in - price_out) / price_out) * 100.,
+        false => ((price_in - price_out) / price_in) * 100.0,
     }
 }
 
@@ -95,7 +97,9 @@ pub fn calculate_drawdown(
         }
         false => {
             let max_price = get_max_price(data, index_in, index_out);
-            (price_in + max_price).abs()
+            //OJO
+            (max_price - price_in).abs()
+            //(price_in + max_price).abs()
         }
     }
 }
@@ -149,6 +153,7 @@ pub fn total_drawdown(trades_out: &[TradeOut], initial_equity: f64) -> f64 {
     }
 }
 
+// OJO
 // pub fn total_drawdown(trades_out: &Vec<TradeOut>, equity: f64) -> f64 {
 //     let mut max_acc_equity = equity;
 //     let mut equity_curve: Vec<f64> = vec![];
@@ -237,34 +242,29 @@ pub fn total_profitable_trades(winning_trades: usize, total_trades: usize) -> f6
     ((winning_trades as f64 / total_trades as f64) * 100.).abs()
 }
 
-pub fn total_profit_per(
-    equity: f64,
-    _net_profit: f64,
-    _trades_in: &Vec<TradeIn>,
-    trades_out: &Vec<TradeOut>,
-) -> f64 {
-    let _initial_value = equity;
+pub fn total_profit_per(trades_out: &[TradeOut]) -> f64 {
     trades_out.iter().map(|trade| trade.profit_per).sum()
 }
 
-// pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
-//     match gross_loses {
-//         0.0 => 0.,
-//         _ => (gross_profits / gross_loses).abs(),
-//     }
-// }
-
 pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
     if gross_loses == 0.0 {
-        if gross_profits > 0.0 {
-            f64::INFINITY
-        } else {
-            0.0
-        }
+        0.
     } else {
-        (gross_profits / gross_loses).abs()
+        gross_profits / gross_loses
     }
 }
+
+// pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
+//     if gross_loses == 0.0 {
+//         if gross_profits > 0.0 {
+//             f64::INFINITY
+//         } else {
+//             0.0
+//         }
+//     } else {
+//         gross_profits / gross_loses
+//     }
+// }
 
 pub fn get_prev_index(index: usize) -> usize {
     match index.cmp(&0) {
