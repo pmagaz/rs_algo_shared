@@ -4,7 +4,6 @@ use super::mode;
 use super::tick::InstrumentTick;
 use super::trade::{PositionResult, Trade, TradeResult, TradeType};
 
-use crate::helpers::calc::*;
 use crate::helpers::uuid;
 use crate::helpers::{date, date::*};
 use crate::models::stop_loss::*;
@@ -530,10 +529,18 @@ fn is_activated_order(
                     tick.ask() // Buy (entry) for short position
                 }
             } else {
-                if order.is_long() {
-                    tick.ask() // Sell (exit) for long position
+                if order.order_type.is_stop() {
+                    if order.is_long() {
+                        tick.ask() // Sell (stop-loss) for long position
+                    } else {
+                        tick.bid() // Sell (stop-loss) for short position
+                    }
                 } else {
-                    tick.bid() // Sell (exit) for short position
+                    if order.is_long() {
+                        tick.ask() // Sell (exit) for long position
+                    } else {
+                        tick.bid() // Sell (exit) for short position
+                    }
                 }
             };
 
@@ -839,14 +846,14 @@ pub fn fulfill_bot_order<T: Trade>(
 }
 
 fn get_order_activation_price(candle: &Candle, activation_source: &str) -> (f64, f64) {
-    let order_engine = &env::var("EXECUTION_MODE").unwrap();
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     match execution_mode.is_bot() {
         true => (candle.close(), candle.close()),
-        false => match order_engine.as_ref() {
+        false => match order_engine.to_lowercase().as_ref() {
             "broker" => (candle.high(), candle.low()),
             "bot" => match activation_source {
-                "highs_lows" => (candle.close(), candle.low()),
+                "highs_lows" => (candle.high(), candle.low()),
                 _ => (candle.close(), candle.close()),
             },
             _ => panic!("ORDER_ENGINE not found!"),
