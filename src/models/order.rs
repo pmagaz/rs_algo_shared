@@ -851,7 +851,7 @@ fn get_order_activation_price(candle: &Candle, activation_source: &str) -> (f64,
     match execution_mode.is_bot() {
         true => (candle.close(), candle.close()),
         false => match order_engine.to_lowercase().as_ref() {
-            "broker" => (candle.high(), candle.low()),
+            "broker" => (candle.close(), candle.close()),
             "bot" => match activation_source {
                 "highs_lows" => (candle.high(), candle.low()),
                 _ => (candle.close(), candle.close()),
