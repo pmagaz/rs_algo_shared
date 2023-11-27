@@ -523,9 +523,18 @@ fn is_activated_order(
 
     let (price_over, price_below) = match tick {
         Some(tick) => {
-            let tick_price = match order.is_long() {
-                true => tick.ask(),
-                false => tick.bid(),
+            let tick_price = if order.order_type.is_entry() {
+                if order.is_long() {
+                    tick.bid() // Buy (entry) for long position
+                } else {
+                    tick.ask() // Buy (entry) for short position
+                }
+            } else {
+                if order.is_long() {
+                    tick.ask() // Sell (exit) for long position
+                } else {
+                    tick.bid() // Sell (exit) for short position
+                }
             };
 
             (tick_price, tick_price)
