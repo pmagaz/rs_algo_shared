@@ -122,8 +122,14 @@ impl MarketHours {
 
     pub fn current_session(&self, date: DateTime<Local>) -> Option<MarketSessions> {
         let current_hour = date.hour();
+
         for session_hour in &self.session_hours {
-            if current_hour >= session_hour.from && current_hour < session_hour.to {
+            if (session_hour.from < session_hour.to
+                && current_hour >= session_hour.from
+                && current_hour < session_hour.to)
+                || (session_hour.from > session_hour.to
+                    && (current_hour >= session_hour.from || current_hour < session_hour.to))
+            {
                 return Some(session_hour.session.clone());
             }
         }
