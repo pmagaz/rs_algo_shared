@@ -457,7 +457,6 @@ pub fn resolve_active_orders(
     use_tick_price: bool,
 ) -> Position {
     let mut order_position: Position = Position::None;
-    let mut orders_activated = Vec::<Position>::new();
 
     for (_id, order) in orders
         .iter()
@@ -469,18 +468,15 @@ pub fn resolve_active_orders(
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
                         order_position = Position::MarketInOrder(order.clone());
-                        orders_activated.push(order_position.clone());
                     }
                     OrderType::SellOrderLong(_, _, _)
                     | OrderType::SellOrderShort(_, _, _)
                     | OrderType::TakeProfitLong(_, _, _)
                     | OrderType::TakeProfitShort(_, _, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
-                        orders_activated.push(order_position.clone());
                     }
                     OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
-                        orders_activated.push(order_position.clone());
                     }
                     _ => todo!(),
                 };
@@ -715,7 +711,7 @@ pub fn cancel_pending_expired_orders(
     orders: &mut Vec<Order>,
 ) -> Vec<Order> {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    match execution_mode.is_back_test() {
+    match execution_mode.is_bot() || execution_mode.is_back_test() {
         true => {
             let current_date = instrument.data.get(index).unwrap().date();
             let mut i = 0;
@@ -748,8 +744,7 @@ pub fn extend_all_pending_orders(orders: &mut Vec<Order>) {
     for order in orders {
         if order.status == OrderStatus::Pending {
             let current_valid = from_dbtime(&order.valid_until.unwrap());
-            let new_valid_date = current_valid + date::Duration::days(365);
-            //log::info!("Extending StopLoss order to {:?}", new_valid_date);
+            let new_valid_date = current_valid + date::Duration::days(365 * 10);
             order.set_valid_until(to_dbtime(new_valid_date));
         }
     }
