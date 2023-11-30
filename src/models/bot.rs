@@ -33,6 +33,7 @@ pub struct BotData {
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct CompactBotData {
     pub _id: Uuid,
+    pub env: Environment,
     pub symbol: String,
     pub market: Market,
     pub strategy_name: String,
