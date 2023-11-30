@@ -138,7 +138,7 @@ pub struct StreamResponse {
     pub bid: f64,
     pub high: f64,
     pub low: f64,
-    pub volume: f64,
+    pub size: f64,
     pub timestamp: f64,
     pub spread: f64,
 }

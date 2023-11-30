@@ -335,7 +335,7 @@ pub fn calculate_trade_profit_per(price_in: f64, price_out: f64, trade_type: &Tr
     calculate_profit_per(price_in, price_out, trade_type)
 }
 
-pub fn calculate_quantity(order_size: f64, price: f64) -> f64 {
+pub fn calculate_size(order_size: f64, price: f64) -> f64 {
     round(order_size / price, 3)
 }
 

@@ -180,7 +180,7 @@ pub enum TradeResult {
 pub struct TradeIn {
     pub id: usize,
     pub index_in: usize,
-    pub quantity: f64,
+    pub size: f64,
     pub origin_price: f64,
     pub price_in: f64,
     pub ask: f64,
@@ -213,6 +213,7 @@ pub struct TradeOut {
     pub trade_type: TradeType,
     pub index_in: usize,
     pub price_in: f64,
+    pub size: f64,
     pub ask: f64,
     pub spread_in: f64,
     pub date_in: DbDateTime,
@@ -272,6 +273,7 @@ pub fn resolve_trade_in(
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let index = calculate_trade_index(index, order, &execution_mode);
+    let size = trade_size;
 
     if trade_type.is_entry() {
         let spread = tick.spread();
@@ -308,8 +310,6 @@ pub fn resolve_trade_in(
             false => price,
         };
 
-        let quantity = calc::calculate_quantity(trade_size, price_in);
-
         let index_in = match execution_mode.is_back_test() {
             true => index,
             false => id,
@@ -322,7 +322,7 @@ pub fn resolve_trade_in(
             price_in,
             ask,
             spread,
-            quantity,
+            size,
             date_in: to_dbtime(current_date),
             trade_type: trade_type.clone(),
         })
@@ -339,7 +339,7 @@ pub fn resolve_trade_out(
     order: Option<&Order>,
     tick: &InstrumentTick,
 ) -> TradeResult {
-    let quantity = trade_in.quantity;
+    let size = trade_in.size;
     let data = &instrument.data;
     let spread = tick.spread();
     let trade_in_type = &trade_in.trade_type;
@@ -351,6 +351,7 @@ pub fn resolve_trade_out(
         .parse::<bool>()
         .unwrap();
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
+    let size = trade_in.size;
 
     let index = calculate_trade_index(index, order, &execution_mode);
     let current_candle = instrument.data.get(index).unwrap();
@@ -423,7 +424,7 @@ pub fn resolve_trade_out(
         };
 
         let profit = match execution_mode.is_back_test() {
-            true => calc::calculate_profit(quantity, price_in, price_out, trade_in_type),
+            true => calc::calculate_profit(size, price_in, price_out, trade_in_type),
             false => 0.,
         };
 
@@ -453,9 +454,10 @@ pub fn resolve_trade_out(
         };
 
         TradeResult::TradeOut(TradeOut {
-            id: uuid::generate_ts_id(current_date),
+            id: trade_in.id,
             index_in,
             price_in,
+            size,
             trade_type: trade_type.clone(),
             date_in,
             spread_in,

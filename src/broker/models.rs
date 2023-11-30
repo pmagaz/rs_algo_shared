@@ -8,6 +8,95 @@ pub type LECHES = (f64, f64, f64, f64, f64, f64);
 pub type VEC_LECHES = Vec<LECHES>;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum TransactionCommand {
+    BuyMarket,  // Execute a trade to buy immediately at current market price
+    SellMarket, // Execute a trade to sell immediately at current market price
+    BuyLimit,   // Set an order to buy at a specified or lower price
+    SellLimit,  // Set an order to sell at a specified or higher price
+    BuyStop,    // Place an order to buy when the price rises to a specified point
+    SellStop,   // Place an order to sell when the price falls to a specified point
+    Balance,    // Read-only: Check account balance, typically for trade history
+    Credit,     // Read-only: Check credit information in the account
+}
+
+impl TransactionCommand {
+    pub fn value(&self) -> isize {
+        match self {
+            TransactionCommand::BuyMarket => 0,
+            TransactionCommand::SellMarket => 1,
+            TransactionCommand::BuyLimit => 2,
+            TransactionCommand::SellLimit => 3,
+            TransactionCommand::BuyStop => 4,
+            TransactionCommand::SellStop => 5,
+            TransactionCommand::Balance => 6,
+            TransactionCommand::Credit => 7,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum TransactionAction {
+    Open,
+    Pending,
+    Close,
+    Modify,
+    Delete,
+}
+
+impl TransactionAction {
+    pub fn value(&self) -> isize {
+        match self {
+            TransactionAction::Open => 0,
+            TransactionAction::Pending => 1,
+            TransactionAction::Close => 2,
+            TransactionAction::Modify => 3,
+            TransactionAction::Delete => 4,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum TransactionState {
+    Error,
+    Pending,
+    Accepted,
+    Rejected,
+}
+
+impl TransactionState {
+    pub fn from_value(value: u64) -> TransactionState {
+        match value {
+            0 => TransactionState::Error,
+            1 => TransactionState::Pending,
+            3 => TransactionState::Accepted,
+            4 => TransactionState::Rejected,
+            _ => panic!(), // Return None for values that don't map to a TransactionStatus
+        }
+    }
+    pub fn is_accepted(&self) -> bool {
+        match self {
+            TransactionState::Accepted => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_pending(&self) -> bool {
+        match self {
+            TransactionState::Pending => true,
+            _ => false,
+        }
+    }
+    pub fn value(&self) -> u64 {
+        match self {
+            TransactionState::Error => 0,
+            TransactionState::Pending => 1,
+            TransactionState::Accepted => 3,
+            TransactionState::Rejected => 4,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum MessageType {
     Login,
     GetSymbols,
@@ -169,15 +258,30 @@ pub struct CommandGetTickPrices {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Transaction {
-    pub cmd: String,
+    pub cmd: isize,
     pub customComment: String,
     pub symbol: String,
-    pub expiration: isize,
+    pub expiration: i64,
     pub order: isize,
     pub price: f64,
     pub sl: f64,
     pub tp: f64,
-    pub volume: f64,
+    pub size: f64,
     #[serde(rename = "type")]
     pub trans_type: isize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionStatus {
+    pub order: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionStatusnResponse {
+    pub comment: String,
+    pub message: String,
+    pub order: u64,
+    pub ask: f64,
+    pub bid: f64,
+    pub status: TransactionState,
 }

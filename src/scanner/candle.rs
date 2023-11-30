@@ -40,7 +40,7 @@ pub struct Candle {
     pub high: f64,
     pub low: f64,
     pub close: f64,
-    pub volume: f64,
+    pub size: f64,
     pub is_closed: bool,
 }
 
@@ -103,7 +103,7 @@ impl Candle {
     }
 
     pub fn volume(&self) -> f64 {
-        self.volume
+        self.size
     }
 
     pub fn candle_type(&self) -> &CandleType {
@@ -131,7 +131,7 @@ impl Candle {
             high: self.high.exp(),
             low: self.low.exp(),
             close: self.close.exp(),
-            volume: self.volume,
+            size: self.size,
             is_closed: self.is_closed(),
             candle_type: self.candle_type.clone(),
         }
@@ -144,7 +144,7 @@ pub struct CandleBuilder {
     high: Option<f64>,
     low: Option<f64>,
     close: Option<f64>,
-    volume: Option<f64>,
+    size: Option<f64>,
     is_closed: Option<bool>,
     previous_candles: Option<Vec<DOHLCV>>,
     logarithmic: Option<bool>,
@@ -158,7 +158,7 @@ impl CandleBuilder {
             high: None,
             low: None,
             close: None,
-            volume: None,
+            size: None,
             is_closed: None,
             previous_candles: None,
             logarithmic: None,
@@ -191,7 +191,7 @@ impl CandleBuilder {
     }
 
     pub fn volume(mut self, val: f64) -> Self {
-        self.volume = Some(val);
+        self.size = Some(val);
         self
     }
 
@@ -581,7 +581,7 @@ impl CandleBuilder {
             Some(high),
             Some(low),
             Some(close),
-            Some(volume),
+            Some(size),
             Some(is_closed),
             Some(_previous_candles),
             Some(_logarithmic),
@@ -591,7 +591,7 @@ impl CandleBuilder {
             self.high,
             self.low,
             self.close,
-            self.volume,
+            self.size,
             self.is_closed,
             self.previous_candles.as_ref(),
             self.logarithmic,
@@ -603,7 +603,7 @@ impl CandleBuilder {
                 close,
                 high,
                 low,
-                volume,
+                size,
                 is_closed,
             })
         } else {
