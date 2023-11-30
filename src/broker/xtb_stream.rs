@@ -134,10 +134,10 @@ impl BrokerStream for Xtb {
             .unwrap();
 
         if stream_subscribe {
-            socket = WebSocket::connect(socket_url).await;
+            socket = WebSocket::connect(socket_url);
             stream = WebSocketClientStream::connect(stream_url).await;
         } else {
-            socket = WebSocket::connect(socket_url).await;
+            socket = WebSocket::connect(socket_url);
             stream = WebSocketClientStream::connect(socket_url).await;
         }
 
@@ -426,7 +426,11 @@ impl BrokerStream for Xtb {
 
         let mut sell_order_price = 0.0;
         let mut stop_loss_order_price = 0.0;
-        let order_size_limit = 0.01;
+
+        let order_size_limit = env::var("ORDER_SIZE_LIMIT")
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
 
         let size = trade_in.size;
         let trade_size = if size > order_size_limit {
@@ -831,6 +835,7 @@ impl BrokerStream for Xtb {
 
         let symbol = &order.symbol;
         let order = order.data;
+        let size = order.size;
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -858,8 +863,6 @@ impl BrokerStream for Xtb {
             true => tick.ask(),
             false => tick.bid(),
         };
-
-        let size = calc::calculate_size(order.size(), price_in);
 
         let trade_in = TradeIn {
             id: uuid::generate_ts_id(Local::now()),

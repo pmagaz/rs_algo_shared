@@ -12,12 +12,9 @@ pub struct WebSocket {
 }
 
 impl WebSocket {
-    pub async fn connect(url: &str) -> Self {
-        let (mut socket, response) = connect(url).expect("Can't connect");
-
-        log::info!("Connected to the server");
-        //log::info!("Response HTTP code: {}", response.status());
-
+    pub fn connect(url: &str) -> Self {
+        let (socket, _) = connect(url).expect("Can't connect");
+        log::info!("Connected to {} !", &url);
         Self {
             url: url.to_string(),
             socket,

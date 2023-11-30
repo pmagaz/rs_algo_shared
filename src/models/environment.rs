@@ -1,4 +1,6 @@
-#[derive(PartialEq, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Environment {
     Production,
     Development,
@@ -11,6 +13,20 @@ impl Environment {
             Environment::Production => true,
             _ => false,
         }
+    }
+
+    pub fn value(&self) -> String {
+        match self {
+            Environment::Production => "Production".to_owned(),
+            Environment::Development => "Development".to_owned(),
+            Environment::Backtesting => "Backtesting".to_owned(),
+        }
+    }
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Environment::Development
     }
 }
 

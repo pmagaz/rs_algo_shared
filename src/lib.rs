@@ -1,6 +1,3 @@
-#[cfg(feature = "chart")]
-pub mod chart;
-
 #[cfg(feature = "broker")]
 pub mod broker;
 

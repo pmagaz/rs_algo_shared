@@ -1,3 +1,4 @@
+use super::environment::Environment;
 use super::order::Order;
 use crate::helpers::date::*;
 use crate::helpers::uuid::Uuid;
@@ -12,6 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct BotData {
     _id: Uuid,
+    env: Environment,
     symbol: String,
     market: Market,
     strategy_name: String,
@@ -45,6 +47,9 @@ pub struct CompactBotData {
 impl BotData {
     pub fn uuid(&self) -> &Uuid {
         &self._id
+    }
+    pub fn env(&self) -> &Environment {
+        &self.env
     }
     pub fn symbol(&self) -> &str {
         &self.symbol

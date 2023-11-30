@@ -62,7 +62,7 @@ impl Broker for Xtb {
         let url = &env::var("BROKER_URL").unwrap();
 
         Self {
-            websocket: WebSocket::connect(url).await,
+            websocket: WebSocket::connect(url),
             streamSessionId: "".to_owned(),
             symbol: "".to_owned(),
             time_frame: 0,

@@ -3,9 +3,11 @@ use std::env;
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
 use super::tick::InstrumentTick;
+use crate::helpers::calc::*;
 use crate::helpers::date::*;
 use crate::helpers::uuid;
 use crate::helpers::{calc, date};
+use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
@@ -585,5 +587,56 @@ pub fn calculate_trade_index(
     match execution_mode.is_back_test() {
         true => index + 1,
         _ => index,
+    }
+}
+
+pub fn calculate_trade_stats(
+    trade_in: &TradeIn,
+    trade_out: &TradeOut,
+    data: &Vec<Candle>,
+) -> TradeOut {
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+    let trade_type = &trade_in.trade_type;
+    let date_out = match execution_mode {
+        mode::ExecutionMode::Bot => trade_out.date_out,
+        _ => to_dbtime(data.last().unwrap().date()),
+    };
+
+    let trade_type = &trade_in.trade_type;
+    let price_in = trade_in.price_in;
+    let price_out = trade_out.price_out;
+    let size = trade_in.size;
+
+    let quantity = calculate_quantity(size, price_in);
+    let profit = calculate_trade_profit(quantity, price_in, price_out, trade_type);
+    let profit_per = calculate_trade_profit_per(price_in, price_out, trade_type);
+
+    let run_up = calculate_trade_runup(data, price_in, trade_type);
+    let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
+    let draw_down = calculate_trade_drawdown(data, price_in, trade_type);
+    let draw_down_per = calculate_trade_drawdown_per(draw_down, price_in, trade_type);
+
+    TradeOut {
+        id: trade_out.id,
+        index_in: trade_in.index_in,
+        price_in: trade_in.price_in,
+        size: trade_in.size,
+        ask: trade_in.ask,
+        spread_in: trade_in.spread,
+        trade_type: trade_out.trade_type.clone(),
+        date_in: trade_in.date_in,
+        index_out: trade_out.index_out,
+        price_origin: trade_out.price_origin,
+        price_out: trade_out.price_out,
+        bid: trade_out.bid,
+        spread_out: trade_in.spread,
+        date_out: trade_out.date_out,
+        profit,
+        profit_per,
+        run_up,
+        run_up_per,
+        draw_down,
+        draw_down_per,
     }
 }
