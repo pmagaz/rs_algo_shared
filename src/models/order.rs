@@ -234,7 +234,7 @@ pub fn prepare_orders(
     let mut orders: Vec<Order> = vec![];
 
     let current_candle = instrument.data().get(index).unwrap();
-    let close_price = current_candle.close();
+    let current_price = current_candle.close();
 
     let next_candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index).unwrap(),
@@ -255,7 +255,7 @@ pub fn prepare_orders(
             | OrderType::SellOrderShort(direction, order_size, target_price)
             | OrderType::TakeProfitLong(direction, order_size, target_price)
             | OrderType::TakeProfitShort(direction, order_size, target_price) => {
-                if validate_target_price(order_type, direction, &close_price, target_price) {
+                if validate_target_price(order_type, direction, &current_price, target_price) {
                     let order = create_order(
                         index,
                         trade_id,

@@ -15,6 +15,20 @@ impl Environment {
         }
     }
 
+    pub fn is_dev(&self) -> bool {
+        match *self {
+            Environment::Development => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_backtest(&self) -> bool {
+        match *self {
+            Environment::Backtesting => true,
+            _ => false,
+        }
+    }
+
     pub fn value(&self) -> String {
         match self {
             Environment::Production => "Production".to_owned(),
