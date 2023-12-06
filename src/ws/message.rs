@@ -9,7 +9,7 @@ use crate::models::order::Order;
 use crate::models::strategy::StrategyType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::TimeFrameType;
-use crate::models::trade::{TradeIn, TradeOut};
+use crate::models::trade::{PositionResult, TradeIn, TradeOut};
 
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +20,7 @@ pub enum CommandType {
     GetInstrumentData,
     GetHistoricData,
     GetInstrumentTick,
+    GetActivePositions,
     GetMarketHours,
     IsMarketOpen,
     UpdateBotData,
@@ -42,6 +43,7 @@ pub enum ResponseType {
     GetInstrumentData,
     GetInstrumentTick,
     GetMarketHours,
+    GetActivePositions,
     IsMarketOpen,
     TradeInFulfilled,
     TradeOutFulfilled,
@@ -154,6 +156,7 @@ pub enum MessageType {
     StreamTickResponse(ResponseBody<InstrumentTick>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     InstrumentTick(ResponseBody<InstrumentTick>),
+    ActivePositions(ResponseBody<PositionResult>),
     MarketHours(ResponseBody<MarketHours>),
     IsMarketOpen(ResponseBody<bool>),
     InitSession(ResponseBody<BotData>),

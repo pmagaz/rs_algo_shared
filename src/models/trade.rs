@@ -13,6 +13,7 @@ use crate::scanner::instrument::*;
 use serde::{Deserialize, Serialize};
 
 pub trait Trade {
+    fn get_id(&self) -> &usize;
     fn get_date(&self) -> &DbDateTime;
     fn get_chrono_date(&self) -> DateTime<Local>;
     fn get_price_in(&self) -> &f64;
@@ -191,7 +192,26 @@ pub struct TradeIn {
     pub trade_type: TradeType,
 }
 
+impl Default for TradeIn {
+    fn default() -> Self {
+        TradeIn {
+            id: 0,
+            index_in: 0,
+            size: 0.0,
+            origin_price: 0.0,
+            price_in: 0.0,
+            ask: 0.0,
+            spread: 0.0,
+            date_in: to_dbtime(Local::now()),
+            trade_type: TradeType::MarketInLong,
+        }
+    }
+}
+
 impl Trade for TradeIn {
+    fn get_id(&self) -> &usize {
+        &self.id
+    }
     fn get_date(&self) -> &DbDateTime {
         &self.date_in
     }
@@ -234,6 +254,9 @@ pub struct TradeOut {
 }
 
 impl Trade for TradeOut {
+    fn get_id(&self) -> &usize {
+        &self.id
+    }
     fn get_date(&self) -> &DbDateTime {
         &self.date_out
     }
@@ -353,6 +376,8 @@ pub fn resolve_trade_out(
         .parse::<bool>()
         .unwrap();
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
+
+    let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
     let size = trade_in.size;
 
     let index = calculate_trade_index(index, order, &execution_mode);
@@ -426,17 +451,17 @@ pub fn resolve_trade_out(
         };
 
         let profit = match execution_mode.is_back_test() {
-            true => calc::calculate_profit(size, price_in, price_out, trade_in_type),
+            true => calc::calculate_profit(size, price_in, price_out, leverage, trade_in_type),
             false => 0.,
         };
 
         let profit_per = match execution_mode.is_back_test() {
-            true => calc::calculate_profit_per(price_in, price_out, trade_in_type),
+            true => calc::calculate_profit_per(profit, size, price_in),
             false => 0.,
         };
 
         let run_up = match execution_mode.is_back_test() {
-            true => calc::calculate_runup(data, price_in, index_in, index, trade_in_type),
+            true => calc::calculate_runup(data, price_in, index_in, index, leverage, trade_in_type),
             false => 0.,
         };
 
@@ -597,6 +622,8 @@ pub fn calculate_trade_stats(
 ) -> TradeOut {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
+    let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
+
     let trade_type = &trade_in.trade_type;
     let date_out = match execution_mode {
         mode::ExecutionMode::Bot => trade_out.date_out,
@@ -609,8 +636,8 @@ pub fn calculate_trade_stats(
     let size = trade_in.size;
 
     let quantity = calculate_quantity(size, price_in);
-    let profit = calculate_trade_profit(quantity, price_in, price_out, trade_type);
-    let profit_per = calculate_trade_profit_per(price_in, price_out, trade_type);
+    let profit = calculate_trade_profit(quantity, price_in, price_out, leverage, trade_type);
+    let profit_per = calculate_trade_profit_per(profit, size, price_in);
 
     let run_up = calculate_trade_runup(data, price_in, trade_type);
     let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
@@ -639,4 +666,25 @@ pub fn calculate_trade_stats(
         draw_down,
         draw_down_per,
     }
+}
+
+pub fn trade_exists<T: Trade>(trades: &[T], search_id: usize) -> bool {
+    trades.iter().any(|order| order.get_id() == &search_id)
+}
+
+pub fn update_trades<T>(trades: &mut Vec<T>, new_trade: T) -> bool
+where
+    T: Trade + Clone,
+{
+    let mut updated = false;
+
+    if let Some(trade) = trades
+        .iter_mut()
+        .find(|trade| trade.get_id() == new_trade.get_id())
+    {
+        *trade = new_trade;
+        updated = true;
+    }
+
+    updated
 }

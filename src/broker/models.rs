@@ -1,5 +1,6 @@
 use crate::helpers::date::{DateTime, Local};
 use crate::models::time_frame::*;
+use crate::models::trade::TradeType;
 use serde::{Deserialize, Serialize};
 
 pub type DOHLC = (DateTime<Local>, f64, f64, f64, f64, f64);
@@ -257,23 +258,34 @@ pub struct CommandGetTickPrices {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Transaction {
+pub struct TradeTransactionInfo {
     pub cmd: isize,
     pub customComment: String,
     pub symbol: String,
     pub expiration: i64,
     pub order: isize,
+    pub offset: i64,
     pub price: f64,
     pub sl: f64,
     pub tp: f64,
-    pub size: f64,
+    pub volume: f64,
     #[serde(rename = "type")]
     pub trans_type: isize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionInfo {
+    pub tradeTransInfo: TradeTransactionInfo,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionStatus {
     pub order: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetTrades {
+    pub openedOnly: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -284,4 +296,15 @@ pub struct TransactionStatusnResponse {
     pub ask: f64,
     pub bid: f64,
     pub status: TransactionState,
+}
+
+//TO PUT HERE index_in, ask, spread, trade_type
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionComments {
+    pub index_in: usize,
+    pub sell_order_price: Option<f64>,
+    pub stop_loss_order_price: Option<f64>,
+    pub bid: f64,
+    pub spread: f64,
+    pub trade_type: TradeType,
 }

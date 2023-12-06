@@ -24,11 +24,24 @@ pub fn get_max_price(data: &Vec<Candle>, index_in: usize, index_out: usize) -> f
         .unwrap()
 }
 
-pub fn calculate_profit(size: f64, price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {
-    match trade_type.is_long() {
+pub fn calculate_profit(
+    size: f64,
+    price_in: f64,
+    price_out: f64,
+    leverage: f64,
+    trade_type: &TradeType,
+) -> f64 {
+    let profit_without_leverage = match trade_type.is_long() {
         true => size * (price_out - price_in),
         false => size * (price_in - price_out),
-    }
+    };
+
+    profit_without_leverage * leverage
+}
+
+pub fn calculate_profit_per(total_profit: f64, size: f64, price_in: f64) -> f64 {
+    let invested_amount = size * price_in;
+    (total_profit / invested_amount) * 100.0
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
@@ -37,15 +50,6 @@ pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
 
 pub fn from_pips(pips: f64, tick: &InstrumentTick) -> f64 {
     tick.pip_size() / pips
-}
-
-pub fn calculate_profit_per(price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {
-    match trade_type.is_long() {
-        true => ((price_out - price_in) / price_in) * 100.,
-        //OJO
-        //false => ((price_in - price_out) / price_out) * 100.,
-        false => ((price_in - price_out) / price_in) * 100.0,
-    }
 }
 
 pub fn calculate_cum_profit(
@@ -69,18 +73,21 @@ pub fn calculate_runup(
     price_in: f64,
     index_in: usize,
     index_out: usize,
+    leverage: f64,
     trade_type: &TradeType,
 ) -> f64 {
-    match trade_type.is_long() {
+    let runup_without_leverage = match trade_type.is_long() {
         true => {
             let max_price = get_max_price(data, index_in, index_out);
             (max_price - price_in).abs() * 100.
         }
         false => {
             let min_price = get_min_price(data, index_in, index_out);
-            (min_price + price_in).abs() * 100.
+            (price_in - min_price).abs() * 100. // Corrected formula for short trades
         }
-    }
+    };
+
+    runup_without_leverage * leverage // Apply leverage to the runup
 }
 
 pub fn calculate_drawdown(
@@ -97,9 +104,7 @@ pub fn calculate_drawdown(
         }
         false => {
             let max_price = get_max_price(data, index_in, index_out);
-            //OJO
             (max_price - price_in).abs()
-            //(price_in + max_price).abs()
         }
     }
 }
@@ -326,13 +331,14 @@ pub fn calculate_trade_profit(
     size: f64,
     price_in: f64,
     price_out: f64,
+    leverage: f64,
     trade_type: &TradeType,
 ) -> f64 {
-    calculate_profit(size, price_in, price_out, trade_type)
+    calculate_profit(size, price_in, price_out, leverage, trade_type)
 }
 
-pub fn calculate_trade_profit_per(price_in: f64, price_out: f64, trade_type: &TradeType) -> f64 {
-    calculate_profit_per(price_in, price_out, trade_type)
+pub fn calculate_trade_profit_per(profit: f64, size: f64, price_in: f64) -> f64 {
+    calculate_profit_per(profit, size, price_in)
 }
 
 pub fn calculate_quantity(order_size: f64, price: f64) -> f64 {

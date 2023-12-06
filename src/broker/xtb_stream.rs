@@ -1,18 +1,18 @@
 use crate::broker::models::*;
-use crate::error::Result;
-use crate::helpers::calc;
+use crate::error::{Result, RsAlgoErrorKind};
 use crate::helpers::date::*;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
-use crate::models::environment;
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
+use crate::models::stop_loss::StopLossType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
+use crate::models::{environment, trade};
 use crate::ws::message::{
     InstrumentData, Message, ResponseBody, ResponseType, TradeData, TradeResponse,
 };
@@ -20,6 +20,7 @@ use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
 
 use futures_util::{stream::SplitStream, Future};
+use round::round;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -94,6 +95,7 @@ pub trait BrokerStream {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
+    async fn get_active_positions(&mut self) -> Result<ResponseBody<PositionResult>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
     async fn is_market_available(&mut self, symbol: &str) -> bool;
@@ -420,12 +422,10 @@ impl BrokerStream for Xtb {
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         let symbol = trade.symbol;
         let mut trade_in = trade.data;
-        let trade_id = uuid::generate_ts_id(Local::now());
-        let comment = format!("TradeId: {}", trade_id);
-        let valid_until = (Local::now() + date::Duration::minutes(1)).timestamp();
+        let valid_until = (Local::now() + date::Duration::minutes(1)).timestamp_millis();
 
-        let mut sell_order_price = 0.0;
-        let mut stop_loss_order_price = 0.0;
+        let mut sell_order_price = None;
+        let mut stop_loss_order_price = None;
 
         let order_size_limit = env::var("ORDER_SIZE_LIMIT")
             .unwrap()
@@ -434,7 +434,7 @@ impl BrokerStream for Xtb {
 
         let size = trade_in.size;
         let trade_size = if size > order_size_limit {
-            log::warn!("Trade size bigger than {:?} !!", order_size_limit);
+            panic!("Trade size bigger than {:?} !!", order_size_limit);
             order_size_limit
         } else {
             size
@@ -444,32 +444,51 @@ impl BrokerStream for Xtb {
             for order in orders.iter() {
                 match order.order_type {
                     OrderType::SellOrderLong(_, _, _) | OrderType::SellOrderShort(_, _, _) => {
-                        sell_order_price = order.target_price;
+                        sell_order_price = Some(round(order.target_price, 5));
                     }
                     OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
-                        stop_loss_order_price = order.target_price;
+                        stop_loss_order_price = Some(round(order.target_price, 5));
                     }
                     _ => {}
                 }
             }
         }
 
-        let trade_command: Command<Transaction> = Command {
+        let tick = self
+            .get_instrument_tick(&symbol)
+            .await
+            .unwrap()
+            .payload
+            .unwrap();
+
+        let comment = serde_json::to_string(&TransactionComments {
+            index_in: trade_in.index_in.clone(),
+            sell_order_price,
+            stop_loss_order_price,
+            trade_type: trade_in.trade_type.clone(),
+            spread: tick.spread(),
+            bid: tick.bid(),
+        })
+        .unwrap();
+
+        let trade_command: Command<TransactionInfo> = Command {
             command: "tradeTransaction".to_owned(),
-            arguments: Transaction {
-                cmd: TransactionCommand::BuyMarket.value(),
-                trans_type: TransactionAction::Open.value(),
-                symbol: symbol.clone(),
-                customComment: comment,
-                expiration: valid_until,
-                order: 0,
-                price: 0.,
-                sl: stop_loss_order_price,
-                tp: sell_order_price,
-                size: trade_size,
+            arguments: TransactionInfo {
+                tradeTransInfo: TradeTransactionInfo {
+                    cmd: TransactionCommand::BuyMarket.value(),
+                    trans_type: TransactionAction::Open.value(),
+                    symbol: symbol.clone(),
+                    customComment: comment,
+                    expiration: valid_until,
+                    order: 0,
+                    price: tick.bid(),
+                    offset: 0,
+                    sl: stop_loss_order_price.unwrap(),
+                    tp: 0.,
+                    volume: trade_size,
+                },
             },
         };
-
         self.send(&trade_command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
 
@@ -484,7 +503,7 @@ impl BrokerStream for Xtb {
                             true => {
                                 trade_in.id = order_id as usize;
                                 trade_in.price_in = trans_status.ask;
-                                trade_in.ask = trans_status.bid;
+                                trade_in.ask = trans_status.ask;
                                 trade_in.spread = trans_status.ask - trans_status.bid;
 
                                 ResponseBody {
@@ -594,7 +613,7 @@ impl BrokerStream for Xtb {
             arguments: TransactionStatus { order: order_id },
         };
 
-        let retry_after = 1000;
+        let retry_after = 800;
 
         loop {
             self.send(&status_command).await.unwrap();
@@ -606,7 +625,12 @@ impl BrokerStream for Xtb {
                     let status = &transaction_status.status;
 
                     if !transaction_status.status.is_pending() {
-                        log::info!("Transaction {:?} status {:?} ", order_id, status);
+                        log::info!(
+                            "Transaction {:?} status {:?} {:?}",
+                            order_id,
+                            status,
+                            transaction_status
+                        );
                         return Ok(transaction_status);
                     } else {
                         log::info!(
@@ -644,25 +668,34 @@ impl BrokerStream for Xtb {
         let mut trade_out = trade.data;
         let valid_until = (Local::now() + date::Duration::minutes(1)).timestamp();
 
-        let trade_command: Command<Transaction> = Command {
+        let tick = self
+            .get_instrument_tick(&symbol)
+            .await
+            .unwrap()
+            .payload
+            .unwrap();
+
+        let trade_command: Command<TransactionInfo> = Command {
             command: "tradeTransaction".to_owned(),
-            arguments: Transaction {
-                cmd: TransactionCommand::SellMarket.value(),
-                trans_type: TransactionAction::Close.value(),
-                symbol: symbol.clone(),
-                customComment: "".to_owned(),
-                expiration: valid_until,
-                order: trade_out.id as isize,
-                price: 0.,
-                sl: 0.,
-                tp: 0.,
-                size: trade_out.size,
+            arguments: TransactionInfo {
+                tradeTransInfo: TradeTransactionInfo {
+                    cmd: TransactionCommand::SellMarket.value(),
+                    trans_type: TransactionAction::Close.value(),
+                    symbol: symbol.clone(),
+                    customComment: "".to_owned(),
+                    expiration: valid_until,
+                    order: trade_out.id as isize,
+                    price: tick.bid(),
+                    offset: 0,
+                    sl: 0.,
+                    tp: 0.,
+                    volume: trade_out.size,
+                },
             },
         };
 
         self.send(&trade_command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
-
         let res = match msg {
             Message::Text(txt) => {
                 let (executed, order_id) = self.parse_new_trade_data(txt).await.unwrap();
@@ -674,17 +707,10 @@ impl BrokerStream for Xtb {
                             true => {
                                 let trade_type = &trade_out.trade_type;
 
-                                let price_in = trade_out.price_in;
-
                                 let price_out = match trade_type.is_long() {
                                     true => trans_status.bid,
                                     false => trans_status.ask,
                                 };
-
-                                // let profit = match trade_type.is_long() {
-                                //     true => price_out - price_in,
-                                //     false => price_in - price_out,
-                                // };
 
                                 trade_out.price_out = price_out;
                                 trade_out.date_out = to_dbtime(Local::now());
@@ -715,7 +741,7 @@ impl BrokerStream for Xtb {
                     false => {
                         log::error!("TradeOut not accepted in Broker");
                         ResponseBody {
-                            response: ResponseType::TradeInFulfilled,
+                            response: ResponseType::TradeOutFulfilled,
                             payload: Some(TradeResponse {
                                 symbol: trade.symbol,
                                 accepted: false,
@@ -810,6 +836,30 @@ impl BrokerStream for Xtb {
                 data,
             }),
         };
+        Ok(res)
+    }
+
+    async fn get_active_positions(&mut self) -> Result<ResponseBody<PositionResult>> {
+        let active_positions_command = Command {
+            command: "getTrades".to_owned(),
+            arguments: GetTrades { openedOnly: true },
+        };
+
+        self.send(&active_positions_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+
+        let res = match msg {
+            Message::Text(txt) => {
+                let position_result = self.parse_active_positions_data(txt).await.unwrap();
+
+                ResponseBody {
+                    response: ResponseType::GetActivePositions,
+                    payload: Some(position_result),
+                }
+            }
+            _ => panic!(),
+        };
+
         Ok(res)
     }
 
@@ -1242,8 +1292,22 @@ impl Xtb {
 
     pub async fn parse_new_trade_data(&mut self, txt: String) -> Result<(bool, u64)> {
         let data = self.parse_message(&txt).await.unwrap();
-        let status = data["status"].as_bool().unwrap();
-        let order_num = data["returnData"]["order"].as_u64().unwrap();
+        let status = data["status"]
+            .as_bool()
+            .ok_or("Missing or invalid 'status' in response data")
+            .unwrap();
+
+        let order_num_result = data["returnData"]["order"]
+            .as_u64()
+            .ok_or("Missing or invalid 'order' in 'returnData'");
+
+        let order_num = match order_num_result {
+            Ok(num) => num,
+            Err(_) => {
+                log::error!("Error parsing trade data: {}", txt);
+                panic!();
+            }
+        };
 
         Ok((status, order_num))
     }
@@ -1256,7 +1320,7 @@ impl Xtb {
         let order = data["returnData"]["order"].as_u64().unwrap();
         let ask = data["returnData"]["ask"].as_f64().unwrap();
         let bid = data["returnData"]["bid"].as_f64().unwrap();
-        let message = data["returnData"]["message"].as_str().unwrap().to_owned();
+        let message = "".to_owned(); //data["returnData"]["message"].as_str().unwrap().to_owned();
         let status =
             TransactionState::from_value(data["returnData"]["requestStatus"].as_u64().unwrap());
         let comment = data["returnData"]["customComment"]
@@ -1292,6 +1356,114 @@ impl Xtb {
             };
             result.push(market_hour);
         }
+        Ok(result)
+    }
+
+    pub async fn parse_active_positions_data(&mut self, txt: String) -> Result<PositionResult> {
+        let data = self.parse_message(&txt).await.unwrap();
+        let current_date = Local::now();
+        let mut trade_in = TradeIn::default();
+        let mut stop_loss_order = Order::default();
+        let data = data["returnData"].as_array().unwrap();
+
+        let mut orders: Vec<Order> = vec![];
+
+        for obj in data {
+            let id = obj["order"].as_i64().unwrap().try_into().unwrap();
+            let size = obj["volume"].as_f64().unwrap().try_into().unwrap();
+            let price_in = obj["open_price"].as_f64().unwrap().try_into().unwrap();
+            let origin_price = price_in;
+            let stop_loss = obj["sl"].as_f64().unwrap().try_into().unwrap();
+            let date_in = to_dbtime(date::parse_time_milliseconds(
+                obj["open_time"].as_i64().unwrap().try_into().unwrap(),
+            ));
+
+            let comment = obj["customComment"].as_str().unwrap().to_owned();
+            let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
+            let index_in = trans_comments.index_in;
+            let trade_type = trans_comments.trade_type;
+            let spread = trans_comments.spread;
+            let bid = trans_comments.bid;
+            let ask = bid + spread;
+            let sell_order_target = match trans_comments.sell_order_price {
+                Some(price) => price,
+                None => 0.0,
+            };
+
+            let stop_order_type = match trade_type.is_long() {
+                true => {
+                    OrderType::StopLossLong(OrderDirection::Down, StopLossType::Price(stop_loss))
+                }
+                false => {
+                    OrderType::StopLossShort(OrderDirection::Up, StopLossType::Price(stop_loss))
+                }
+            };
+
+            let sell_order_type = match trade_type.is_long() {
+                true => OrderType::SellOrderLong(OrderDirection::Up, size, sell_order_target),
+                false => OrderType::SellOrderShort(OrderDirection::Down, size, sell_order_target),
+            };
+
+            trade_in = TradeIn {
+                id,
+                index_in,
+                size,
+                origin_price,
+                price_in,
+                ask,
+                spread,
+                date_in,
+                trade_type,
+            };
+
+            let stop_loss_order = Order {
+                id,
+                trade_id: id,
+                index_created: id,
+                size,
+                order_type: stop_order_type,
+                index_fulfilled: 0,
+                status: OrderStatus::Pending,
+                origin_price,
+                target_price: stop_loss,
+                created_at: date_in,
+                updated_at: None,
+                full_filled_at: None,
+                valid_until: Some(to_dbtime(current_date + date::Duration::days(365 * 10))),
+            };
+
+            orders.push(stop_loss_order);
+
+            match trans_comments.sell_order_price {
+                Some(sell_price) => {
+                    let sell_order = Order {
+                        id,
+                        trade_id: id,
+                        index_created: id,
+                        size,
+                        order_type: sell_order_type,
+                        index_fulfilled: 0,
+                        status: OrderStatus::Pending,
+                        origin_price,
+                        target_price: sell_price,
+                        created_at: date_in,
+                        updated_at: None,
+                        full_filled_at: None,
+                        valid_until: Some(to_dbtime(current_date + date::Duration::days(365 * 10))),
+                    };
+
+                    orders.push(sell_order);
+                }
+                None => (),
+            };
+        }
+
+        let result = if data.len() > 0 {
+            PositionResult::MarketIn(TradeResult::TradeIn(trade_in), Some(orders))
+        } else {
+            PositionResult::None
+        };
+
         Ok(result)
     }
 

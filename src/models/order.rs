@@ -1,8 +1,8 @@
-use std::env;
+use std::{env, mem};
 
 use super::mode;
 use super::tick::InstrumentTick;
-use super::trade::{PositionResult, Trade, TradeResult, TradeType};
+use super::trade::{Trade, TradeType};
 
 use crate::helpers::uuid;
 use crate::helpers::{date, date::*};
@@ -108,6 +108,26 @@ pub struct Order {
     pub updated_at: Option<DbDateTime>,
     pub full_filled_at: Option<DbDateTime>,
     pub valid_until: Option<DbDateTime>,
+}
+
+impl Default for Order {
+    fn default() -> Self {
+        Order {
+            id: 0,
+            trade_id: 0,
+            index_created: 0,
+            index_fulfilled: 0,
+            size: 0.0,
+            order_type: OrderType::BuyOrderLong(OrderDirection::Up, 0.0, 0.0),
+            status: OrderStatus::Pending,
+            origin_price: 0.0,
+            target_price: 0.0,
+            created_at: to_dbtime(Local::now()),
+            updated_at: None,
+            full_filled_at: None,
+            valid_until: None,
+        }
+    }
 }
 
 impl Order {
@@ -826,4 +846,21 @@ fn get_order_activation_price(candle: &Candle, order: &Order, tick: &InstrumentT
     } else {
         (price_over + spread, price_below + spread)
     }
+}
+
+pub fn order_exists(orders: &[Order], search_id: usize) -> bool {
+    orders.iter().any(|order| order.id == search_id)
+}
+
+pub fn update_orders(orders: &mut Vec<Order>, new_orders: &[Order]) -> bool {
+    let mut updated = false;
+
+    for new_order in new_orders {
+        if let Some(order) = orders.iter_mut().find(|o| o.id == new_order.id) {
+            *order = new_order.clone();
+            updated = true;
+        }
+    }
+
+    updated
 }
