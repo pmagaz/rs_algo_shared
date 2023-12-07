@@ -139,10 +139,13 @@ pub fn calculate_strategy_stats(
         let net_profit_per = total_profit_per(trades_out);
         let profitable_trades = total_profitable_trades(wining_trades, trades);
 
-        let max_drawdown = match instrument.market() {
-            Market::Forex => total_drawdown(trades_out, equity) * 10.,
-            _ => total_drawdown(trades_out, equity),
-        };
+        //OJO
+        // let max_drawdown = match instrument.market() {
+        //     Market::Forex => total_drawdown(trades_out, equity) * 10.,
+        //     _ => total_drawdown(trades_out, equity),
+        // };
+
+        let max_drawdown = total_drawdown(trades_out, equity);
 
         let max_runup = total_runup(trades_out, equity);
         let strategy_start_price = match instrument.data.first().map(|x| x.open) {
