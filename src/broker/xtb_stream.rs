@@ -461,6 +461,13 @@ impl BrokerStream for Xtb {
             .payload
             .unwrap();
 
+        log::info!(
+            "Opening trade. Ask: {} Bid: {} Spread: {}",
+            tick.ask(),
+            tick.bid(),
+            tick.spread()
+        );
+
         let comment = serde_json::to_string(&TransactionComments {
             index_in: trade_in.index_in.clone(),
             sell_order_price,
@@ -504,14 +511,16 @@ impl BrokerStream for Xtb {
                                 trade_in.id = order_id as usize;
                                 trade_in.price_in = trans_status.ask;
                                 trade_in.ask = trans_status.ask;
-                                trade_in.spread = trans_status.ask - trans_status.bid;
+                                //trade_in.spread = trans_status.ask - trans_status.bid;
+                                trade_in.spread = tick.spread();
 
                                 log::info!(
-                                    "Trade accepted in Broker ask: {} bid: {} spread: {}",
+                                    "Trade accepted!. Ask: {} Bid: {} Spread: {:?}",
                                     trade_in.ask,
                                     trans_status.bid,
-                                    trade_in.spread
+                                    trade_in.spread,
                                 );
+
                                 ResponseBody {
                                     response: ResponseType::TradeInFulfilled,
                                     payload: Some(TradeResponse {
@@ -550,120 +559,6 @@ impl BrokerStream for Xtb {
         };
 
         Ok(res)
-    }
-
-    async fn open_trade_test(
-        &mut self,
-        trade: TradeData<TradeIn>,
-        _orders: Option<Vec<Order>>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
-        let symbol = &trade.symbol;
-        let mut data = trade.data;
-
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-        let tick = match execution_mode {
-            mode::ExecutionMode::Bot => self
-                .get_instrument_tick(&symbol)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
-            _ => self
-                .get_instrument_tick_test(&symbol, data.price_in)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
-        };
-
-        let ask = tick.ask();
-        let bid = tick.bid();
-        let spread = tick.spread();
-        let trade_type = data.trade_type.clone();
-
-        let price_in = match trade_type.is_long() {
-            true => ask,
-            false => bid,
-        };
-
-        log::info!(
-            "{} Test TradeIn accepted at ask: {} bid: {} tick",
-            trade.symbol,
-            ask,
-            bid
-        );
-
-        data.id = uuid::generate_ts_id(Local::now());
-        data.price_in = price_in;
-        data.ask = ask;
-        data.spread = spread;
-
-        let res = ResponseBody {
-            response: ResponseType::TradeInFulfilled,
-            payload: Some(TradeResponse {
-                symbol: trade.symbol,
-                accepted: true,
-                data: data,
-            }),
-        };
-
-        Ok(res)
-    }
-
-    async fn get_transaction_status(
-        &mut self,
-        order_id: u64,
-    ) -> Result<TransactionStatusnResponse> {
-        let status_command = Command {
-            command: "tradeTransactionStatus".to_owned(),
-            arguments: TransactionStatus { order: order_id },
-        };
-
-        let retry_after = 800;
-
-        loop {
-            self.send(&status_command).await.unwrap();
-            let msg = self.socket.read().await.unwrap();
-
-            match msg {
-                Message::Text(txt) => {
-                    let transaction_status = self.parse_trade_status_data(txt).await.unwrap();
-                    let status = &transaction_status.status;
-
-                    if !transaction_status.status.is_pending() {
-                        log::info!(
-                            "Transaction {:?} status {:?} {:?}",
-                            order_id,
-                            status,
-                            transaction_status
-                        );
-                        return Ok(transaction_status);
-                    } else {
-                        log::info!(
-                            "Transaction {:?} status {:?}. Retry after {} ms",
-                            order_id,
-                            status,
-                            retry_after
-                        );
-
-                        sleep(Duration::from_millis(retry_after));
-                    }
-                }
-                _ => todo!(),
-            };
-        }
-    }
-
-    async fn close_trade(
-        &mut self,
-        trade: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
-        let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
-
-        match is_prod {
-            true => self.close_trade_real(trade).await,
-            false => self.close_trade_test(trade).await,
-        }
     }
 
     async fn close_trade_real(
@@ -763,6 +658,116 @@ impl BrokerStream for Xtb {
 
         Ok(res)
     }
+
+    async fn get_transaction_status(
+        &mut self,
+        order_id: u64,
+    ) -> Result<TransactionStatusnResponse> {
+        let status_command = Command {
+            command: "tradeTransactionStatus".to_owned(),
+            arguments: TransactionStatus { order: order_id },
+        };
+
+        let retry_after = 800;
+
+        loop {
+            self.send(&status_command).await.unwrap();
+            let msg = self.socket.read().await.unwrap();
+
+            match msg {
+                Message::Text(txt) => {
+                    let transaction_status = self.parse_trade_status_data(txt).await.unwrap();
+                    let status = &transaction_status.status;
+
+                    if !transaction_status.status.is_pending() {
+                        log::info!("Transaction {} status {:?}", order_id, status,);
+                        return Ok(transaction_status);
+                    } else {
+                        log::info!(
+                            "Transaction {:?} status {:?}. Retry after {} ms",
+                            order_id,
+                            status,
+                            retry_after
+                        );
+
+                        sleep(Duration::from_millis(retry_after));
+                    }
+                }
+                _ => todo!(),
+            };
+        }
+    }
+
+    async fn open_trade_test(
+        &mut self,
+        trade: TradeData<TradeIn>,
+        _orders: Option<Vec<Order>>,
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
+        let symbol = &trade.symbol;
+        let mut data = trade.data;
+
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => self
+                .get_instrument_tick_test(&symbol, data.price_in)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+        };
+
+        let ask = tick.ask();
+        let bid = tick.bid();
+        let spread = tick.spread();
+        let trade_type = data.trade_type.clone();
+
+        let price_in = match trade_type.is_long() {
+            true => ask,
+            false => bid,
+        };
+
+        log::info!(
+            "{} Test TradeIn accepted at ask: {} bid: {} tick",
+            trade.symbol,
+            ask,
+            bid
+        );
+
+        data.id = uuid::generate_ts_id(Local::now());
+        data.price_in = price_in;
+        data.ask = ask;
+        data.spread = spread;
+
+        let res = ResponseBody {
+            response: ResponseType::TradeInFulfilled,
+            payload: Some(TradeResponse {
+                symbol: trade.symbol,
+                accepted: true,
+                data: data,
+            }),
+        };
+
+        Ok(res)
+    }
+
+    async fn close_trade(
+        &mut self,
+        trade: TradeData<TradeOut>,
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
+        let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
+
+        match is_prod {
+            true => self.close_trade_real(trade).await,
+            false => self.close_trade_test(trade).await,
+        }
+    }
+
     async fn close_trade_test(
         &mut self,
         trade: TradeData<TradeOut>,
@@ -857,7 +862,6 @@ impl BrokerStream for Xtb {
         let res = match msg {
             Message::Text(txt) => {
                 let position_result = self.parse_active_positions_data(txt).await.unwrap();
-
                 ResponseBody {
                     response: ResponseType::GetActivePositions,
                     payload: Some(position_result),
@@ -1062,7 +1066,7 @@ impl BrokerStream for Xtb {
 
         let arrival_time = match is_prod {
             true => 1,
-            false => 10000,
+            false => 3000,
         };
 
         self.symbol = symbol.to_owned();
@@ -1122,7 +1126,7 @@ impl BrokerStream for Xtb {
                     let high = data["high"].as_f64().unwrap();
                     let low = data["low"].as_f64().unwrap();
                     let timestamp = data["timestamp"].as_i64().unwrap();
-                    let spread = ask - bid;
+                    let spread = data["spreadRaw"].as_f64().unwrap();
 
                     let tick = InstrumentTick::new()
                         .symbol(symbol)
@@ -1275,10 +1279,9 @@ impl Xtb {
         let bid = data["returnData"]["bid"].as_f64().unwrap();
         let high = data["returnData"]["high"].as_f64().unwrap();
         let low = data["returnData"]["low"].as_f64().unwrap();
-        let pip_size = data["returnData"]["tickSize"].as_f64().unwrap() * 10.;
-        let percentage = 0.;
-
-        let spread = ask - bid;
+        //OJO
+        let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
+        let spread = data["returnData"]["spreadRaw"].as_f64().unwrap();
 
         let tick = InstrumentTick::new()
             .symbol(symbol)
@@ -1291,7 +1294,6 @@ impl Xtb {
             .time(Local::now().timestamp())
             .build()
             .unwrap();
-        //let tick = InstrumentTick::new(symbol, ask, bid, spread, pip_size, percentage);
 
         Ok(tick)
     }
@@ -1386,6 +1388,7 @@ impl Xtb {
 
             let comment = obj["customComment"].as_str().unwrap().to_owned();
             let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
+            log::info!("2222222 {:?}", trans_comments);
             let index_in = trans_comments.index_in;
             let trade_type = trans_comments.trade_type;
             let spread = trans_comments.spread;
