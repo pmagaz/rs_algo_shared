@@ -506,6 +506,12 @@ impl BrokerStream for Xtb {
                                 trade_in.ask = trans_status.ask;
                                 trade_in.spread = trans_status.ask - trans_status.bid;
 
+                                log::info!(
+                                    "Trade accepted in Broker ask: {} bid: {} spread: {}",
+                                    trade_in.ask,
+                                    trans_status.bid,
+                                    trade_in.spread
+                                );
                                 ResponseBody {
                                     response: ResponseType::TradeInFulfilled,
                                     payload: Some(TradeResponse {
