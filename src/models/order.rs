@@ -1,4 +1,4 @@
-use std::{env, mem};
+use std::{env};
 
 use super::mode;
 use super::tick::InstrumentTick;
@@ -64,14 +64,14 @@ impl OrderType {
 
     pub fn get_direction(&self) -> &OrderDirection {
         match self {
-            OrderType::BuyOrderLong(d, _, _) => &d,
-            OrderType::BuyOrderShort(d, _, _) => &d,
-            OrderType::SellOrderLong(d, _, _) => &d,
-            OrderType::SellOrderShort(d, _, _) => &d,
-            OrderType::TakeProfitLong(d, _, _) => &d,
-            OrderType::TakeProfitShort(d, _, _) => &d,
-            OrderType::StopLossLong(d, _) => &d,
-            OrderType::StopLossShort(d, _) => &d,
+            OrderType::BuyOrderLong(d, _, _) => d,
+            OrderType::BuyOrderShort(d, _, _) => d,
+            OrderType::SellOrderLong(d, _, _) => d,
+            OrderType::SellOrderShort(d, _, _) => d,
+            OrderType::TakeProfitLong(d, _, _) => d,
+            OrderType::TakeProfitShort(d, _, _) => d,
+            OrderType::StopLossLong(d, _) => d,
+            OrderType::StopLossShort(d, _) => d,
         }
     }
 
@@ -171,7 +171,7 @@ impl Order {
         self.set_full_filled_at(to_dbtime(date));
     }
 
-    pub fn unfulfill_order(&mut self, index: usize, date: DateTime<Local>) {
+    pub fn unfulfill_order(&mut self, _index: usize, date: DateTime<Local>) {
         self.set_full_filled_index(0);
         self.set_status(OrderStatus::Pending);
         self.set_updated_at(to_dbtime(date));
@@ -579,12 +579,10 @@ fn is_activated_order(
         OrderDirection::Up => {
             let cross_over = if is_bot {
                 price_over >= target_price
+            } else if is_stop {
+                is_closed && current_candle.high() >= target_price
             } else {
-                if is_stop {
-                    is_closed && current_candle.high() >= target_price
-                } else {
-                    price_over >= target_price && is_next_bar && is_closed
-                }
+                price_over >= target_price && is_next_bar && is_closed
             };
 
             if cross_over {
@@ -602,12 +600,10 @@ fn is_activated_order(
         OrderDirection::Down => {
             let cross_below = if is_bot {
                 price_below <= target_price
+            } else if is_stop {
+                is_closed && current_candle.low() <= target_price
             } else {
-                if is_stop {
-                    is_closed && current_candle.low() <= target_price
-                } else {
-                    price_below <= target_price && is_next_bar && is_closed
-                }
+                price_below <= target_price && is_next_bar && is_closed
             };
 
             if cross_below {
@@ -844,11 +840,11 @@ pub fn fulfill_bot_order<T: Trade>(
     fulfill_trade_order(index, trade, order, orders)
 }
 
-fn get_order_activation_price(candle: &Candle, order: &Order, tick: &InstrumentTick) -> (f64, f64) {
+fn get_order_activation_price(candle: &Candle, _order: &Order, tick: &InstrumentTick) -> (f64, f64) {
     let order_engine = &env::var("EXECUTION_MODE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    let spread = tick.spread();
+    let _spread = tick.spread();
 
     let (price_over, price_below) = match execution_mode.is_bot() {
         true => (candle.close(), candle.close()),
@@ -874,7 +870,7 @@ pub fn hostias(
     order: &Order,
     price_over: f64,
     price_below: f64,
-    tick: &InstrumentTick,
+    _tick: &InstrumentTick,
 ) -> (f64, f64) {
     if order.is_long() {
         (price_over, price_below)

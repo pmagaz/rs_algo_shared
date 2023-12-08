@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Default)]
 pub enum Environment {
     Production,
+    #[default]
     Development,
     Backtesting,
 }
@@ -38,11 +40,7 @@ impl Environment {
     }
 }
 
-impl Default for Environment {
-    fn default() -> Self {
-        Environment::Development
-    }
-}
+
 
 pub fn from_str(env: &str) -> Environment {
     match env.to_lowercase().as_str() {

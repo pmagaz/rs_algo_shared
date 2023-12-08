@@ -1,7 +1,7 @@
 use reqwest::{Client, Error, Response};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use std::time::Duration;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpMethod {

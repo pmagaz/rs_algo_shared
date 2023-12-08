@@ -1,4 +1,4 @@
-use crate::{helpers::calc::*, models::market::Market, scanner::instrument::Instrument};
+use crate::{helpers::calc::*, scanner::instrument::Instrument};
 
 use serde::{Deserialize, Serialize};
 

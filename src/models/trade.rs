@@ -364,7 +364,7 @@ pub fn resolve_trade_out(
     order: Option<&Order>,
     tick: &InstrumentTick,
 ) -> TradeResult {
-    let size = trade_in.size;
+    let _size = trade_in.size;
     let data = &instrument.data;
     let spread = tick.spread();
     let trade_in_type = &trade_in.trade_type;
@@ -551,11 +551,7 @@ pub fn wait_for_new_trade(
                         }
                     };
 
-                    if current_date >= next_entry_date {
-                        false
-                    } else {
-                        true
-                    }
+                    current_date < next_entry_date
                 }
                 None => false,
             }
@@ -624,8 +620,8 @@ pub fn calculate_trade_stats(
 
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
 
-    let trade_type = &trade_in.trade_type;
-    let date_out = match execution_mode {
+    let _trade_type = &trade_in.trade_type;
+    let _date_out = match execution_mode {
         mode::ExecutionMode::Bot => trade_out.date_out,
         _ => to_dbtime(data.last().unwrap().date()),
     };
