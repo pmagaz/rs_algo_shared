@@ -86,15 +86,15 @@ pub trait BrokerStream {
         &mut self,
         trade_out: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    // async fn open_order(
-    //     &mut self,
-    //     order: TradeData<Order>,
-    // ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    // async fn close_order(
-    //     &mut self,
-    //     trade: TradeData<TradeOut>,
-    //     order: TradeData<Order>,
-    // ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
+    async fn open_order(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
+    async fn close_order(
+        &mut self,
+        trade: TradeData<TradeOut>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn get_active_positions(&mut self) -> Result<ResponseBody<PositionResult>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
@@ -881,6 +881,175 @@ impl BrokerStream for Xtb {
             _ => panic!(),
         };
 
+        Ok(res)
+    }
+
+    async fn open_order(
+        &mut self,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
+        // let trade_command = Command {
+        //     command: "tradeTransaction".to_owned(),
+        //     arguments: Transaction {
+        //         cmd: TransactionCommand::Buy.value(),
+        //         symbol: "".to_owned(),
+        //         customComment: "".to_owned(),
+        //         expiration: 0,
+        //         order: 0,
+        //         price: 0.,
+        //         sl: 0.,
+        //         tp: 0.,
+        //         size: 0.,
+        //         trans_type: 0,
+        //     },
+        // };
+
+        let symbol = &order.symbol;
+        let order = order.data;
+        let size = order.size;
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => self
+                .get_instrument_tick_test(&symbol, order.target_price)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+        };
+
+        let spread = tick.spread();
+
+        let trade_type = match order.order_type.is_long() {
+            true => TradeType::OrderInLong,
+            false => TradeType::OrderInShort,
+        };
+
+        let price_in = match trade_type.is_long() {
+            true => tick.ask(),
+            false => tick.bid(),
+        };
+
+        let trade_in = TradeIn {
+            id: uuid::generate_ts_id(Local::now()),
+            index_in: order.index_created,
+            size,
+            origin_price: order.origin_price,
+            price_in,
+            ask: tick.ask(),
+            spread,
+            trade_type,
+            date_in: to_dbtime(Local::now()),
+        };
+
+        let res = ResponseBody {
+            response: ResponseType::TradeInFulfilled,
+            payload: Some(TradeResponse {
+                symbol: symbol.clone(),
+                accepted: true,
+                data: trade_in,
+            }),
+        };
+
+        Ok(res)
+    }
+
+    async fn close_order(
+        &mut self,
+        trade: TradeData<TradeOut>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
+        let symbol = &trade.symbol;
+        let mut trade_data = trade.data;
+        let order = order.data;
+
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let tick = match execution_mode {
+            mode::ExecutionMode::Bot => self
+                .get_instrument_tick(&symbol)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+            _ => self
+                .get_instrument_tick_test(&symbol, order.target_price)
+                .await
+                .unwrap()
+                .payload
+                .unwrap(),
+        };
+        let ask = tick.ask();
+        let bid = tick.bid();
+        let spread = tick.spread();
+
+        let trade_type = trade_data.trade_type.clone();
+        let order_type = order.order_type;
+
+        let non_profitable_outs = trade.options.non_profitable_out;
+        let price_in = trade_data.price_in;
+
+        let price_out = match trade_type.is_stop() {
+            true => match trade_type.is_long() {
+                true => order.target_price,
+                false => order.target_price + spread,
+            },
+            false => match trade_type.is_long() {
+                true => bid,
+                false => ask,
+            },
+        };
+
+        let profit = match trade_type.is_long() {
+            true => price_out - price_in,
+            false => price_in - price_out,
+        };
+
+        let is_profitable = match profit {
+            _ if profit > 0. => true,
+            _ => false,
+        };
+
+        let accepted = match trade_type.is_stop() {
+            true => true,
+            false => match non_profitable_outs {
+                true => true,
+                false => is_profitable,
+            },
+        };
+
+        let str_accepted = match accepted {
+            true => "accepted",
+            false => "NOT accepted",
+        };
+
+        log::info!(
+            "{:?} {} {} with profit {}",
+            order_type,
+            trade.symbol,
+            str_accepted,
+            profit
+        );
+
+        trade_data.id = uuid::generate_ts_id(Local::now());
+        trade_data.price_out = price_out;
+        trade_data.date_out = to_dbtime(Local::now());
+        trade_data.bid = bid;
+        trade_data.ask = ask;
+        trade_data.spread_out = spread;
+
+        let res = ResponseBody {
+            response: ResponseType::TradeOutFulfilled,
+            payload: Some(TradeResponse {
+                symbol: trade.symbol,
+                accepted,
+                data: trade_data,
+            }),
+        };
         Ok(res)
     }
 
