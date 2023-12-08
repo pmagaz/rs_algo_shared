@@ -303,20 +303,6 @@ impl CandleBuilder {
         let (mid_open, _mid_high, _mid_low, mid_close) = &self.get_previous_ohlc(0);
         let (open, _high, _low, close) = &self.get_current_ohlc();
 
-        // log::info!(
-        //     "22222222 {:?}",
-        //     (
-        //         close < open
-        //             && mid_close < mid_open
-        //             && left_close < left_open
-        //             && close < mid_close
-        //             && mid_close < left_close,
-        //         left_open,
-        //         mid_open,
-        //         open
-        //     )
-        // );
-
         let diff_size = (left_close - close).abs();
         let _diff_size_percentage = (diff_size / close) * 100.0;
 

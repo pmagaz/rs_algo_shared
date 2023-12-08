@@ -202,6 +202,10 @@ impl Order {
         }
     }
 
+    pub fn is_entry(&self) -> bool {
+        self.order_type.is_entry()
+    }
+
     pub fn is_full_filled(&self) -> bool {
         match self.full_filled_at {
             Some(_x) => true,
@@ -540,19 +544,36 @@ fn is_activated_order(
 
     let (price_over, price_below) = match use_tick_price {
         true => {
-            let tick_price = if order.is_long() {
-                tick.bid()
-            } else {
-                tick.ask()
-            };
+            // let price_source = if order.is_long() {
+            //     if order.is_entry() {
+            //         tick.ask()
+            //     } else {
+            //         tick.bid()
+            //     }
+            // } else {
+            //     if order.is_entry() {
+            //         tick.bid()
+            //     } else {
+            //         tick.ask()
+            //     }
+            // };
 
-            (tick_price, tick_price)
+            (tick.bid(), tick.bid())
         }
         false => {
             let (price_over, price_below) = get_order_activation_price(current_candle, order, tick);
             (price_over, price_below)
         }
     };
+
+    // log::info!(
+    //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
+    //     source,
+    //     order.target_price,
+    //     price_over,
+    //     price_below,
+    //     (tick.ask(), tick.bid())
+    // );
 
     match direction {
         OrderDirection::Up => {
@@ -841,10 +862,24 @@ fn get_order_activation_price(candle: &Candle, order: &Order, tick: &InstrumentT
         },
     };
 
+    // if order.is_long() {
+    //     (price_over, price_below)
+    // } else {
+    //     (price_over + spread, price_below + spread)
+    // }
+    (price_over, price_below)
+}
+
+pub fn hostias(
+    order: &Order,
+    price_over: f64,
+    price_below: f64,
+    tick: &InstrumentTick,
+) -> (f64, f64) {
     if order.is_long() {
         (price_over, price_below)
     } else {
-        (price_over + spread, price_below + spread)
+        (price_over, price_below)
     }
 }
 
