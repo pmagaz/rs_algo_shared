@@ -33,6 +33,39 @@ impl TransactionCommand {
             TransactionCommand::Credit => 7,
         }
     }
+
+    pub fn from_value(value: i64) -> Option<TransactionCommand> {
+        match value {
+            0 => Some(TransactionCommand::BuyMarket),
+            1 => Some(TransactionCommand::SellMarket),
+            2 => Some(TransactionCommand::BuyLimit),
+            3 => Some(TransactionCommand::SellLimit),
+            4 => Some(TransactionCommand::BuyStop),
+            5 => Some(TransactionCommand::SellStop),
+            6 => Some(TransactionCommand::Balance),
+            7 => Some(TransactionCommand::Credit),
+            _ => None, // Invalid value
+        }
+    }
+
+    pub fn is_entry(&self) -> bool {
+        matches!(
+            self,
+            TransactionCommand::BuyMarket
+                | TransactionCommand::SellMarket
+                | TransactionCommand::BuyLimit
+                | TransactionCommand::SellLimit
+                | TransactionCommand::BuyStop
+                | TransactionCommand::SellStop
+        )
+    }
+
+    pub fn is_exit(&self) -> bool {
+        matches!(
+            self,
+            TransactionCommand::Balance | TransactionCommand::Credit
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -244,6 +277,12 @@ pub struct CommandTickStreamParams {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct CommandTradeStatusParams {
+    pub command: String,
+    pub streamSessionId: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TradingHoursCommand {
     pub symbols: Vec<String>,
 }
@@ -277,7 +316,6 @@ pub struct TradeTransactionInfo {
 pub struct TransactionInfo {
     pub tradeTransInfo: TradeTransactionInfo,
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionStatus {
     pub order: u64,

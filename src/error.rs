@@ -5,6 +5,8 @@ pub type Result<T> = ::anyhow::Result<T, RsAlgoError>;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Error)]
 pub enum RsAlgoErrorKind {
+    #[error("Error while Parsing!")]
+    ParseError,
     #[error("Invalid Candle!")]
     InvalidCandle,
     #[error("Invalid Instrument!")]

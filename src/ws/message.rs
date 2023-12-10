@@ -50,6 +50,7 @@ pub enum ResponseType {
     InitSession,
     SubscribeStream,
     SubscribeTickPrices,
+    SubscribeTrades,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

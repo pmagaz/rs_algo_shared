@@ -105,9 +105,11 @@ pub trait BrokerStream {
         symbol: &str,
         price: f64,
     ) -> Result<ResponseBody<InstrumentTick>>;
+    async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
+    async fn subscribe_trades(&mut self, symbol: &str) -> Result<()>;
     async fn parse_stream_data(msg: Message) -> Option<String>;
     async fn keepalive_ping(&mut self) -> Result<String>;
     async fn disconnect(&mut self) -> Result<()>;
@@ -239,7 +241,7 @@ impl BrokerStream for Xtb {
         let msg = self.socket.read().await.unwrap();
         let res = match msg {
             Message::Text(txt) => {
-                let tick = self.parse_tick_data(symbol.to_owned(), txt).await.unwrap();
+                let tick = self.parse_tick_data(symbol.to_owned(), txt).unwrap();
 
                 ResponseBody {
                     response: ResponseType::GetInstrumentTick,
@@ -250,6 +252,30 @@ impl BrokerStream for Xtb {
         };
 
         Ok(res)
+    }
+
+    async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)> {
+        let tick_command = Command {
+            command: "getSymbol".to_owned(),
+            arguments: SymbolArg {
+                symbol: symbol.to_owned(),
+            },
+        };
+        self.send(&tick_command).await?;
+        let msg = self.socket.read().await.unwrap();
+
+        if let Message::Text(txt) = msg {
+            let data = self.parse_message(&txt)?;
+            let return_data = data
+                .get("returnData")
+                .ok_or_else(|| RsAlgoErrorKind::ParseError)
+                .unwrap();
+            let ask = return_data["ask"].as_f64().unwrap();
+            let bid = return_data["bid"].as_f64().unwrap();
+            Ok((ask, bid))
+        } else {
+            panic!();
+        }
     }
 
     async fn get_historic_data(
@@ -337,7 +363,7 @@ impl BrokerStream for Xtb {
 
         let res = match msg {
             Message::Text(txt) => {
-                let data = self.parse_message(&txt).await.unwrap();
+                let data = self.parse_message(&txt).unwrap();
 
                 let mut market_hours: Vec<MarketHour> = vec![];
 
@@ -421,14 +447,15 @@ impl BrokerStream for Xtb {
         orders: Option<Vec<Order>>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         const MAX_RETRIES: usize = 3;
-        const RETRY_AFTER: u64 = 800;
+        const RETRY_AFTER: u64 = 500;
         let mut attempts = 0;
         let mut accepted = false;
         let symbol = trade.symbol;
-        let trade_in = trade.data;
+        let mut trade_in = trade.data;
         let mut sell_order_price = None;
         let mut stop_loss_order_price = None;
-        let valid_until = (Local::now() + date::Duration::minutes(1)).timestamp_millis();
+        let valid_until = (Local::now() + date::Duration::minutes(3)).timestamp_millis();
+        let is_long = trade_in.trade_type.is_long();
 
         let order_size_limit = env::var("ORDER_SIZE_LIMIT")
             .unwrap()
@@ -458,47 +485,37 @@ impl BrokerStream for Xtb {
         }
 
         while !accepted && attempts < MAX_RETRIES {
-            let symbol = symbol.clone();
-            let mut trade_in = trade_in.clone();
             let trade_type = trade_in.trade_type.clone();
 
-            let tick = self
-                .get_instrument_tick(&symbol)
-                .await
-                .unwrap()
-                .payload
-                .unwrap();
-
-            log::info!(
-                "Opening trade. Ask: {} Bid: {} Spread: {}",
-                tick.ask(),
-                tick.bid(),
-                tick.spread()
-            );
+            let (ask, bid) = self.get_ask_bid(&symbol).await.unwrap();
+            let spread = ask - bid;
 
             let comment = serde_json::to_string(&TransactionComments {
                 index_in: trade_in.index_in.clone(),
                 sell_order_price,
                 stop_loss_order_price,
                 trade_type,
-                spread: tick.spread(),
-                bid: tick.bid(),
+                spread: spread,
+                bid: bid,
             })
             .unwrap();
 
-            let command = match trade_in.trade_type.is_long() {
+            let command = match is_long {
                 true => TransactionCommand::BuyMarket.value(),
                 false => TransactionCommand::SellMarket.value(),
             };
 
-            let opening_price = tick.bid();
+            let opening_price = match is_long {
+                true => ask,
+                false => bid,
+            };
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
                 arguments: TransactionInfo {
                     tradeTransInfo: TradeTransactionInfo {
                         cmd: command,
-                        symbol: symbol.clone(),
+                        symbol: symbol.to_owned(),
                         trans_type: TransactionAction::Open.value(),
                         customComment: comment,
                         expiration: valid_until,
@@ -515,9 +532,16 @@ impl BrokerStream for Xtb {
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
 
+            log::info!(
+                "Opening trade. Ask: {} Bid: {} Spread: {}",
+                ask,
+                bid,
+                spread
+            );
+
             match msg {
                 Message::Text(txt) => {
-                    let (executed, order_id) = self.parse_new_trade_data(txt).await.unwrap();
+                    let (executed, order_id) = self.parse_new_trade_data(txt).unwrap();
 
                     match executed {
                         true => {
@@ -527,7 +551,7 @@ impl BrokerStream for Xtb {
                                     trade_in.id = order_id as usize;
                                     trade_in.price_in = trans_status.ask;
                                     trade_in.ask = trans_status.ask;
-                                    trade_in.spread = tick.spread();
+                                    trade_in.spread = spread;
                                     accepted = true;
                                 }
                                 false => {
@@ -568,30 +592,29 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         const MAX_RETRIES: usize = 3;
-        const RETRY_AFTER: u64 = 800;
+        const RETRY_AFTER: u64 = 500;
         let mut attempts = 0;
         let mut accepted = false;
-        let trade_out = trade.data;
+        let mut trade_out = trade.data;
         let symbol = trade.symbol;
-        let valid_until = (Local::now() + date::Duration::minutes(1)).timestamp();
+        let valid_until = (Local::now() + date::Duration::minutes(3)).timestamp();
+        let is_long = trade_out.trade_type.is_long();
 
         while !accepted && attempts < MAX_RETRIES {
-            let symbol = symbol.clone();
-            let mut trade_out = trade_out.clone();
-
-            let tick = self
-                .get_instrument_tick(&symbol)
-                .await
-                .unwrap()
-                .payload
-                .unwrap();
-
             let command = match trade_out.trade_type.is_long() {
                 true => TransactionCommand::SellMarket.value(),
                 false => TransactionCommand::BuyMarket.value(),
             };
 
-            let closing_price = tick.bid();
+            let (ask, bid) = self.get_ask_bid(&symbol).await?;
+            let spread = ask - bid;
+
+            let closing_price = match is_long {
+                true => bid,
+                false => ask,
+            };
+
+            let custom_comment = "";
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
@@ -599,8 +622,8 @@ impl BrokerStream for Xtb {
                     tradeTransInfo: TradeTransactionInfo {
                         cmd: command,
                         trans_type: TransactionAction::Close.value(),
-                        symbol: symbol.clone(),
-                        customComment: "".to_owned(),
+                        symbol: symbol.to_owned(),
+                        customComment: custom_comment.to_owned(),
                         expiration: valid_until,
                         order: trade_out.id as isize,
                         price: closing_price,
@@ -614,9 +637,16 @@ impl BrokerStream for Xtb {
 
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
+
+            log::info!(
+                "Closing trade. Ask: {} Bid: {} Spread: {}",
+                ask,
+                bid,
+                spread
+            );
             match msg {
                 Message::Text(txt) => {
-                    let (executed, order_id) = self.parse_new_trade_data(txt).await.unwrap();
+                    let (executed, order_id) = self.parse_new_trade_data(txt).unwrap();
 
                     match executed {
                         true => {
@@ -687,11 +717,11 @@ impl BrokerStream for Xtb {
 
             match msg {
                 Message::Text(txt) => {
-                    let transaction_status = self.parse_trade_status_data(txt).await.unwrap();
+                    let transaction_status = self.parse_trade_status_data(txt).unwrap();
                     let status = &transaction_status.status;
 
                     if !transaction_status.status.is_pending() {
-                        log::info!("Transaction {} status {:?}", order_id, status,);
+                        log::info!("Transaction {} status {:?}", order_id, status);
                         return Ok(transaction_status);
                     } else {
                         log::info!(
@@ -872,7 +902,7 @@ impl BrokerStream for Xtb {
 
         let res = match msg {
             Message::Text(txt) => {
-                let position_result = self.parse_active_positions_data(txt).await.unwrap();
+                let position_result = self.parse_active_positions_data(txt).unwrap();
                 ResponseBody {
                     response: ResponseType::GetActivePositions,
                     payload: Some(position_result),
@@ -1094,6 +1124,17 @@ impl BrokerStream for Xtb {
         Ok(())
     }
 
+    async fn subscribe_trades(&mut self, symbol: &str) -> Result<()> {
+        let command = CommandTradeStatusParams {
+            command: "getTrades".to_owned(),
+            streamSessionId: self.streamSessionId.clone(),
+        };
+
+        self.send_stream(&command).await.unwrap();
+
+        Ok(())
+    }
+
     async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
     where
         F: Send + FnMut(Message) -> T,
@@ -1155,6 +1196,56 @@ impl BrokerStream for Xtb {
                         payload: Some(tick),
                     };
                     Some(serde_json::to_string(&msg).unwrap())
+                // } else if command == "trade" {
+                //     let id = data["returnData"]["order"].as_u64().unwrap();
+                //     let index_in = id;
+                //     let comment = obj["customComment"].as_str().unwrap().to_owned();
+                //     let trans_comments: TransactionComments =
+                //         serde_json::from_str(&comment).unwrap();
+                //     let trade_type = trans_comments.trade_type;
+                //     let date_out = parse_time_seconds(
+                //         data["returnData"]["close_time"].as_i64().unwrap() / 1000,
+                //     );
+                //     // let ask = data["returnData"]["ask"].as_f64().unwrap();
+                //     // let bid = data["returnData"]["bid"].as_f64().unwrap();
+                //     let message = "".to_owned(); //data["returnData"]["message"].as_str().unwrap().to_owned();
+                //     let command_type =
+                //         TransactionCommand::from_value(data["returnData"]["cmd"].as_i64().unwrap());
+
+                //     let comment = data["returnData"]["customComment"]
+                //         .as_str()
+                //         .unwrap()
+                //         .to_owned();
+
+                //     let leches = TradeResult::TradeOut(TradeOut {
+                //         id,
+                //         index_in,
+                //         price_in,
+                //         size,
+                //         trade_type: trade_type.clone(),
+                //         date_in,
+                //         spread_in,
+                //         ask: price_in,
+                //         index_out,
+                //         price_origin,
+                //         price_out,
+                //         bid,
+                //         spread_out: spread,
+                //         date_out,
+                //         profit,
+                //         profit_per,
+                //         run_up,
+                //         run_up_per,
+                //         draw_down,
+                //         draw_down_per,
+                //     });
+
+                //     let msg: ResponseBody<TransactionStatusnResponse> = ResponseBody {
+                //         response: ResponseType::SubscribeTrades,
+                //         payload: Some(status),
+                //     };
+
+                //     Some(serde_json::to_string(&msg).unwrap())
                 } else {
                     None
                 }
@@ -1224,7 +1315,7 @@ impl Xtb {
         Ok(res)
     }
 
-    pub async fn parse_message(&mut self, msg: &str) -> Result<Value> {
+    pub fn parse_message(&mut self, msg: &str) -> Result<Value> {
         let parsed: Value = serde_json::from_str(&msg).expect("Can't parse to JSON");
         Ok(parsed)
     }
@@ -1233,7 +1324,7 @@ impl Xtb {
         &mut self,
         msg: &str,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
-        let data = self.parse_message(&msg).await.unwrap();
+        let data = self.parse_message(&msg).unwrap();
         let response: ResponseBody<InstrumentData<VEC_DOHLC>> = match &data {
             // Login
             _x if matches!(&data["streamSessionId"], Value::String(_x)) => {
@@ -1266,10 +1357,14 @@ impl Xtb {
 
     async fn parse_price_data(&mut self, data: &Value) -> Result<VEC_DOHLC> {
         let mut result: VEC_DOHLC = vec![];
-        let digits = data["returnData"]["digits"].as_f64().unwrap();
+        let return_data = data
+            .get("returnData")
+            .ok_or_else(|| RsAlgoErrorKind::ParseError)
+            .unwrap();
+        let digits = return_data["digits"].as_f64().unwrap();
         let x = 10.0_f64;
         let pow = x.powf(digits);
-        for obj in data["returnData"]["rateInfos"].as_array().unwrap() {
+        for obj in return_data["rateInfos"].as_array().unwrap() {
             //FIXME!!
             let date = parse_time_seconds(obj["ctm"].as_i64().unwrap() / 1000);
             let open = obj["open"].as_f64().unwrap() / pow;
@@ -1284,15 +1379,20 @@ impl Xtb {
         Ok(result)
     }
 
-    pub async fn parse_tick_data(&mut self, symbol: String, txt: String) -> Result<InstrumentTick> {
-        let data = self.parse_message(&txt).await.unwrap();
-        let ask = data["returnData"]["ask"].as_f64().unwrap();
-        let bid = data["returnData"]["bid"].as_f64().unwrap();
-        let high = data["returnData"]["high"].as_f64().unwrap();
-        let low = data["returnData"]["low"].as_f64().unwrap();
+    pub fn parse_tick_data(&mut self, symbol: String, txt: String) -> Result<InstrumentTick> {
+        let data = self.parse_message(&txt).unwrap();
+        let return_data = data
+            .get("returnData")
+            .ok_or_else(|| RsAlgoErrorKind::ParseError)
+            .unwrap();
+
+        let ask = return_data["ask"].as_f64().unwrap();
+        let bid = return_data["bid"].as_f64().unwrap();
+        let high = return_data["high"].as_f64().unwrap();
+        let low = return_data["low"].as_f64().unwrap();
         //OJO
-        let pip_size = data["returnData"]["tickSize"].as_f64().unwrap();
-        let spread = data["returnData"]["spreadRaw"].as_f64().unwrap();
+        let pip_size = return_data["tickSize"].as_f64().unwrap();
+        let spread = return_data["spreadRaw"].as_f64().unwrap();
 
         let tick = InstrumentTick::new()
             .symbol(symbol)
@@ -1309,8 +1409,8 @@ impl Xtb {
         Ok(tick)
     }
 
-    pub async fn parse_new_trade_data(&mut self, txt: String) -> Result<(bool, u64)> {
-        let data = self.parse_message(&txt).await.unwrap();
+    pub fn parse_new_trade_data(&mut self, txt: String) -> Result<(bool, u64)> {
+        let data = self.parse_message(&txt).unwrap();
         let mut status = data["status"]
             .as_bool()
             .ok_or("Missing or invalid 'status' in response data")
@@ -1332,21 +1432,18 @@ impl Xtb {
         Ok((status, order_num))
     }
 
-    pub async fn parse_trade_status_data(
-        &mut self,
-        txt: String,
-    ) -> Result<TransactionStatusnResponse> {
-        let data = self.parse_message(&txt).await.unwrap();
-        let order = data["returnData"]["order"].as_u64().unwrap();
-        let ask = data["returnData"]["ask"].as_f64().unwrap();
-        let bid = data["returnData"]["bid"].as_f64().unwrap();
+    pub fn parse_trade_status_data(&mut self, txt: String) -> Result<TransactionStatusnResponse> {
+        let data = self.parse_message(&txt).unwrap();
+        let return_data = data
+            .get("returnData")
+            .ok_or_else(|| RsAlgoErrorKind::ParseError)
+            .unwrap();
+        let order = return_data["order"].as_u64().unwrap();
+        let ask = return_data["ask"].as_f64().unwrap();
+        let bid = return_data["bid"].as_f64().unwrap();
         let message = "".to_owned(); //data["returnData"]["message"].as_str().unwrap().to_owned();
-        let status =
-            TransactionState::from_value(data["returnData"]["requestStatus"].as_u64().unwrap());
-        let comment = data["returnData"]["customComment"]
-            .as_str()
-            .unwrap()
-            .to_owned();
+        let status = TransactionState::from_value(return_data["requestStatus"].as_u64().unwrap());
+        let comment = return_data["customComment"].as_str().unwrap().to_owned();
 
         Ok(TransactionStatusnResponse {
             comment,
@@ -1362,8 +1459,12 @@ impl Xtb {
         let mut result: Vec<MarketHour> = vec![];
         let current_date = Local::now();
         let base = current_date.date().and_hms(0, 0, 0);
+        let return_data = data
+            .get("returnData")
+            .ok_or_else(|| RsAlgoErrorKind::ParseError)
+            .unwrap();
 
-        for obj in data["returnData"]["trading"].as_array().unwrap() {
+        for obj in return_data["trading"].as_array().unwrap() {
             let day = obj["day"].as_i64().unwrap().try_into().unwrap();
             let from = obj["from"].as_i64().unwrap();
             let to = obj["to"].as_i64().unwrap();
@@ -1379,8 +1480,8 @@ impl Xtb {
         Ok(result)
     }
 
-    pub async fn parse_active_positions_data(&mut self, txt: String) -> Result<PositionResult> {
-        let data = self.parse_message(&txt).await.unwrap();
+    pub fn parse_active_positions_data(&mut self, txt: String) -> Result<PositionResult> {
+        let data = self.parse_message(&txt).unwrap();
         let current_date = Local::now();
         let mut trade_in = TradeIn::default();
         let data = data["returnData"].as_array().unwrap();

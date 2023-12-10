@@ -1,4 +1,5 @@
 use std::env;
+use std::fmt::Display;
 
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
@@ -152,6 +153,22 @@ impl TradeType {
         match *self {
             TradeType::StopLossLong | TradeType::StopLossShort => true,
             _ => false,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            TradeType::MarketInLong => "MarketInLong",
+            TradeType::MarketOutLong => "MarketOutLong",
+            TradeType::MarketInShort => "MarketInShort",
+            TradeType::MarketOutShort => "MarketOutShort",
+            TradeType::OrderInLong => "OrderInLong",
+            TradeType::OrderOutLong => "OrderOutLong",
+            TradeType::OrderInShort => "OrderInShort",
+            TradeType::OrderOutShort => "OrderOutShort",
+            TradeType::StopLossLong => "StopLossLong",
+            TradeType::StopLossShort => "StopLossShort",
+            TradeType::None => "None",
         }
     }
 }
