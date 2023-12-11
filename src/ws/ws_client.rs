@@ -62,6 +62,29 @@ impl WebSocket {
         }
     }
 
+    pub async fn send_and_read(
+        &mut self,
+        msg: &str,
+    ) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
+        self.socket
+            .write_message(Message::text(msg))
+            .map_err(|err| {
+                log::error!("Error sending message: {}", err);
+                RsAlgoError {
+                    err: RsAlgoErrorKind::SendingAfter,
+                }
+            })
+            .unwrap();
+
+        match self.socket.read_message() {
+            Ok(msg) => Ok(msg),
+            Err(err) => {
+                log::error!("Error reading msg: {}", err);
+                Err(err)
+            }
+        }
+    }
+
     pub async fn disconnect(&mut self) -> Result<()> {
         self.socket.close(None).unwrap();
         Ok(())

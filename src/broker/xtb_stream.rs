@@ -293,7 +293,7 @@ impl BrokerStream for Xtb {
         };
 
         self.send(&command).await.unwrap();
-        let msg = self.socket.read().await.unwrap();
+        self.socket.read().await.unwrap();
 
         // if let Message::Text(txt) = msg {
         //     let data = self.parse_message(&txt)?;
@@ -388,14 +388,14 @@ impl BrokerStream for Xtb {
     }
 
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
-        let trading_hours_command = Command {
+        let command = Command {
             command: "getTradingHours".to_owned(),
             arguments: TradingHoursCommand {
                 symbols: vec![symbol.to_string()],
             },
         };
 
-        self.send(&trading_hours_command).await.unwrap();
+        self.send(&command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
 
         let res = match msg {
@@ -1363,6 +1363,17 @@ impl Xtb {
 
         Ok(())
     }
+
+    // async fn send_and_read<T>(&mut self, command: &T) -> Result<()>
+    // where
+    //     for<'de> T: Serialize + Deserialize<'de> + Debug,
+    // {
+    //     self.socket
+    //         .send_and_read(&serde_json::to_string(&command).unwrap())
+    //         .await?;
+
+    //     Ok(())
+    // }
 
     async fn send_stream<T>(&mut self, command: &T) -> Result<()>
     where

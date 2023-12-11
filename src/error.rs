@@ -19,6 +19,8 @@ pub enum RsAlgoErrorKind {
     ConnectionError,
     #[error("Can't send after disconect!")]
     SendingAfter,
+    #[error("Can't read socket!")]
+    CantRead,
 }
 
 #[derive(Debug, Error)]
