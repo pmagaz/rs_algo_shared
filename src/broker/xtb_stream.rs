@@ -531,20 +531,22 @@ impl BrokerStream for Xtb {
 
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
-            let end = Local::now();
 
             log::info!(
-                "Opening trade. Ask: {} Bid: {} Spread: {}",
+                "Opening {} {:?} trade. Ask: {} Bid: {} Spread: {}",
+                &symbol,
+                &trade_in.trade_type,
                 ask,
                 bid,
                 spread
             );
 
-            log::info!("Operation Took: {:?}", (start - end).num_milliseconds());
-
             match msg {
                 Message::Text(txt) => {
-                    let (executed, order_id) = self.parse_new_trade_data(txt).unwrap();
+                    let end = Local::now();
+                    log::info!("Operation Took: {:?}", (end - start).num_milliseconds());
+
+                    let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
 
                     match executed {
                         true => {
@@ -595,7 +597,7 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         const MAX_RETRIES: usize = 3;
-        const RETRY_AFTER: u64 = 500;
+        const RETRY_AFTER: u64 = 800;
         let mut attempts = 0;
         let mut accepted = false;
         let mut trade_out = trade.data;
@@ -604,11 +606,12 @@ impl BrokerStream for Xtb {
         let is_long = trade_out.trade_type.is_long();
 
         while !accepted && attempts < MAX_RETRIES {
-            let command = match trade_out.trade_type.is_long() {
+            let command = match is_long {
                 true => TransactionCommand::SellMarket.value(),
                 false => TransactionCommand::BuyMarket.value(),
             };
 
+            let start = Local::now();
             let (ask, bid) = self.get_ask_bid(&symbol).await?;
             let spread = ask - bid;
 
@@ -642,14 +645,19 @@ impl BrokerStream for Xtb {
             let msg = self.socket.read().await.unwrap();
 
             log::info!(
-                "Closing trade. Ask: {} Bid: {} Spread: {}",
+                "Closing {} {:?} trade. Ask: {} Bid: {} Spread: {}",
+                &symbol,
+                &trade_out.trade_type,
                 ask,
                 bid,
                 spread
             );
             match msg {
                 Message::Text(txt) => {
-                    let (executed, order_id) = self.parse_new_trade_data(txt).unwrap();
+                    let end = Local::now();
+                    log::info!("Operation Took: {:?}", (end - start).num_milliseconds());
+
+                    let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
 
                     match executed {
                         true => {
@@ -1412,8 +1420,8 @@ impl Xtb {
         Ok(tick)
     }
 
-    pub fn parse_new_trade_data(&mut self, txt: String) -> Result<(bool, u64)> {
-        let data = self.parse_message(&txt).unwrap();
+    pub fn parse_new_trade_data(&mut self, txt: &str) -> Result<(bool, u64)> {
+        let data = self.parse_message(txt).unwrap();
         let mut status = data["status"]
             .as_bool()
             .ok_or("Missing or invalid 'status' in response data")
