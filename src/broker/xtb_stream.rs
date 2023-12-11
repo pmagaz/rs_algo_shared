@@ -295,25 +295,24 @@ impl BrokerStream for Xtb {
         self.send(&command).await.unwrap();
         let msg = self.socket.read().await.unwrap();
 
-        if let Message::Text(txt) = msg {
-            let data = self.parse_message(&txt)?;
-            let return_data = data
-                .get("returnData")
-                .ok_or_else(|| RsAlgoErrorKind::ParseError)
-                .unwrap()
-                .as_array()
-                .unwrap();
+        // if let Message::Text(txt) = msg {
+        //     let data = self.parse_message(&txt)?;
 
-            let mut closing_price = 0.;
+        //     let return_data = data
+        //         .get("returnData")
+        //         .ok_or_else(|| RsAlgoErrorKind::ParseError)?
+        //         .as_array()
+        //         .ok_or_else(|| RsAlgoErrorKind::ParseError)?;
 
-            if return_data.len() > 0 {
-                closing_price = return_data[0]["close_price"].as_f64().unwrap();
-            }
-
-            Ok(closing_price)
-        } else {
-            panic!()
-        }
+        //     if let Some(first_record) = return_data.first() {
+        //         Ok(first_record["close_price"].as_f64().unwrap())
+        //     } else {
+        //         Ok(0.0)
+        //     }
+        // } else {
+        //     panic!()
+        // }
+        Ok(1.)
     }
 
     async fn get_historic_data(
