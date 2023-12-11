@@ -649,13 +649,12 @@ impl BrokerStream for Xtb {
         let symbol = trade.symbol;
         let valid_until = (Local::now() + date::Duration::minutes(3)).timestamp();
         let is_long = trade_out.trade_type.is_long();
+        let command = match is_long {
+            true => TransactionCommand::SellMarket.value(),
+            false => TransactionCommand::BuyMarket.value(),
+        };
 
         while !accepted && attempts < MAX_RETRIES {
-            let command = match is_long {
-                true => TransactionCommand::SellMarket.value(),
-                false => TransactionCommand::BuyMarket.value(),
-            };
-
             let start = Local::now();
 
             // let closing_price = match is_long {
