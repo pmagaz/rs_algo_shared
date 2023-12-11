@@ -1,4 +1,4 @@
-use std::{env};
+use std::env;
 
 use super::mode;
 use super::tick::InstrumentTick;
@@ -840,7 +840,11 @@ pub fn fulfill_bot_order<T: Trade>(
     fulfill_trade_order(index, trade, order, orders)
 }
 
-fn get_order_activation_price(candle: &Candle, _order: &Order, tick: &InstrumentTick) -> (f64, f64) {
+fn get_order_activation_price(
+    candle: &Candle,
+    _order: &Order,
+    tick: &InstrumentTick,
+) -> (f64, f64) {
     let order_engine = &env::var("EXECUTION_MODE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());

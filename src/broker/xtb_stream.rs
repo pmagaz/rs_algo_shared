@@ -95,7 +95,12 @@ pub trait BrokerStream {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn get_active_positions(&mut self) -> Result<ResponseBody<PositionResult>>;
+    async fn close_order_test(
+        &mut self,
+        trade: TradeData<TradeOut>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
+    async fn get_active_positions(&mut self, symbol: &str) -> Result<ResponseBody<PositionResult>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
     async fn is_market_available(&mut self, symbol: &str) -> bool;
@@ -106,6 +111,7 @@ pub trait BrokerStream {
         price: f64,
     ) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
+    async fn get_closing_price(&mut self, symbol: &str) -> Result<f64>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
@@ -273,6 +279,43 @@ impl BrokerStream for Xtb {
             let ask = return_data["ask"].as_f64().unwrap();
             let bid = return_data["bid"].as_f64().unwrap();
             Ok((ask, bid))
+        } else {
+            panic!();
+        }
+    }
+
+    async fn get_closing_price(&mut self, symbol: &str) -> Result<f64> {
+        let command = Command {
+            command: "getTrades".to_owned(),
+            arguments: GetTrades { openedOnly: true },
+        };
+
+        self.send(&command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+
+        if let Message::Text(txt) = msg {
+            let data = self.parse_message(&txt)?;
+
+            let return_data = data
+                .get("returnData")
+                .ok_or_else(|| RsAlgoErrorKind::ParseError)
+                .unwrap()
+                .as_array()
+                .unwrap();
+            let mut closing_price = 0.;
+
+            if return_data.len() > 0 {
+                for obj in return_data {
+                    let order_symbol = obj["symbol"].as_str().unwrap();
+                    if order_symbol == symbol {
+                        closing_price = obj["close_price"].as_f64().unwrap();
+                        break;
+                    }
+                }
+                Ok(closing_price)
+            } else {
+                panic!()
+            }
         } else {
             panic!();
         }
@@ -510,6 +553,8 @@ impl BrokerStream for Xtb {
                 false => bid,
             };
 
+            let opening_price = 1.;
+
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
                 arguments: TransactionInfo {
@@ -544,7 +589,11 @@ impl BrokerStream for Xtb {
             match msg {
                 Message::Text(txt) => {
                     let end = Local::now();
-                    log::info!("Operation Took: {:?}", (end - start).num_milliseconds());
+
+                    log::info!(
+                        "Operation total time: {:?}",
+                        (end - start).num_milliseconds()
+                    );
 
                     let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
 
@@ -615,11 +664,13 @@ impl BrokerStream for Xtb {
             let (ask, bid) = self.get_ask_bid(&symbol).await?;
             let spread = ask - bid;
 
-            let closing_price = match is_long {
-                true => bid,
-                false => ask,
-            };
+            // let closing_price = match is_long {
+            //     true => bid,
+            //     false => ask,
+            // };
 
+            let closing_price = self.get_closing_price(&symbol).await.unwrap();
+            //let closing_price = 1.;
             let custom_comment = format!("Closing order {}", trade_out.id);
 
             let trade_command: Command<TransactionInfo> = Command {
@@ -641,6 +692,8 @@ impl BrokerStream for Xtb {
                 },
             };
 
+            log::info!("{:?}", trade_command);
+
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
 
@@ -652,10 +705,14 @@ impl BrokerStream for Xtb {
                 bid,
                 spread
             );
+
             match msg {
                 Message::Text(txt) => {
                     let end = Local::now();
-                    log::info!("Operation Took: {:?}", (end - start).num_milliseconds());
+                    log::info!(
+                        "Operation total time: {:?}",
+                        (end - start).num_milliseconds()
+                    );
 
                     let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
 
@@ -902,7 +959,7 @@ impl BrokerStream for Xtb {
         Ok(res)
     }
 
-    async fn get_active_positions(&mut self) -> Result<ResponseBody<PositionResult>> {
+    async fn get_active_positions(&mut self, symbol: &str) -> Result<ResponseBody<PositionResult>> {
         let active_positions_command = Command {
             command: "getTrades".to_owned(),
             arguments: GetTrades { openedOnly: true },
@@ -913,7 +970,7 @@ impl BrokerStream for Xtb {
 
         let res = match msg {
             Message::Text(txt) => {
-                let position_result = self.parse_active_positions_data(txt).unwrap();
+                let position_result = self.parse_active_positions_data(txt, symbol).unwrap();
                 ResponseBody {
                     response: ResponseType::GetActivePositions,
                     payload: Some(position_result),
@@ -999,8 +1056,19 @@ impl BrokerStream for Xtb {
 
         Ok(res)
     }
-
     async fn close_order(
+        &mut self,
+        trade: TradeData<TradeOut>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
+        let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
+
+        match is_prod {
+            true => self.close_trade_real(trade).await,
+            false => self.close_order_test(trade, order).await,
+        }
+    }
+    async fn close_order_test(
         &mut self,
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
@@ -1491,7 +1559,11 @@ impl Xtb {
         Ok(result)
     }
 
-    pub fn parse_active_positions_data(&mut self, txt: String) -> Result<PositionResult> {
+    pub fn parse_active_positions_data(
+        &mut self,
+        txt: String,
+        symbol: &str,
+    ) -> Result<PositionResult> {
         let data = self.parse_message(&txt).unwrap();
         let current_date = Local::now();
         let mut trade_in = TradeIn::default();
@@ -1500,93 +1572,104 @@ impl Xtb {
         let mut orders: Vec<Order> = vec![];
 
         for obj in data {
-            let id = obj["order"].as_i64().unwrap().try_into().unwrap();
-            let size = obj["volume"].as_f64().unwrap().try_into().unwrap();
-            let price_in = obj["open_price"].as_f64().unwrap().try_into().unwrap();
-            let origin_price = price_in;
-            let stop_loss = obj["sl"].as_f64().unwrap().try_into().unwrap();
-            let date_in = to_dbtime(date::parse_time_milliseconds(
-                obj["open_time"].as_i64().unwrap().try_into().unwrap(),
-            ));
+            let order_symbol = obj["symbol"].as_str().unwrap();
+            if order_symbol == symbol {
+                let id = obj["order"].as_i64().unwrap().try_into().unwrap();
+                let size = obj["volume"].as_f64().unwrap().try_into().unwrap();
+                let price_in = obj["open_price"].as_f64().unwrap().try_into().unwrap();
+                let close_price = obj["close_price"].as_f64().unwrap();
+                let origin_price = price_in;
+                let stop_loss = obj["sl"].as_f64().unwrap().try_into().unwrap();
+                let date_in = to_dbtime(date::parse_time_milliseconds(
+                    obj["open_time"].as_i64().unwrap().try_into().unwrap(),
+                ));
 
-            let comment = obj["customComment"].as_str().unwrap().to_owned();
-            let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
-            let index_in = trans_comments.index_in;
-            let trade_type = trans_comments.trade_type;
-            let spread = trans_comments.spread;
-            let bid = trans_comments.bid;
-            let ask = bid + spread;
-            let sell_order_target = match trans_comments.sell_order_price {
-                Some(price) => price,
-                None => 0.0,
-            };
+                log::info!("1111111 {:?}", (origin_price, close_price));
 
-            let stop_order_type = match trade_type.is_long() {
-                true => {
-                    OrderType::StopLossLong(OrderDirection::Down, StopLossType::Price(stop_loss))
-                }
-                false => {
-                    OrderType::StopLossShort(OrderDirection::Up, StopLossType::Price(stop_loss))
-                }
-            };
+                let comment = obj["customComment"].as_str().unwrap().to_owned();
+                let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
+                let index_in = trans_comments.index_in;
+                let trade_type = trans_comments.trade_type;
+                let spread = trans_comments.spread;
+                let bid = trans_comments.bid;
+                let ask = bid + spread;
+                let sell_order_target = match trans_comments.sell_order_price {
+                    Some(price) => price,
+                    None => 0.0,
+                };
 
-            let sell_order_type = match trade_type.is_long() {
-                true => OrderType::SellOrderLong(OrderDirection::Up, size, sell_order_target),
-                false => OrderType::SellOrderShort(OrderDirection::Down, size, sell_order_target),
-            };
+                let stop_order_type = match trade_type.is_long() {
+                    true => OrderType::StopLossLong(
+                        OrderDirection::Down,
+                        StopLossType::Price(stop_loss),
+                    ),
+                    false => {
+                        OrderType::StopLossShort(OrderDirection::Up, StopLossType::Price(stop_loss))
+                    }
+                };
 
-            trade_in = TradeIn {
-                id,
-                index_in,
-                size,
-                origin_price,
-                price_in,
-                ask,
-                spread,
-                date_in,
-                trade_type,
-            };
+                let sell_order_type = match trade_type.is_long() {
+                    true => OrderType::SellOrderLong(OrderDirection::Up, size, sell_order_target),
+                    false => {
+                        OrderType::SellOrderShort(OrderDirection::Down, size, sell_order_target)
+                    }
+                };
 
-            let stop_loss_order = Order {
-                id,
-                trade_id: id,
-                index_created: id,
-                size,
-                order_type: stop_order_type,
-                index_fulfilled: 0,
-                status: OrderStatus::Pending,
-                origin_price,
-                target_price: stop_loss,
-                created_at: date_in,
-                updated_at: None,
-                full_filled_at: None,
-                valid_until: Some(to_dbtime(current_date + date::Duration::days(365 * 10))),
-            };
+                trade_in = TradeIn {
+                    id,
+                    index_in,
+                    size,
+                    origin_price,
+                    price_in,
+                    ask,
+                    spread,
+                    date_in,
+                    trade_type,
+                };
 
-            orders.push(stop_loss_order);
+                let stop_loss_order = Order {
+                    id,
+                    trade_id: id,
+                    index_created: id,
+                    size,
+                    order_type: stop_order_type,
+                    index_fulfilled: 0,
+                    status: OrderStatus::Pending,
+                    origin_price,
+                    target_price: stop_loss,
+                    created_at: date_in,
+                    updated_at: None,
+                    full_filled_at: None,
+                    valid_until: Some(to_dbtime(current_date + date::Duration::days(365 * 10))),
+                };
 
-            match trans_comments.sell_order_price {
-                Some(sell_price) => {
-                    let sell_order = Order {
-                        id,
-                        trade_id: id,
-                        index_created: id,
-                        size,
-                        order_type: sell_order_type,
-                        index_fulfilled: 0,
-                        status: OrderStatus::Pending,
-                        origin_price,
-                        target_price: sell_price,
-                        created_at: date_in,
-                        updated_at: None,
-                        full_filled_at: None,
-                        valid_until: Some(to_dbtime(current_date + date::Duration::days(365 * 10))),
-                    };
+                orders.push(stop_loss_order);
 
-                    orders.push(sell_order);
-                }
-                None => (),
-            };
+                match trans_comments.sell_order_price {
+                    Some(sell_price) => {
+                        let sell_order = Order {
+                            id,
+                            trade_id: id,
+                            index_created: id,
+                            size,
+                            order_type: sell_order_type,
+                            index_fulfilled: 0,
+                            status: OrderStatus::Pending,
+                            origin_price,
+                            target_price: sell_price,
+                            created_at: date_in,
+                            updated_at: None,
+                            full_filled_at: None,
+                            valid_until: Some(to_dbtime(
+                                current_date + date::Duration::days(365 * 10),
+                            )),
+                        };
+
+                        orders.push(sell_order);
+                    }
+                    None => (),
+                };
+            }
         }
 
         let result = if data.len() > 0 {
@@ -1594,7 +1677,6 @@ impl Xtb {
         } else {
             PositionResult::None
         };
-
         Ok(result)
     }
 
