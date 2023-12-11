@@ -111,7 +111,7 @@ pub trait BrokerStream {
         price: f64,
     ) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
-    async fn get_closing_price(&mut self, symbol: &str) -> Result<f64>;
+    async fn get_close_price(&mut self, order_id: usize) -> Result<f64>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
@@ -284,10 +284,12 @@ impl BrokerStream for Xtb {
         }
     }
 
-    async fn get_closing_price(&mut self, symbol: &str) -> Result<f64> {
+    async fn get_close_price(&mut self, order_id: usize) -> Result<f64> {
         let command = Command {
-            command: "getTrades".to_owned(),
-            arguments: GetTrades { openedOnly: true },
+            command: "getTrade".to_owned(),
+            arguments: GetTrade {
+                orders: vec![order_id],
+            },
         };
 
         self.send(&command).await.unwrap();
@@ -306,19 +308,12 @@ impl BrokerStream for Xtb {
             let mut closing_price = 0.;
 
             if return_data.len() > 0 {
-                for obj in return_data {
-                    let order_symbol = obj["symbol"].as_str().unwrap();
-                    if order_symbol == symbol {
-                        closing_price = obj["close_price"].as_f64().unwrap();
-                        break;
-                    }
-                }
-                Ok(closing_price)
-            } else {
-                panic!()
+                closing_price = return_data[0]["close_price"].as_f64().unwrap();
             }
+
+            Ok(closing_price)
         } else {
-            panic!();
+            panic!()
         }
     }
 
@@ -670,7 +665,7 @@ impl BrokerStream for Xtb {
 
             //let closing_price = 1.;
             let custom_comment = format!("Closing order {}", trade_out.id);
-            let closing_price = self.get_closing_price(&symbol).await.unwrap();
+            let closing_price = self.get_close_price(trade_out.id).await.unwrap();
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),

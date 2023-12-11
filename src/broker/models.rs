@@ -327,6 +327,11 @@ pub struct GetTrades {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GetTrade {
+    pub orders: Vec<usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionStatusnResponse {
     pub comment: String,
     pub message: String,
