@@ -286,7 +286,7 @@ impl BrokerStream for Xtb {
 
     async fn get_close_price(&mut self, order_id: usize) -> Result<f64> {
         let command = Command {
-            command: "getTrade".to_owned(),
+            command: "getTradeRecords".to_owned(),
             arguments: GetTrade {
                 orders: vec![order_id],
             },
@@ -297,7 +297,6 @@ impl BrokerStream for Xtb {
 
         if let Message::Text(txt) = msg {
             let data = self.parse_message(&txt)?;
-
             let return_data = data
                 .get("returnData")
                 .ok_or_else(|| RsAlgoErrorKind::ParseError)
@@ -523,6 +522,11 @@ impl BrokerStream for Xtb {
             }
         }
 
+        let command = match is_long {
+            true => TransactionCommand::BuyMarket.value(),
+            false => TransactionCommand::SellMarket.value(),
+        };
+
         while !accepted && attempts < MAX_RETRIES {
             let trade_type = trade_in.trade_type.clone();
             let start = Local::now();
@@ -538,11 +542,6 @@ impl BrokerStream for Xtb {
                 bid: bid,
             })
             .unwrap();
-
-            let command = match is_long {
-                true => TransactionCommand::BuyMarket.value(),
-                false => TransactionCommand::SellMarket.value(),
-            };
 
             let opening_price = match is_long {
                 true => ask,
@@ -1578,8 +1577,6 @@ impl Xtb {
                 let date_in = to_dbtime(date::parse_time_milliseconds(
                     obj["open_time"].as_i64().unwrap().try_into().unwrap(),
                 ));
-
-                log::info!("1111111 {:?}", (origin_price, close_price));
 
                 let comment = obj["customComment"].as_str().unwrap().to_owned();
                 let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
