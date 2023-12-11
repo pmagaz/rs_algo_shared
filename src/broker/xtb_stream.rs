@@ -486,7 +486,7 @@ impl BrokerStream for Xtb {
 
         while !accepted && attempts < MAX_RETRIES {
             let trade_type = trade_in.trade_type.clone();
-
+            let start = Local::now();
             let (ask, bid) = self.get_ask_bid(&symbol).await.unwrap();
             let spread = ask - bid;
 
@@ -531,6 +531,7 @@ impl BrokerStream for Xtb {
 
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
+            let end = Local::now();
 
             log::info!(
                 "Opening trade. Ask: {} Bid: {} Spread: {}",
@@ -538,6 +539,8 @@ impl BrokerStream for Xtb {
                 bid,
                 spread
             );
+
+            log::info!("Operation Took: {:?}", (start - end).num_milliseconds());
 
             match msg {
                 Message::Text(txt) => {
@@ -614,7 +617,7 @@ impl BrokerStream for Xtb {
                 false => ask,
             };
 
-            let custom_comment = "";
+            let custom_comment = format!("Closing order {}", trade_out.id);
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
