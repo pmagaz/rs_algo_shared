@@ -302,6 +302,7 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .as_array()
                 .unwrap();
+
             let mut closing_price = 0.;
 
             if return_data.len() > 0 {
@@ -661,17 +662,15 @@ impl BrokerStream for Xtb {
             };
 
             let start = Local::now();
-            let (ask, bid) = self.get_ask_bid(&symbol).await?;
-            let spread = ask - bid;
 
             // let closing_price = match is_long {
             //     true => bid,
             //     false => ask,
             // };
 
-            let closing_price = self.get_closing_price(&symbol).await.unwrap();
             //let closing_price = 1.;
             let custom_comment = format!("Closing order {}", trade_out.id);
+            let closing_price = self.get_closing_price(&symbol).await.unwrap();
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
@@ -692,15 +691,17 @@ impl BrokerStream for Xtb {
                 },
             };
 
-            log::info!("{:?}", trade_command);
-
             self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
 
+            let (ask, bid) = self.get_ask_bid(&symbol).await?;
+            let spread = ask - bid;
+
             log::info!(
-                "Closing {} {:?} trade. Ask: {} Bid: {} Spread: {}",
+                "Closing {} {:?} at {}. Ask: {} Bid: {} Spread: {}",
                 &symbol,
                 &trade_out.trade_type,
+                closing_price,
                 ask,
                 bid,
                 spread
