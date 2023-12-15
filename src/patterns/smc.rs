@@ -1,9 +1,8 @@
-
 use crate::scanner::candle::{Candle, CandleType};
 
 pub fn is_bullish_fair_value_gap(candles: &[Candle]) -> bool {
-    let body_wick_ratio = 0.65;
-    let min_gap_percentage = 2.;
+    let body_wick_ratio = 0.80;
+    let min_gap_percentage = 3.;
 
     let left_candle = &candles[0];
     let middle_candle = &candles[1];
@@ -20,12 +19,6 @@ pub fn is_bullish_fair_value_gap(candles: &[Candle]) -> bool {
     if middle_candle_body_to_wick_ratio >= body_wick_ratio
         && gap_size_percentage >= min_gap_percentage
     {
-        // log::info!(
-        //     "FVG detected: {} {} {}",
-        //     middle_candle.date,
-        //     middle_candle_body_to_wick_ratio,
-        //     gap_size_percentage,
-        // );
         true
     } else {
         false

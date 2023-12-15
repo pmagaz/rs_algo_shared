@@ -498,6 +498,12 @@ impl CandleBuilder {
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
 
         if candle_types {
+            if self.is_three_in_row() {
+                return CandleType::ThreeInRow;
+            }
+            if self.is_bearish_three_in_row() {
+                return CandleType::BearishThreeInRow;
+            }
             if self.is_bullish_crows() {
                 return CandleType::BullishCrows;
             }
@@ -509,12 +515,6 @@ impl CandleBuilder {
             }
             if self.is_bullish_gap() {
                 return CandleType::BullishGap;
-            }
-            if self.is_three_in_row() {
-                return CandleType::ThreeInRow;
-            }
-            if self.is_bearish_three_in_row() {
-                return CandleType::BearishThreeInRow;
             }
             if self.is_karakasa() {
                 return CandleType::Karakasa;
@@ -537,9 +537,9 @@ impl CandleBuilder {
             if self.is_hanging_man() {
                 return CandleType::HangingMan;
             }
-            if self.is_bearish_gap() {
-                return CandleType::BearishGap;
-            }
+            // if self.is_bearish_gap() {
+            //     return CandleType::BearishGap;
+            // }
             if self.is_bearish_marubozu() {
                 return CandleType::BearishMarubozu;
             }

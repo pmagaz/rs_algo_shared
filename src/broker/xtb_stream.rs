@@ -547,7 +547,7 @@ impl BrokerStream for Xtb {
                 false => bid,
             };
 
-            let opening_price = 1.;
+            //let opening_price = 1.;
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
@@ -660,49 +660,74 @@ impl BrokerStream for Xtb {
             //     false => ask,
             // };
 
-            //let closing_price = 1.;
+            let closing_price = 1.;
             //let custom_comment = format!("Closing order {}", trade_out.id);
-            let closing_price = self.get_close_price(trade_out.id).await.unwrap();
-            let mut command_str = String::new();
+            //let closing_price = self.get_close_price(trade_out.id).await.unwrap();
+            // let mut command_str = String::new();
 
-            command_str
-                .push_str(r#"{"command":"tradeTransaction","arguments":{"tradeTransInfo":{"#);
-            command_str.push_str(&format!(
-                r#""cmd":{},"trans_type":{},"symbol":"{}","#,
-                command,
-                TransactionAction::Close.value(),
-                symbol
-            ));
-            command_str.push_str(r#""customComment":"","expiration":"#);
-            command_str.push_str(&valid_until.to_string());
-            command_str.push_str(r#"","order":"#);
-            command_str.push_str(&trade_out.id.to_string());
-            command_str.push_str(r#"","price":"#);
-            command_str.push_str(&closing_price.to_string());
-            command_str.push_str(r#"","offset":0,"sl":0.0,"tp":0.0,"volume":"#);
-            command_str.push_str(&trade_out.size.to_string());
-            command_str.push_str(r#""}}}"#);
+            // command_str
+            //     .push_str(r#"{"command":"tradeTransaction","arguments":{"tradeTransInfo":{"#);
+            // command_str.push_str(&format!(
+            //     r#""cmd":{},"trans_type":{},"symbol":"{}","#,
+            //     command,
+            //     TransactionAction::Close.value(),
+            //     symbol
+            // ));
+            // command_str.push_str(r#""customComment":"","#);
+            // command_str.push_str(&format!(
+            //     r#""expiration":{},"order":{},"price":{},"offset":0,"sl":0.0,"tp":0.0,"volume":{}"#,
+            //     valid_until, trade_out.id, closing_price, trade_out.size
+            // ));
+            //command_str.push_str(r#"}}"#);
+            // let trade_command = format!(
+            //     r#"{{
+            //     "command": "tradeTransaction",
+            //     "arguments": {{
+            //         "tradeTransInfo": {{
+            //             "cmd": {},
+            //             "trans_type": {},
+            //             "symbol": "{}",
+            //             "customComment": "",
+            //             "expiration": {},
+            //             "order": {},
+            //             "price": {},
+            //             "offset": 0,
+            //             "sl": 0.0,
+            //             "tp": 0.0,
+            //             "volume": {}
+            //         }}
+            //     }}
+            // }}"#,
+            //     command,
+            //     TransactionAction::Close.value(),
+            //     symbol,
+            //     valid_until,
+            //     trade_out.id as isize,
+            //     closing_price,
+            //     trade_out.size
+            // );
+            // Now command_str contains your JSON data
 
-            // let trade_command: Command<TransactionInfo> = Command {
-            //     command: "tradeTransaction".to_owned(),
-            //     arguments: TransactionInfo {
-            //         tradeTransInfo: TradeTransactionInfo {
-            //             cmd: command,
-            //             trans_type: TransactionAction::Close.value(),
-            //             symbol: symbol.to_owned(),
-            //             customComment: "".to_owned(),
-            //             expiration: valid_until,
-            //             order: trade_out.id as isize,
-            //             price: closing_price,
-            //             offset: 0,
-            //             sl: 0.,
-            //             tp: 0.,
-            //             volume: trade_out.size,
-            //         },
-            //     },
-            // };
+            let trade_command: Command<TransactionInfo> = Command {
+                command: "tradeTransaction".to_owned(),
+                arguments: TransactionInfo {
+                    tradeTransInfo: TradeTransactionInfo {
+                        cmd: command,
+                        trans_type: TransactionAction::Close.value(),
+                        symbol: symbol.to_owned(),
+                        customComment: "".to_owned(),
+                        expiration: valid_until,
+                        order: trade_out.id as isize,
+                        price: closing_price,
+                        offset: 0,
+                        sl: 0.,
+                        tp: 0.,
+                        volume: trade_out.size,
+                    },
+                },
+            };
 
-            self.send_str(&command_str).await.unwrap();
+            self.send(&trade_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
 
             let (ask, bid) = self.get_ask_bid(&symbol).await?;
