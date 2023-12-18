@@ -572,7 +572,7 @@ impl BrokerStream for Xtb {
             let msg = self.socket.read().await.unwrap();
 
             log::info!(
-                "Opening {} {:?} trade. Ask: {} Bid: {} Spread: {}",
+                "Real Opening {} {:?} trade. Ask: {} Bid: {} Spread: {}",
                 &symbol,
                 &trade_in.trade_type,
                 ask,
@@ -734,7 +734,7 @@ impl BrokerStream for Xtb {
             let spread = ask - bid;
 
             log::info!(
-                "Closing {} {:?} at {}. Ask: {} Bid: {} Spread: {}",
+                "Real Closing {} {:?} at {}. Ask: {} Bid: {} Spread: {}",
                 &symbol,
                 &trade_out.trade_type,
                 closing_price,
@@ -924,6 +924,8 @@ impl BrokerStream for Xtb {
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
         let mut data = trade.data;
+        log::info!("444444444 {:?}", data.date_out);
+
         let mut date_out = to_dbtime(Local::now());
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
@@ -942,6 +944,8 @@ impl BrokerStream for Xtb {
                     .unwrap()
             }
         };
+
+        log::info!("55555555 {:?}", date_out);
 
         let ask = tick.ask();
         let bid = tick.bid();
@@ -978,7 +982,7 @@ impl BrokerStream for Xtb {
         };
 
         log::info!(
-            "{:?} {} {} with profit {}",
+            "Test {:?} {} {} with profit {}",
             trade_type,
             trade.symbol,
             str_accepted,
