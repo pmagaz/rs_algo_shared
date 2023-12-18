@@ -936,7 +936,7 @@ impl BrokerStream for Xtb {
                 .unwrap(),
             _ => {
                 date_out = data.date_out;
-                self.get_instrument_tick_test(&symbol, data.price_in)
+                self.get_instrument_tick_test(&symbol, data.price_out)
                     .await
                     .unwrap()
                     .payload

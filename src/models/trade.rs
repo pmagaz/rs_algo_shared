@@ -400,6 +400,7 @@ pub fn resolve_trade_out(
     let index = calculate_trade_index(index, order, &execution_mode);
     let current_candle = instrument.data.get(index).unwrap();
     let current_date = current_candle.date();
+    let id = uuid::generate_ts_id(current_date);
     let price_origin = *trade_in.get_price_in();
 
     let close_trade_price = match trade_type {
@@ -427,7 +428,11 @@ pub fn resolve_trade_out(
         true => price_out + spread,
         false => price_out,
     };
-    let index_out = index;
+
+    let index_out = match execution_mode.is_back_test() {
+        true => index,
+        false => id,
+    };
 
     let profit = match trade_in_type.is_long() {
         true => price_out - price_in,

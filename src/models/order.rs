@@ -522,13 +522,16 @@ fn calculate_order_price_limit(
 ) -> (f64, f64) {
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
 
-    match (execution_mode.is_bot(), order_engine.as_ref()) {
-        (true, _) => (candle.close(), candle.close()),
-        (false, "broker") => (candle.high(), candle.low()),
-        (false, "bot") if activation_source.to_lowercase() == "highs_lows" => {
-            (candle.high(), candle.low())
-        }
-        _ => (candle.close(), candle.close()),
+    match execution_mode.is_bot() {
+        true => (candle.close(), candle.close()),
+        false => match order_engine.as_ref() {
+            "broker" => (candle.high(), candle.low()),
+            "bot" => match activation_source.to_lowercase().as_ref() {
+                "highs_lows" => (candle.high(), candle.low()),
+                _ => (candle.close(), candle.close()),
+            },
+            _ => panic!("ORDER_ENGINE not found!"),
+        },
     }
 }
 
@@ -578,7 +581,7 @@ fn is_activated_order(
             false => {
                 let (price_over, price_below) = if use_tick_price {
                     if order.is_long() == order.is_entry() {
-                        (tick.bid(), tick.bid())
+                        (tick.ask(), tick.ask())
                     } else {
                         (tick.bid(), tick.bid())
                     }
@@ -864,44 +867,6 @@ pub fn fulfill_bot_order<T: Trade>(
 ) {
     let index = instrument.data().len() - 1;
     fulfill_trade_order(index, trade, order, orders)
-}
-
-fn get_order_activation_price(candle: &Candle, order: &Order, tick: &InstrumentTick) -> (f64, f64) {
-    let order_engine = &env::var("EXECUTION_MODE").unwrap();
-    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    let spread = tick.spread();
-
-    let (price_over, price_below) = match execution_mode.is_bot() {
-        true => (candle.close(), candle.close()),
-        false => match order_engine.as_ref() {
-            "broker" => (candle.high(), candle.low()),
-            "bot" => match activation_source.to_lowercase().as_ref() {
-                "highs_lows" => (candle.high(), candle.low()),
-                _ => (candle.close(), candle.close()),
-            },
-            _ => panic!("ORDER_ENGINE not found!"),
-        },
-    };
-
-    if order.is_long() == order.is_entry() {
-        (price_over, price_below)
-    } else {
-        (price_over + spread, price_below + spread)
-    }
-}
-
-pub fn hostias(
-    order: &Order,
-    price_over: f64,
-    price_below: f64,
-    _tick: &InstrumentTick,
-) -> (f64, f64) {
-    if order.is_long() {
-        (price_over, price_below)
-    } else {
-        (price_over, price_below)
-    }
 }
 
 pub fn order_exists(orders: &[Order], search_id: usize) -> bool {
