@@ -542,12 +542,12 @@ impl BrokerStream for Xtb {
             })
             .unwrap();
 
-            let opening_price = match is_long {
-                true => ask,
-                false => bid,
-            };
+            // let opening_price = match is_long {
+            //     true => ask,
+            //     false => bid,
+            // };
 
-            //let opening_price = 1.;
+            let opening_price = 1.;
 
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
@@ -851,7 +851,7 @@ impl BrokerStream for Xtb {
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         let symbol = &trade.symbol;
         let mut data = trade.data;
-
+        let mut date_in = to_dbtime(Local::now());
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -860,12 +860,15 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => self
-                .get_instrument_tick_test(&symbol, data.price_in)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
+
+            _ => {
+                date_in = data.date_in;
+                self.get_instrument_tick_test(&symbol, data.price_in)
+                    .await
+                    .unwrap()
+                    .payload
+                    .unwrap()
+            }
         };
 
         let ask = tick.ask();
@@ -888,6 +891,7 @@ impl BrokerStream for Xtb {
         data.id = uuid::generate_ts_id(Local::now());
         data.price_in = price_in;
         data.ask = ask;
+        data.date_in = date_in;
         data.spread = spread;
 
         let res = ResponseBody {
@@ -920,7 +924,7 @@ impl BrokerStream for Xtb {
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
         let mut data = trade.data;
-
+        let mut date_out = to_dbtime(Local::now());
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -929,12 +933,14 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => self
-                .get_instrument_tick_test(&symbol, data.price_in)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
+            _ => {
+                date_out = data.date_out;
+                self.get_instrument_tick_test(&symbol, data.price_in)
+                    .await
+                    .unwrap()
+                    .payload
+                    .unwrap()
+            }
         };
 
         let ask = tick.ask();
@@ -980,7 +986,7 @@ impl BrokerStream for Xtb {
         );
 
         data.price_out = price_out;
-        data.date_out = to_dbtime(Local::now());
+        data.date_out = date_out;
         data.bid = bid;
         data.ask = ask;
         data.spread_out = spread;

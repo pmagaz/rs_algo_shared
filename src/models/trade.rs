@@ -461,7 +461,7 @@ pub fn resolve_trade_out(
 
     if profit_check {
         let date_out = to_dbtime(current_candle.date());
-
+        //panic!("{:?}", date_out);
         let date_in = match execution_mode.is_back_test() {
             true => to_dbtime(instrument.data.get(index_in).unwrap().date()),
             false => to_dbtime(current_date),
