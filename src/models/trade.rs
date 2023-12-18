@@ -438,6 +438,9 @@ pub fn resolve_trade_out(
         _ if profit > 0. => true,
         _ => false,
     };
+
+    let date_out = to_dbtime(current_candle.date());
+
     if trade_type.is_stop() && profit > 0. {
         log::error!(
             "Profitable stop loss! {} @ {:?} {} ",
@@ -460,8 +463,6 @@ pub fn resolve_trade_out(
     };
 
     if profit_check {
-        let date_out = to_dbtime(current_candle.date());
-        //panic!("{:?}", date_out);
         let date_in = match execution_mode.is_back_test() {
             true => to_dbtime(instrument.data.get(index_in).unwrap().date()),
             false => to_dbtime(current_date),

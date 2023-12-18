@@ -3,12 +3,14 @@ use std::env;
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::helpers::comp::percentage_change;
 use crate::helpers::date::*;
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 pub type OHLCV = (f64, f64, f64, f64);
 pub type DOHLCV = (DateTime<Local>, f64, f64, f64, f64, f64);
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub enum CandleType {
     Default,
     Doji,
@@ -30,6 +32,34 @@ pub enum CandleType {
     Reversal,
     ThreeInRow,
     BearishThreeInRow,
+}
+
+impl CandleType {
+    pub fn from_str(input_str: &str) -> Option<Self> {
+        match input_str.to_lowercase().as_str() {
+            "default" => Some(Self::Default),
+            "doji" => Some(Self::Doji),
+            "karakasa" => Some(Self::Karakasa),
+            "bearishkarakasa" => Some(Self::BearishKarakasa),
+            "marubozu" => Some(Self::Marubozu),
+            "bearishmarubozu" => Some(Self::BearishMarubozu),
+            "harami" => Some(Self::Harami),
+            "bearishharami" => Some(Self::BearishHarami),
+            "bearishstar" => Some(Self::BearishStar),
+            "engulfing" => Some(Self::Engulfing),
+            "morningstar" => Some(Self::MorningStar),
+            "bearishengulfing" => Some(Self::BearishEngulfing),
+            "hangingman" => Some(Self::HangingMan),
+            "bullishcrows" => Some(Self::BullishCrows),
+            "bearishcrows" => Some(Self::BearishCrows),
+            "bullishgap" => Some(Self::BullishGap),
+            "bearishgap" => Some(Self::BearishGap),
+            "reversal" => Some(Self::Reversal),
+            "threeinrow" => Some(Self::ThreeInRow),
+            "bearishthreeinrow" => Some(Self::BearishThreeInRow),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -496,11 +526,25 @@ impl CandleBuilder {
 
     fn identify_candle_type(&self) -> CandleType {
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
+        let selected_candle_types_str = env::var("SELECTED_CANDLE_TYPES").unwrap_or_default();
+
+        let selected_candle_types: HashMap<CandleType, bool> = selected_candle_types_str
+            .split(',')
+            .filter_map(|s| CandleType::from_str(s).map(|ct| (ct, true)))
+            .collect();
 
         if candle_types {
+            // let candle_type = CandleType::ThreeInRow;
+            // if let Some(&true) = selected_candle_types.get(&candle_type) {
+            //     if self.is_three_in_row() {
+            //         return CandleType::ThreeInRow;
+            //     }
+            // }
+
             if self.is_three_in_row() {
                 return CandleType::ThreeInRow;
             }
+
             if self.is_bearish_three_in_row() {
                 return CandleType::BearishThreeInRow;
             }
@@ -537,9 +581,6 @@ impl CandleBuilder {
             if self.is_hanging_man() {
                 return CandleType::HangingMan;
             }
-            // if self.is_bearish_gap() {
-            //     return CandleType::BearishGap;
-            // }
             if self.is_bearish_marubozu() {
                 return CandleType::BearishMarubozu;
             }
@@ -555,6 +596,9 @@ impl CandleBuilder {
             if self.is_doji() {
                 return CandleType::Doji;
             }
+            // if self.is_bearish_gap() {
+            //     return CandleType::BearishGap;
+            // }
         }
 
         CandleType::Default
