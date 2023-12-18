@@ -498,6 +498,8 @@ pub fn resolve_trade_out(
             false => 0.,
         };
 
+        log::info!("1111111 {:?}", date_out);
+
         TradeResult::TradeOut(TradeOut {
             id: trade_in.id,
             index_in,
@@ -657,6 +659,8 @@ pub fn calculate_trade_stats(
     let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
     let draw_down = calculate_trade_drawdown(data, price_in, trade_type);
     let draw_down_per = calculate_trade_drawdown_per(draw_down, price_in, trade_type);
+
+    log::info!("333333 {:?}", trade_out.date_out);
 
     TradeOut {
         id: trade_out.id,
