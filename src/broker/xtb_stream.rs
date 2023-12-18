@@ -924,7 +924,6 @@ impl BrokerStream for Xtb {
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         let symbol = &trade.symbol;
         let mut data = trade.data;
-        log::info!("444444444 {:?}", data.date_out);
 
         let mut date_out = to_dbtime(Local::now());
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
@@ -944,8 +943,6 @@ impl BrokerStream for Xtb {
                     .unwrap()
             }
         };
-
-        log::info!("55555555 {:?}", date_out);
 
         let ask = tick.ask();
         let bid = tick.bid();
@@ -1112,7 +1109,7 @@ impl BrokerStream for Xtb {
 
         match is_prod {
             true => self.close_trade_real(trade).await,
-            false => self.close_order_test(trade, order).await,
+            false => self.close_trade_test(trade).await,
         }
     }
     async fn close_order_test(

@@ -1,6 +1,6 @@
 use std::env;
 
-use super::mode;
+use super::mode::{self, ExecutionMode};
 use super::tick::InstrumentTick;
 use super::trade::{Trade, TradeType};
 
@@ -515,6 +515,23 @@ pub fn resolve_active_orders(
     }
 }
 
+fn calculate_order_price_limit(
+    execution_mode: &ExecutionMode,
+    candle: &Candle,
+    activation_source: &str,
+) -> (f64, f64) {
+    let order_engine = &env::var("ORDER_ENGINE").unwrap();
+
+    match (execution_mode.is_bot(), order_engine.as_ref()) {
+        (true, _) => (candle.close(), candle.close()),
+        (false, "broker") => (candle.high(), candle.low()),
+        (false, "bot") if activation_source.to_lowercase() == "highs_lows" => {
+            (candle.high(), candle.low())
+        }
+        _ => (candle.close(), candle.close()),
+    }
+}
+
 fn is_activated_order(
     index: usize,
     order: &Order,
@@ -525,12 +542,12 @@ fn is_activated_order(
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
-    let current_candle = match execution_mode.is_back_test() {
+    let candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index).unwrap(),
         false => instrument.data().last().unwrap(),
     };
 
-    let candle_ts = uuid::generate_ts_id(current_candle.date());
+    let candle_ts = uuid::generate_ts_id(candle.date());
     let source = if use_tick_price { "Tick" } else { "Candle" };
     let is_bot = execution_mode.is_bot();
     let is_stop = order.order_type.is_stop();
@@ -538,34 +555,43 @@ fn is_activated_order(
     let direction = order.order_type.get_direction();
     let target_price = order.target_price;
     let is_closed = match activation_source.as_ref() {
-        "close" => current_candle.is_closed(),
+        "close" => candle.is_closed(),
         _ => true,
     };
 
-    let (price_over, price_below) = match use_tick_price {
-        true => {
-            // let price_source = if order.is_long() {
-            //     if order.is_entry() {
-            //         tick.ask()
-            //     } else {
-            //         tick.bid()
-            //     }
-            // } else {
-            //     if order.is_entry() {
-            //         tick.bid()
-            //     } else {
-            //         tick.ask()
-            //     }
-            // };
+    let spread = tick.spread();
 
-            (tick.bid(), tick.bid())
-        }
-        false => {
-            let (price_over, price_below) = get_order_activation_price(current_candle, order, tick);
-            (price_over, price_below)
-        }
-    };
+    let (price_over, price_below) =
+        match execution_mode.is_back_test() || execution_mode.is_bot_test() {
+            //ONLY BACKTESTING & BOT BACKTESTING, NO TICK PRICING
+            true => {
+                let (price_over, price_below) =
+                    calculate_order_price_limit(&execution_mode, &candle, activation_source);
 
+                if order.is_long() == order.is_entry() {
+                    (price_over + spread, price_below + spread)
+                } else {
+                    (price_over, price_below)
+                }
+            }
+            //PRODUCTION BOT
+            false => {
+                let (price_over, price_below) = if use_tick_price {
+                    if order.is_long() == order.is_entry() {
+                        (tick.bid(), tick.bid())
+                    } else {
+                        (tick.bid(), tick.bid())
+                    }
+                } else {
+                    let (price_over, price_below) =
+                        calculate_order_price_limit(&execution_mode, &candle, activation_source);
+
+                    (price_over, price_below)
+                };
+
+                (price_over, price_below)
+            }
+        };
     // log::info!(
     //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
     //     source,
@@ -580,7 +606,7 @@ fn is_activated_order(
             let cross_over = if is_bot {
                 price_over >= target_price
             } else if is_stop {
-                is_closed && current_candle.high() >= target_price
+                is_closed && candle.high() >= target_price
             } else {
                 price_over >= target_price && is_next_bar && is_closed
             };
@@ -601,7 +627,7 @@ fn is_activated_order(
             let cross_below = if is_bot {
                 price_below <= target_price
             } else if is_stop {
-                is_closed && current_candle.low() <= target_price
+                is_closed && candle.low() <= target_price
             } else {
                 price_below <= target_price && is_next_bar && is_closed
             };
@@ -840,15 +866,11 @@ pub fn fulfill_bot_order<T: Trade>(
     fulfill_trade_order(index, trade, order, orders)
 }
 
-fn get_order_activation_price(
-    candle: &Candle,
-    _order: &Order,
-    tick: &InstrumentTick,
-) -> (f64, f64) {
+fn get_order_activation_price(candle: &Candle, order: &Order, tick: &InstrumentTick) -> (f64, f64) {
     let order_engine = &env::var("EXECUTION_MODE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    let _spread = tick.spread();
+    let spread = tick.spread();
 
     let (price_over, price_below) = match execution_mode.is_bot() {
         true => (candle.close(), candle.close()),
@@ -862,12 +884,11 @@ fn get_order_activation_price(
         },
     };
 
-    // if order.is_long() {
-    //     (price_over, price_below)
-    // } else {
-    //     (price_over + spread, price_below + spread)
-    // }
-    (price_over, price_below)
+    if order.is_long() == order.is_entry() {
+        (price_over, price_below)
+    } else {
+        (price_over + spread, price_below + spread)
+    }
 }
 
 pub fn hostias(
