@@ -111,7 +111,7 @@ pub trait BrokerStream {
         price: f64,
     ) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
-    async fn get_close_price(&mut self, order_id: usize) -> Result<f64>;
+    async fn get_transaction_id(&mut self, order_id: usize) -> Result<usize>;
     async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
@@ -284,7 +284,37 @@ impl BrokerStream for Xtb {
         }
     }
 
-    async fn get_close_price(&mut self, order_id: usize) -> Result<f64> {
+    // async fn get_transaction_id(&mut self, order_id: usize) -> Result<f64> {
+    //     let command = Command {
+    //         command: "getTradeRecords".to_owned(),
+    //         arguments: GetTrade {
+    //             orders: vec![order_id],
+    //         },
+    //     };
+
+    //     self.send(&command).await.unwrap();
+    //     let msg = self.socket.read().await.unwrap();
+
+    //     if let Message::Text(txt) = msg {
+    //         let data = self.parse_message(&txt)?;
+
+    //         let return_data = data
+    //             .get("returnData")
+    //             .ok_or_else(|| RsAlgoErrorKind::ParseError)?
+    //             .as_array()
+    //             .ok_or_else(|| RsAlgoErrorKind::ParseError)?;
+
+    //         if let Some(first_record) = return_data.first() {
+    //             Ok(first_record["close_price"].as_f64().unwrap())
+    //         } else {
+    //             Ok(0.0)
+    //         }
+    //     } else {
+    //         panic!()
+    //     }
+    // }
+
+    async fn get_transaction_id(&mut self, order_id: usize) -> Result<usize> {
         let command = Command {
             command: "getTradeRecords".to_owned(),
             arguments: GetTrade {
@@ -293,26 +323,25 @@ impl BrokerStream for Xtb {
         };
 
         self.send(&command).await.unwrap();
-        self.socket.read().await.unwrap();
+        let msg = self.socket.read().await.unwrap();
 
-        // if let Message::Text(txt) = msg {
-        //     let data = self.parse_message(&txt)?;
+        if let Message::Text(txt) = msg {
+            let data = self.parse_message(&txt)?;
 
-        //     let return_data = data
-        //         .get("returnData")
-        //         .ok_or_else(|| RsAlgoErrorKind::ParseError)?
-        //         .as_array()
-        //         .ok_or_else(|| RsAlgoErrorKind::ParseError)?;
+            let return_data = data
+                .get("returnData")
+                .ok_or_else(|| RsAlgoErrorKind::ParseError)?
+                .as_array()
+                .ok_or_else(|| RsAlgoErrorKind::ParseError)?;
 
-        //     if let Some(first_record) = return_data.first() {
-        //         Ok(first_record["close_price"].as_f64().unwrap())
-        //     } else {
-        //         Ok(0.0)
-        //     }
-        // } else {
-        //     panic!()
-        // }
-        Ok(1.)
+            if let Some(first_record) = return_data.first() {
+                Ok(first_record["position"].as_u64().unwrap() as usize)
+            } else {
+                Ok(0)
+            }
+        } else {
+            panic!()
+        }
     }
 
     async fn get_historic_data(
@@ -542,11 +571,6 @@ impl BrokerStream for Xtb {
             })
             .unwrap();
 
-            // let opening_price = match is_long {
-            //     true => ask,
-            //     false => bid,
-            // };
-
             let opening_price = 1.;
 
             let trade_command: Command<TransactionInfo> = Command {
@@ -589,14 +613,15 @@ impl BrokerStream for Xtb {
                         (end - start).num_milliseconds()
                     );
 
-                    let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
+                    let (executed, order_id) = self.get_order_id_executed(&txt).unwrap();
 
                     match executed {
                         true => {
                             let trans_status = self.get_transaction_status(order_id).await?;
                             match trans_status.status.is_accepted() {
                                 true => {
-                                    trade_in.id = order_id as usize;
+                                    let id = self.get_transaction_id(order_id as usize).await?;
+                                    trade_in.id = id;
                                     trade_in.price_in = trans_status.ask;
                                     trade_in.ask = trans_status.ask;
                                     trade_in.spread = spread;
@@ -654,58 +679,9 @@ impl BrokerStream for Xtb {
 
         while !accepted && attempts < MAX_RETRIES {
             let start = Local::now();
-
-            // let closing_price = match is_long {
-            //     true => bid,
-            //     false => ask,
-            // };
-
             let closing_price = 1.;
-            //let custom_comment = format!("Closing order {}", trade_out.id);
-            //let closing_price = self.get_close_price(trade_out.id).await.unwrap();
-            // let mut command_str = String::new();
+            let custom_comment = format!("Closing order {}", trade_out.id);
 
-            // command_str
-            //     .push_str(r#"{"command":"tradeTransaction","arguments":{"tradeTransInfo":{"#);
-            // command_str.push_str(&format!(
-            //     r#""cmd":{},"trans_type":{},"symbol":"{}","#,
-            //     command,
-            //     TransactionAction::Close.value(),
-            //     symbol
-            // ));
-            // command_str.push_str(r#""customComment":"","#);
-            // command_str.push_str(&format!(
-            //     r#""expiration":{},"order":{},"price":{},"offset":0,"sl":0.0,"tp":0.0,"volume":{}"#,
-            //     valid_until, trade_out.id, closing_price, trade_out.size
-            // ));
-            //command_str.push_str(r#"}}"#);
-            // let trade_command = format!(
-            //     r#"{{
-            //     "command": "tradeTransaction",
-            //     "arguments": {{
-            //         "tradeTransInfo": {{
-            //             "cmd": {},
-            //             "trans_type": {},
-            //             "symbol": "{}",
-            //             "customComment": "",
-            //             "expiration": {},
-            //             "order": {},
-            //             "price": {},
-            //             "offset": 0,
-            //             "sl": 0.0,
-            //             "tp": 0.0,
-            //             "volume": {}
-            //         }}
-            //     }}
-            // }}"#,
-            //     command,
-            //     TransactionAction::Close.value(),
-            //     symbol,
-            //     valid_until,
-            //     trade_out.id as isize,
-            //     closing_price,
-            //     trade_out.size
-            // );
             // Now command_str contains your JSON data
 
             let trade_command: Command<TransactionInfo> = Command {
@@ -715,7 +691,7 @@ impl BrokerStream for Xtb {
                         cmd: command,
                         trans_type: TransactionAction::Close.value(),
                         symbol: symbol.to_owned(),
-                        customComment: "".to_owned(),
+                        customComment: custom_comment,
                         expiration: valid_until,
                         order: trade_out.id as isize,
                         price: closing_price,
@@ -751,7 +727,7 @@ impl BrokerStream for Xtb {
                         (end - start).num_milliseconds()
                     );
 
-                    let (executed, order_id) = self.parse_new_trade_data(&txt).unwrap();
+                    let (executed, order_id) = self.get_order_id_executed(&txt).unwrap();
 
                     match executed {
                         true => {
@@ -1549,7 +1525,7 @@ impl Xtb {
         Ok(tick)
     }
 
-    pub fn parse_new_trade_data(&mut self, txt: &str) -> Result<(bool, u64)> {
+    pub fn get_order_id_executed(&mut self, txt: &str) -> Result<(bool, u64)> {
         let data = self.parse_message(txt).unwrap();
         let mut status = data["status"]
             .as_bool()
@@ -1635,7 +1611,7 @@ impl Xtb {
         for obj in data {
             let order_symbol = obj["symbol"].as_str().unwrap();
             if order_symbol == symbol {
-                let id = obj["order"].as_i64().unwrap().try_into().unwrap();
+                let id = obj["position"].as_i64().unwrap().try_into().unwrap();
                 let size = obj["volume"].as_f64().unwrap().try_into().unwrap();
                 let price_in = obj["open_price"].as_f64().unwrap().try_into().unwrap();
                 let close_price = obj["close_price"].as_f64().unwrap();

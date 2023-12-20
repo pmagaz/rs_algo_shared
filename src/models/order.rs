@@ -496,10 +496,9 @@ pub fn resolve_active_orders(
                     OrderType::SellOrderLong(_, _, _)
                     | OrderType::SellOrderShort(_, _, _)
                     | OrderType::TakeProfitLong(_, _, _)
-                    | OrderType::TakeProfitShort(_, _, _) => {
-                        order_position = Position::MarketOutOrder(order.clone());
-                    }
-                    OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
+                    | OrderType::TakeProfitShort(_, _, _)
+                    | OrderType::StopLossLong(_, _)
+                    | OrderType::StopLossShort(_, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
                     }
                     _ => todo!(),
@@ -509,13 +508,16 @@ pub fn resolve_active_orders(
         }
     }
 
-    match has_executed_buy_order(orders, &order_position) {
+    let (_, _, pending_stop_losses) = get_num_pending_orders(orders);
+    let has_active_trade = if pending_stop_losses > 0 { true } else { false };
+
+    match has_active_trade {
         true => order_position,
         false => Position::None,
     }
 }
 
-fn calculate_order_price_limit(
+fn calculate_order_price_origin(
     execution_mode: &ExecutionMode,
     candle: &Candle,
     activation_source: &str,
@@ -532,6 +534,141 @@ fn calculate_order_price_limit(
             },
             _ => panic!("ORDER_ENGINE not found!"),
         },
+    }
+}
+fn get_order_activation_price(
+    candle: &Candle,
+    _order: &Order,
+    tick: &InstrumentTick,
+) -> (f64, f64) {
+    let order_engine = &env::var("EXECUTION_MODE").unwrap();
+    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let _spread = tick.spread();
+
+    let (price_over, price_below) = match execution_mode.is_bot() {
+        true => (candle.close(), candle.close()),
+        false => match order_engine.as_ref() {
+            "broker" => (candle.high(), candle.low()),
+            "bot" => match activation_source.to_lowercase().as_ref() {
+                "highs_lows" => (candle.high(), candle.low()),
+                _ => (candle.close(), candle.close()),
+            },
+            _ => panic!("ORDER_ENGINE not found!"),
+        },
+    };
+
+    // if order.is_long() {
+    //     (price_over, price_below)
+    // } else {
+    //     (price_over + spread, price_below + spread)
+    // }
+    (price_over, price_below)
+}
+
+fn is_activated_order2(
+    index: usize,
+    order: &Order,
+    instrument: &Instrument,
+    tick: &InstrumentTick,
+    use_tick_price: bool,
+) -> bool {
+    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+    let current_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index).unwrap(),
+        false => instrument.data().last().unwrap(),
+    };
+
+    let candle_ts = uuid::generate_ts_id(current_candle.date());
+    let source = if use_tick_price { "Tick" } else { "Candle" };
+    let is_bot = execution_mode.is_bot();
+    let is_stop = order.order_type.is_stop();
+    let is_next_bar = candle_ts > order.id;
+    let direction = order.order_type.get_direction();
+    let target_price = order.target_price;
+    let is_closed = match activation_source.as_ref() {
+        "close" => current_candle.is_closed(),
+        _ => true,
+    };
+
+    let (price_over, price_below) = match use_tick_price {
+        true => {
+            // let price_source = if order.is_long() {
+            //     if order.is_entry() {
+            //         tick.ask()
+            //     } else {
+            //         tick.bid()
+            //     }
+            // } else {
+            //     if order.is_entry() {
+            //         tick.bid()
+            //     } else {
+            //         tick.ask()
+            //     }
+            // };
+
+            (tick.bid(), tick.bid())
+        }
+        false => {
+            let (price_over, price_below) = get_order_activation_price(current_candle, order, tick);
+            (price_over, price_below)
+        }
+    };
+
+    // log::info!(
+    //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
+    //     source,
+    //     order.target_price,
+    //     price_over,
+    //     price_below,
+    //     (tick.ask(), tick.bid())
+    // );
+
+    match direction {
+        OrderDirection::Up => {
+            let cross_over = if is_bot {
+                price_over >= target_price
+            } else if is_stop {
+                is_closed && current_candle.high() >= target_price
+            } else {
+                price_over >= target_price && is_next_bar && is_closed
+            };
+
+            // if cross_over {
+            //     log::info!(
+            //         "{} Over {:?} activated. Price {:?} > {} target",
+            //         source,
+            //         order.order_type,
+            //         price_over,
+            //         target_price
+            //     );
+            // }
+
+            cross_over
+        }
+        OrderDirection::Down => {
+            let cross_below = if is_bot {
+                price_below <= target_price
+            } else if is_stop {
+                is_closed && current_candle.low() <= target_price
+            } else {
+                price_below <= target_price && is_next_bar && is_closed
+            };
+
+            if cross_below {
+                log::info!(
+                    "{} Below {:?} activated. Price {:?} < {} target",
+                    source,
+                    order.order_type,
+                    price_below,
+                    target_price
+                );
+            }
+
+            cross_below
+        }
     }
 }
 
@@ -553,6 +690,7 @@ fn is_activated_order(
     let candle_ts = uuid::generate_ts_id(candle.date());
     let source = if use_tick_price { "Tick" } else { "Candle" };
     let is_bot = execution_mode.is_bot();
+    let is_bot_test = execution_mode.is_bot_test();
     let is_stop = order.order_type.is_stop();
     let is_next_bar = candle_ts > order.id;
     let direction = order.order_type.get_direction();
@@ -569,7 +707,7 @@ fn is_activated_order(
             //ONLY BACKTESTING & BOT BACKTESTING, NO TICK PRICING
             true => {
                 let (price_over, price_below) =
-                    calculate_order_price_limit(&execution_mode, &candle, activation_source);
+                    calculate_order_price_origin(&execution_mode, &candle, activation_source);
 
                 if order.is_long() == order.is_entry() {
                     (price_over + spread, price_below + spread)
@@ -587,7 +725,7 @@ fn is_activated_order(
                     }
                 } else {
                     let (price_over, price_below) =
-                        calculate_order_price_limit(&execution_mode, &candle, activation_source);
+                        calculate_order_price_origin(&execution_mode, &candle, activation_source);
 
                     (price_over, price_below)
                 };
@@ -595,6 +733,7 @@ fn is_activated_order(
                 (price_over, price_below)
             }
         };
+
     // log::info!(
     //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
     //     source,
@@ -606,13 +745,17 @@ fn is_activated_order(
 
     match direction {
         OrderDirection::Up => {
-            let cross_over = if is_bot {
-                price_over >= target_price
-            } else if is_stop {
-                is_closed && candle.high() >= target_price
+            let mut cross_over = false;
+
+            if is_bot || is_bot_test {
+                cross_over = price_over >= target_price;
             } else {
-                price_over >= target_price && is_next_bar && is_closed
-            };
+                cross_over = price_over >= target_price && is_next_bar && is_closed;
+            }
+
+            if is_stop {
+                cross_over = is_closed && candle.high() >= target_price;
+            }
 
             if cross_over {
                 log::info!(
@@ -627,13 +770,17 @@ fn is_activated_order(
             cross_over
         }
         OrderDirection::Down => {
-            let cross_below = if is_bot {
-                price_below <= target_price
-            } else if is_stop {
-                is_closed && candle.low() <= target_price
+            let mut cross_below = false;
+
+            if is_bot || is_bot_test {
+                cross_below = price_below <= target_price;
             } else {
-                price_below <= target_price && is_next_bar && is_closed
-            };
+                cross_below = price_below <= target_price && is_next_bar && is_closed;
+            }
+
+            if is_stop {
+                cross_below = is_closed && candle.low() <= target_price;
+            }
 
             if cross_below {
                 log::info!(
@@ -725,24 +872,39 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
     pending_orders
 }
 
-pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool {
-    let max_buy_orders = env::var("MAX_BUY_ORDERS")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
+// pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool {
+//     let max_buy_orders = env::var("MAX_BUY_ORDERS")
+//         .unwrap()
+//         .parse::<usize>()
+//         .unwrap();
 
-    let (pending_buy_orders, _sell_orders, _stop_losses) = get_num_pending_orders(orders);
+//     let (pending_buy_orders, pending_sell_orders, pending_stop_losses) =
+//         get_num_pending_orders(orders);
 
-    match operation {
-        Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
-            //No Active buy
-            std::cmp::Ordering::Equal => false,
-            //Aactive buy
-            _ => true,
-        },
-        _ => true,
-    }
-}
+//     if pending_buy_orders == 0 {
+//         return false;
+//     }
+
+//     log::info!(
+//         "55555555 {:?}",
+//         (
+//             pending_buy_orders,
+//             pending_sell_orders,
+//             max_buy_orders,
+//             pending_stop_losses
+//         )
+//     );
+
+//     match operation {
+//         Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
+//             //No Active buy
+//             std::cmp::Ordering::Equal => false,
+//             //Aactive buy
+//             _ => true,
+//         },
+//         _ => true,
+//     }
+// }
 
 pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
     let max_pending_orders = env::var("MAX_PENDING_ORDERS")

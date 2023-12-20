@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 
 pub trait Trade {
     fn get_id(&self) -> &usize;
+    fn get_index(&self) -> &usize;
     fn get_date(&self) -> &DbDateTime;
     fn get_chrono_date(&self) -> DateTime<Local>;
     fn get_price_in(&self) -> &f64;
@@ -229,6 +230,9 @@ impl Trade for TradeIn {
     fn get_id(&self) -> &usize {
         &self.id
     }
+    fn get_index(&self) -> &usize {
+        &self.index_in
+    }
     fn get_date(&self) -> &DbDateTime {
         &self.date_in
     }
@@ -273,6 +277,10 @@ pub struct TradeOut {
 impl Trade for TradeOut {
     fn get_id(&self) -> &usize {
         &self.id
+    }
+
+    fn get_index(&self) -> &usize {
+        &self.index_out
     }
     fn get_date(&self) -> &DbDateTime {
         &self.date_out
@@ -403,9 +411,12 @@ pub fn resolve_trade_out(
     let id = uuid::generate_ts_id(current_date);
     let price_origin = *trade_in.get_price_in();
 
-    let close_trade_price = match trade_type {
-        TradeType::StopLossLong | TradeType::StopLossShort => order.unwrap().target_price,
-        _ => current_candle.open(),
+    let close_trade_price = match trade_type.is_order() {
+        true => order.unwrap().target_price,
+        false => match execution_mode.is_back_test() {
+            true => current_candle.open(),
+            false => current_candle.close(),
+        },
     };
 
     let price_out = match order_engine.as_ref() {
@@ -416,7 +427,8 @@ pub fn resolve_trade_out(
         _ => close_trade_price,
     };
 
-    let (price_in, price_out) = match execution_mode.is_back_test() {
+    let (price_in, price_out) = match execution_mode.is_back_test() || execution_mode.is_bot_test()
+    {
         true => match trade_in_type.is_long() {
             true => (trade_in.price_in, price_out),
             false => (trade_in.price_in, price_out + spread),
@@ -552,7 +564,7 @@ pub fn wait_for_new_trade(
 
             let time_frame = instrument.time_frame();
 
-            let current_date = match execution_mode.is_back_test() {
+            let current_date = match execution_mode.is_back_test() || execution_mode.is_bot_test() {
                 true => instrument.data().get(index).unwrap().date(),
                 false => Local::now(),
             };
@@ -600,7 +612,7 @@ pub fn wait_for_closing_trade(index: usize, instrument: &Instrument, trade_in: &
 
             let time_frame = instrument.time_frame();
 
-            let current_date = match execution_mode.is_back_test() {
+            let current_date = match execution_mode.is_back_test() || execution_mode.is_bot_test() {
                 true => instrument.data().get(index).unwrap().date(),
                 false => Local::now(),
             };
@@ -691,7 +703,7 @@ pub fn trade_exists<T: Trade>(trades: &[T], search_id: usize) -> bool {
     trades.iter().any(|order| order.get_id() == &search_id)
 }
 
-pub fn update_trades<T>(trades: &mut Vec<T>, new_trade: T) -> bool
+pub fn update_trade_by_id<T>(trades: &mut Vec<T>, new_trade: T) -> bool
 where
     T: Trade + Clone,
 {
@@ -706,4 +718,31 @@ where
     }
 
     updated
+}
+
+pub fn update_last<T>(trades: &mut Vec<T>, new_trade: T) -> bool
+where
+    T: Trade + Clone,
+{
+    if let Some(last_trade) = trades.last_mut() {
+        if last_trade.get_index() == new_trade.get_index() {
+            log::info!("Updating {} trade data", last_trade.get_index());
+            *last_trade = new_trade;
+            true
+        } else {
+            log::info!("Cant update {} trade data", last_trade.get_index());
+
+            false
+        }
+    } else {
+        false
+    }
+}
+
+pub fn delete_last<T>(trades: &mut Vec<T>) -> bool {
+    if trades.pop().is_some() {
+        true
+    } else {
+        false
+    }
 }

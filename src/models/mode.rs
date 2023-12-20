@@ -10,7 +10,7 @@ pub enum ExecutionMode {
 impl ExecutionMode {
     pub fn is_bot(&self) -> bool {
         match *self {
-            ExecutionMode::Bot | ExecutionMode::BotBackTest => true,
+            ExecutionMode::Bot => true,
             _ => false,
         }
     }
