@@ -516,6 +516,7 @@ impl BrokerStream for Xtb {
         const RETRY_AFTER: u64 = 500;
         let mut attempts = 0;
         let mut accepted = false;
+        let mut status = TradeStatus::Rejected;
         let symbol = trade.symbol;
         let mut trade_in = trade.data;
         let mut sell_order_price = None;
@@ -621,11 +622,13 @@ impl BrokerStream for Xtb {
                             match trans_status.status.is_accepted() {
                                 true => {
                                     let id = self.get_transaction_id(order_id as usize).await?;
+
                                     trade_in.id = id;
                                     trade_in.price_in = trans_status.ask;
                                     trade_in.ask = trans_status.ask;
                                     trade_in.spread = spread;
                                     accepted = true;
+                                    status = TradeStatus::Fulfilled;
                                 }
                                 false => {
                                     attempts += 1;
@@ -640,12 +643,15 @@ impl BrokerStream for Xtb {
                 _ => todo!(),
             }
 
+            trade_in.status = status.clone();
+
             sleep(Duration::from_millis(RETRY_AFTER));
 
             if !accepted {
                 log::error!(
-                    "{:?} not accepted in Broker. Retrying...",
-                    &trade_in.trade_type
+                    "{:?} {:?} in Broker. Retrying...",
+                    &trade_in.trade_type,
+                    &trade_in.status
                 );
             }
         }
@@ -668,6 +674,7 @@ impl BrokerStream for Xtb {
         const RETRY_AFTER: u64 = 800;
         let mut attempts = 0;
         let mut accepted = false;
+        let mut status = TradeStatus::Rejected;
         let mut trade_out = trade.data;
         let symbol = trade.symbol;
         let valid_until = (Local::now() + date::Duration::minutes(3)).timestamp();
@@ -747,6 +754,7 @@ impl BrokerStream for Xtb {
                                     trade_out.ask = trans_status.ask;
                                     trade_out.spread_out = trans_status.ask - trans_status.bid;
                                     accepted = true;
+                                    status = TradeStatus::Fulfilled;
                                 }
                                 false => {
                                     attempts += 1;
@@ -761,12 +769,15 @@ impl BrokerStream for Xtb {
                 _ => todo!(),
             }
 
+            trade_out.status = status.clone();
+
             sleep(Duration::from_millis(RETRY_AFTER));
 
             if !accepted {
                 log::error!(
-                    "{:?} not accepted in Broker. Retrying...",
-                    &trade_out.trade_type
+                    "{:?} {:?} in Broker. Retrying...",
+                    &trade_out.trade_type,
+                    &trade_out.status
                 );
             }
         }
@@ -869,6 +880,7 @@ impl BrokerStream for Xtb {
         data.ask = ask;
         data.date_in = date_in;
         data.spread = spread;
+        data.status = TradeStatus::Fulfilled;
 
         let res = ResponseBody {
             response: ResponseType::TradeInFulfilled,
@@ -954,6 +966,11 @@ impl BrokerStream for Xtb {
             false => "NOT accepted",
         };
 
+        let status = match accepted {
+            true => TradeStatus::Fulfilled,
+            false => TradeStatus::Rejected,
+        };
+
         log::info!(
             "Test {:?} {} {} with profit {}",
             trade_type,
@@ -967,6 +984,7 @@ impl BrokerStream for Xtb {
         data.bid = bid;
         data.ask = ask;
         data.spread_out = spread;
+        data.status = status;
 
         let res = ResponseBody {
             response: ResponseType::TradeOutFulfilled,
@@ -1063,6 +1081,7 @@ impl BrokerStream for Xtb {
             spread,
             trade_type,
             date_in: to_dbtime(Local::now()),
+            status: TradeStatus::Fulfilled,
         };
 
         let res = ResponseBody {
@@ -1112,6 +1131,7 @@ impl BrokerStream for Xtb {
                 .payload
                 .unwrap(),
         };
+
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
@@ -1156,6 +1176,11 @@ impl BrokerStream for Xtb {
             false => "NOT accepted",
         };
 
+        let status = match accepted {
+            true => TradeStatus::Fulfilled,
+            false => TradeStatus::Rejected,
+        };
+
         log::info!(
             "{:?} {} {} with profit {}",
             order_type,
@@ -1170,6 +1195,7 @@ impl BrokerStream for Xtb {
         trade_data.bid = bid;
         trade_data.ask = ask;
         trade_data.spread_out = spread;
+        trade_data.status = status;
 
         let res = ResponseBody {
             response: ResponseType::TradeOutFulfilled,
@@ -1660,6 +1686,7 @@ impl Xtb {
                     spread,
                     date_in,
                     trade_type,
+                    status: TradeStatus::Fulfilled,
                 };
 
                 let stop_loss_order = Order {

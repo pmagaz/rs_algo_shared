@@ -13,6 +13,19 @@ use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TradeStatus {
+    Pending,
+    Fulfilled,
+    Rejected,
+}
+
+impl Default for TradeStatus {
+    fn default() -> Self {
+        TradeStatus::Pending
+    }
+}
+
 pub trait Trade {
     fn get_id(&self) -> &usize;
     fn get_index(&self) -> &usize;
@@ -21,6 +34,9 @@ pub trait Trade {
     fn get_price_in(&self) -> &f64;
     fn get_type(&self) -> &TradeType;
     fn get_price_out(&self) -> &f64;
+    fn get_status(&self) -> &TradeStatus;
+    fn is_fulfilled(&self) -> bool;
+    fn is_last_trade_fulfilled<T: Trade>(trades: &Vec<&T>) -> bool;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -200,6 +216,8 @@ pub enum TradeResult {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeIn {
     pub id: usize,
+    pub trade_type: TradeType,
+    pub status: TradeStatus,
     pub index_in: usize,
     pub size: f64,
     pub origin_price: f64,
@@ -207,7 +225,6 @@ pub struct TradeIn {
     pub ask: f64,
     pub spread: f64,
     pub date_in: DbDateTime,
-    pub trade_type: TradeType,
 }
 
 impl Default for TradeIn {
@@ -222,6 +239,7 @@ impl Default for TradeIn {
             spread: 0.0,
             date_in: to_dbtime(Local::now()),
             trade_type: TradeType::MarketInLong,
+            status: TradeStatus::default(),
         }
     }
 }
@@ -248,12 +266,36 @@ impl Trade for TradeIn {
     fn get_price_out(&self) -> &f64 {
         &self.price_in
     }
+    fn get_status(&self) -> &TradeStatus {
+        &self.status
+    }
+
+    fn is_fulfilled(&self) -> bool {
+        if self.get_status() == &TradeStatus::Fulfilled {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_last_trade_fulfilled<T: Trade>(trades: &Vec<&T>) -> bool {
+        if let Some(last_trade) = trades.last() {
+            if last_trade.get_status() == &TradeStatus::Fulfilled {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TradeOut {
     pub id: usize,
     pub trade_type: TradeType,
+    pub status: TradeStatus,
     pub index_in: usize,
     pub price_in: f64,
     pub size: f64,
@@ -278,7 +320,6 @@ impl Trade for TradeOut {
     fn get_id(&self) -> &usize {
         &self.id
     }
-
     fn get_index(&self) -> &usize {
         &self.index_out
     }
@@ -296,6 +337,28 @@ impl Trade for TradeOut {
     }
     fn get_price_out(&self) -> &f64 {
         &self.price_out
+    }
+    fn get_status(&self) -> &TradeStatus {
+        &self.status
+    }
+    fn is_fulfilled(&self) -> bool {
+        if self.get_status() == &TradeStatus::Fulfilled {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn is_last_trade_fulfilled<T: Trade>(trades: &Vec<&T>) -> bool {
+        if let Some(last_trade) = trades.last() {
+            if last_trade.get_status() == &TradeStatus::Fulfilled {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 }
 
@@ -375,6 +438,7 @@ pub fn resolve_trade_in(
             size,
             date_in: to_dbtime(current_date),
             trade_type: trade_type.clone(),
+            status: TradeStatus::default(),
         })
     } else {
         TradeResult::None
@@ -515,6 +579,8 @@ pub fn resolve_trade_out(
             false => 0.,
         };
 
+        let status = TradeStatus::default();
+
         TradeResult::TradeOut(TradeOut {
             id: trade_in.id,
             index_in,
@@ -536,6 +602,7 @@ pub fn resolve_trade_out(
             run_up_per,
             draw_down,
             draw_down_per,
+            status,
         })
     } else {
         log::warn!("Non profitable {:?} exit", trade_type);
@@ -666,6 +733,10 @@ pub fn calculate_trade_stats(
     let price_out = trade_out.price_out;
     let size = trade_in.size;
 
+    if price_in == price_out {
+        panic!("equal price_in / out");
+    }
+
     let quantity = calculate_quantity(size, price_in);
     let profit = calculate_trade_profit(quantity, price_in, price_out, leverage, trade_type);
     let profit_per = calculate_trade_profit_per(profit, size, price_in, leverage);
@@ -680,7 +751,7 @@ pub fn calculate_trade_stats(
         index_in: trade_in.index_in,
         price_in: trade_in.price_in,
         size: trade_in.size,
-        ask: trade_in.ask,
+        ask: trade_out.ask,
         spread_in: trade_in.spread,
         trade_type: trade_out.trade_type.clone(),
         date_in: trade_in.date_in,
@@ -688,7 +759,7 @@ pub fn calculate_trade_stats(
         price_origin: trade_out.price_origin,
         price_out: trade_out.price_out,
         bid: trade_out.bid,
-        spread_out: trade_in.spread,
+        spread_out: trade_out.spread_out,
         date_out: trade_out.date_out,
         profit,
         profit_per,
@@ -696,6 +767,7 @@ pub fn calculate_trade_stats(
         run_up_per,
         draw_down,
         draw_down_per,
+        status: trade_out.status.clone(),
     }
 }
 
@@ -730,7 +802,7 @@ where
             *last_trade = new_trade;
             true
         } else {
-            log::info!("Cant update {} trade data", last_trade.get_index());
+            log::error!("Cant update {} trade data", last_trade.get_index());
 
             false
         }

@@ -206,7 +206,7 @@ impl Order {
         self.order_type.is_entry()
     }
 
-    pub fn is_full_filled(&self) -> bool {
+    pub fn is_fulfilled(&self) -> bool {
         match self.full_filled_at {
             Some(_x) => true,
             None => false,
@@ -481,7 +481,6 @@ pub fn resolve_active_orders(
     use_tick_price: bool,
 ) -> Position {
     let mut order_position: Position = Position::None;
-
     for (_id, order) in orders
         .iter()
         .enumerate()
@@ -534,141 +533,6 @@ fn calculate_order_price_origin(
             },
             _ => panic!("ORDER_ENGINE not found!"),
         },
-    }
-}
-fn get_order_activation_price(
-    candle: &Candle,
-    _order: &Order,
-    tick: &InstrumentTick,
-) -> (f64, f64) {
-    let order_engine = &env::var("EXECUTION_MODE").unwrap();
-    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    let _spread = tick.spread();
-
-    let (price_over, price_below) = match execution_mode.is_bot() {
-        true => (candle.close(), candle.close()),
-        false => match order_engine.as_ref() {
-            "broker" => (candle.high(), candle.low()),
-            "bot" => match activation_source.to_lowercase().as_ref() {
-                "highs_lows" => (candle.high(), candle.low()),
-                _ => (candle.close(), candle.close()),
-            },
-            _ => panic!("ORDER_ENGINE not found!"),
-        },
-    };
-
-    // if order.is_long() {
-    //     (price_over, price_below)
-    // } else {
-    //     (price_over + spread, price_below + spread)
-    // }
-    (price_over, price_below)
-}
-
-fn is_activated_order2(
-    index: usize,
-    order: &Order,
-    instrument: &Instrument,
-    tick: &InstrumentTick,
-    use_tick_price: bool,
-) -> bool {
-    let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
-    let current_candle = match execution_mode.is_back_test() {
-        true => instrument.data().get(index).unwrap(),
-        false => instrument.data().last().unwrap(),
-    };
-
-    let candle_ts = uuid::generate_ts_id(current_candle.date());
-    let source = if use_tick_price { "Tick" } else { "Candle" };
-    let is_bot = execution_mode.is_bot();
-    let is_stop = order.order_type.is_stop();
-    let is_next_bar = candle_ts > order.id;
-    let direction = order.order_type.get_direction();
-    let target_price = order.target_price;
-    let is_closed = match activation_source.as_ref() {
-        "close" => current_candle.is_closed(),
-        _ => true,
-    };
-
-    let (price_over, price_below) = match use_tick_price {
-        true => {
-            // let price_source = if order.is_long() {
-            //     if order.is_entry() {
-            //         tick.ask()
-            //     } else {
-            //         tick.bid()
-            //     }
-            // } else {
-            //     if order.is_entry() {
-            //         tick.bid()
-            //     } else {
-            //         tick.ask()
-            //     }
-            // };
-
-            (tick.bid(), tick.bid())
-        }
-        false => {
-            let (price_over, price_below) = get_order_activation_price(current_candle, order, tick);
-            (price_over, price_below)
-        }
-    };
-
-    // log::info!(
-    //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
-    //     source,
-    //     order.target_price,
-    //     price_over,
-    //     price_below,
-    //     (tick.ask(), tick.bid())
-    // );
-
-    match direction {
-        OrderDirection::Up => {
-            let cross_over = if is_bot {
-                price_over >= target_price
-            } else if is_stop {
-                is_closed && current_candle.high() >= target_price
-            } else {
-                price_over >= target_price && is_next_bar && is_closed
-            };
-
-            // if cross_over {
-            //     log::info!(
-            //         "{} Over {:?} activated. Price {:?} > {} target",
-            //         source,
-            //         order.order_type,
-            //         price_over,
-            //         target_price
-            //     );
-            // }
-
-            cross_over
-        }
-        OrderDirection::Down => {
-            let cross_below = if is_bot {
-                price_below <= target_price
-            } else if is_stop {
-                is_closed && current_candle.low() <= target_price
-            } else {
-                price_below <= target_price && is_next_bar && is_closed
-            };
-
-            if cross_below {
-                log::info!(
-                    "{} Below {:?} activated. Price {:?} < {} target",
-                    source,
-                    order.order_type,
-                    price_below,
-                    target_price
-                );
-            }
-
-            cross_below
-        }
     }
 }
 
