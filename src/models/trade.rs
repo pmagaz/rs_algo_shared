@@ -734,7 +734,7 @@ pub fn calculate_trade_stats(
     let size = trade_in.size;
 
     if price_in == price_out {
-        panic!("equal price_in / out");
+        log::error!("Equal price in / out");
     }
 
     let quantity = calculate_quantity(size, price_in);
