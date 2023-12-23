@@ -1,10 +1,10 @@
 use crate::broker::models::*;
 use crate::error::{Result, RsAlgoErrorKind};
-use crate::helpers::date::*;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
+use crate::helpers::{calc, date::*};
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
@@ -123,6 +123,7 @@ pub trait BrokerStream {
         &mut self,
         symbol: &str,
         price: f64,
+        trade_type: &TradeType,
     ) -> Result<ResponseBody<InstrumentTick>>;
     async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
     async fn get_transaction_id(&mut self, order_id: usize) -> Result<usize>;
@@ -399,6 +400,7 @@ impl BrokerStream for Xtb {
         &mut self,
         symbol: &str,
         price: f64,
+        trade_type: &TradeType,
     ) -> Result<ResponseBody<InstrumentTick>> {
         let tick_url = &format!(
             "{}{}",
@@ -412,10 +414,17 @@ impl BrokerStream for Xtb {
             .await
             .unwrap();
 
+        let slippage_pips = env::var("SLIPPAGE_PIPS").unwrap().parse::<f64>().unwrap();
+
+        let price_with_slippage = match trade_type.is_long() == trade_type.is_entry() {
+            true => price + calc::to_pips(slippage_pips, &tick),
+            false => price - calc::to_pips(slippage_pips, &tick),
+        };
+
         let tick = InstrumentTick::new()
             .symbol(symbol.to_string())
-            .ask(price + tick.spread())
-            .bid(price)
+            .ask(price_with_slippage + tick.spread())
+            .bid(price_with_slippage)
             .high(0.0)
             .low(0.0)
             .spread(tick.spread())
@@ -854,13 +863,6 @@ impl BrokerStream for Xtb {
         let mut data = trade.data;
         let mut date_in = to_dbtime(Local::now());
         let trade_type = data.trade_type.clone();
-        let percentage_slipagge = 0.5;
-        let slipagge = data.price_in * (percentage_slipagge / 100.0);
-
-        let final_price = match trade_type.is_long() {
-            true => data.price_in + slipagge,
-            false => data.price_in - slipagge,
-        };
 
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -871,8 +873,19 @@ impl BrokerStream for Xtb {
                 .unwrap(),
 
             _ => {
+                // let slippage_per = &env::var("SLIPPAGE_PIPS")
+                //     .unwrap()
+                //     .parse::<f64>()
+                //     .unwrap();
+
+                // let slippage = data.price_in * (slippage_per / 100.0);
+
+                // let price_with_slippage = match trade_type.is_long() {
+                //     true => data.price_in + slippage,
+                //     false => data.price_in - slippage,
+                // };
                 date_in = data.date_in;
-                self.get_instrument_tick_test(&symbol, final_price)
+                self.get_instrument_tick_test(&symbol, data.price_in, &trade_type)
                     .await
                     .unwrap()
                     .payload
@@ -938,13 +951,6 @@ impl BrokerStream for Xtb {
         let trade_type = data.trade_type.clone();
 
         let mut date_out = to_dbtime(Local::now());
-        let percentage_slipagge = 0.5;
-        let slipagge = data.price_in * (percentage_slipagge / 100.0);
-
-        let final_price = match trade_type.is_long() {
-            true => data.price_in - slipagge,
-            false => data.price_in + slipagge,
-        };
 
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -955,7 +961,7 @@ impl BrokerStream for Xtb {
                 .unwrap(),
             _ => {
                 date_out = data.date_out;
-                self.get_instrument_tick_test(&symbol, final_price)
+                self.get_instrument_tick_test(&symbol, data.price_out, &trade_type)
                     .await
                     .unwrap()
                     .payload
@@ -1083,14 +1089,6 @@ impl BrokerStream for Xtb {
         };
         let size = order.size;
 
-        let percentage_slipagge = 0.5;
-        let slipagge = order.target_price * (percentage_slipagge / 100.0);
-
-        let final_price = match trade_type.is_long() {
-            true => order.target_price + slipagge,
-            false => order.target_price - slipagge,
-        };
-
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -1099,8 +1097,19 @@ impl BrokerStream for Xtb {
                 .payload
                 .unwrap(),
             _ => {
+                // let slippage_per = &env::var("SLIPPAGE_PIPS")
+                //     .unwrap()
+                //     .parse::<f64>()
+                //     .unwrap();
+                // let slippage = order.target_price * (slippage_per / 100.0);
+
+                // let price_with_slippage = match trade_type.is_long() {
+                //     true => order.target_price + slippage,
+                //     false => order.target_price - slippage,
+                // };
+
                 date_in = trade.date_in;
-                self.get_instrument_tick_test(&symbol, final_price)
+                self.get_instrument_tick_test(&symbol, order.target_price, &trade_type)
                     .await
                     .unwrap()
                     .payload
@@ -1195,14 +1204,6 @@ impl BrokerStream for Xtb {
         let trade_type = trade_data.trade_type.clone();
         let order_type = order_data.order_type;
 
-        let percentage_slipagge = 0.5;
-        let slipagge = order_data.target_price * (percentage_slipagge / 100.0);
-
-        let final_price = match trade_type.is_long() {
-            true => order_data.target_price - slipagge,
-            false => order_data.target_price + slipagge,
-        };
-
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -1211,8 +1212,17 @@ impl BrokerStream for Xtb {
                 .payload
                 .unwrap(),
             _ => {
+                let slippage_per = &env::var("SLIPPAGE_PIPS").unwrap().parse::<f64>().unwrap();
+
+                // let slippage = order_data.target_price * (slippage_per / 100.0);
+
+                // let price_with_slippage = match trade_type.is_long() {
+                //     true => order_data.target_price - slippage,
+                //     false => order_data.target_price + slippage,
+                // };
+
                 date_out = trade_data.date_out;
-                self.get_instrument_tick_test(&symbol, final_price)
+                self.get_instrument_tick_test(&symbol, order_data.target_price, &trade_type)
                     .await
                     .unwrap()
                     .payload

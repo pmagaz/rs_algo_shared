@@ -260,7 +260,7 @@ pub fn prepare_orders(
     let current_candle = instrument.data().get(index).unwrap();
     let current_price = current_candle.close();
 
-    let next_candle = match execution_mode.is_back_test() {
+    let next_candle = match execution_mode.is_back_test() || execution_mode.is_bot_test() {
         true => instrument.data().get(index).unwrap(),
         false => instrument.data.last().unwrap(),
     };

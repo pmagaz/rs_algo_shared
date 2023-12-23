@@ -734,7 +734,7 @@ pub fn calculate_trade_stats(
     let size = trade_in.size;
 
     if price_in == price_out {
-        log::error!("Equal price in / out");
+        log::error!("Equal price in / out {:?}", (trade_in.price_in));
     }
 
     let quantity = calculate_quantity(size, price_in);
@@ -804,7 +804,6 @@ where
         } else {
             log::error!("Cant update {} trade data", last_trade.get_index());
             panic!();
-
             false
         }
     } else {
