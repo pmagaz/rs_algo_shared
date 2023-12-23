@@ -803,7 +803,7 @@ pub fn cancel_pending_expired_orders(
     orders: &mut Vec<Order>,
 ) -> Vec<Order> {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-    match execution_mode.is_bot() || execution_mode.is_back_test() {
+    match execution_mode.is_bot_test() || execution_mode.is_back_test() {
         true => {
             let current_date = instrument.data.get(index).unwrap().date();
             let mut i = 0;

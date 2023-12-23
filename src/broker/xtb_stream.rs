@@ -88,6 +88,16 @@ pub trait BrokerStream {
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn open_order(
         &mut self,
+        trade: TradeData<TradeIn>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
+    // async fn open_order_real(
+    //     &mut self,
+    //     order: TradeData<Order>,
+    // ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
+    async fn open_order_test(
+        &mut self,
+        trade: TradeData<TradeIn>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
     async fn close_order(
@@ -95,6 +105,10 @@ pub trait BrokerStream {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
+    // async fn close_order_real(
+    //     &mut self,
+    //     order: TradeData<Order>,
+    // ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
     async fn close_order_test(
         &mut self,
         trade: TradeData<TradeOut>,
@@ -689,8 +703,6 @@ impl BrokerStream for Xtb {
             let closing_price = 1.;
             let custom_comment = format!("Closing order {}", trade_out.id);
 
-            // Now command_str contains your JSON data
-
             let trade_command: Command<TransactionInfo> = Command {
                 command: "tradeTransaction".to_owned(),
                 arguments: TransactionInfo {
@@ -868,14 +880,14 @@ impl BrokerStream for Xtb {
             false => bid,
         };
 
-        log::info!(
+        let trade_result_log = format!(
             "{} Test TradeIn accepted at ask: {} bid: {} tick",
-            trade.symbol,
-            ask,
-            bid
+            symbol, ask, bid
         );
 
-        data.id = uuid::generate_ts_id(Local::now());
+        log::info!("{}", trade_result_log);
+
+        data.id = uuid::generate_ts_id(from_dbtime(&date_in));
         data.price_in = price_in;
         data.ask = ask;
         data.date_in = date_in;
@@ -971,13 +983,16 @@ impl BrokerStream for Xtb {
             false => TradeStatus::Rejected,
         };
 
-        log::info!(
+        let trade_result_log = format!(
             "Test {:?} {} {} with profit {}",
-            trade_type,
-            trade.symbol,
-            str_accepted,
-            profit
+            trade_type, trade.symbol, str_accepted, profit
         );
+
+        if accepted {
+            log::info!("{}", trade_result_log)
+        } else {
+            log::error!("{}", trade_result_log);
+        }
 
         data.price_out = price_out;
         data.date_out = date_out;
@@ -1022,26 +1037,28 @@ impl BrokerStream for Xtb {
 
     async fn open_order(
         &mut self,
+        trade: TradeData<TradeIn>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
-        // let trade_command = Command {
-        //     command: "tradeTransaction".to_owned(),
-        //     arguments: Transaction {
-        //         cmd: TransactionCommand::Buy.value(),
-        //         symbol: "".to_owned(),
-        //         customComment: "".to_owned(),
-        //         expiration: 0,
-        //         order: 0,
-        //         price: 0.,
-        //         sl: 0.,
-        //         tp: 0.,
-        //         size: 0.,
-        //         trans_type: 0,
-        //     },
-        // };
+        let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
+
+        match is_prod {
+            true => self.open_trade_real(trade, Some(vec![order.data])).await,
+            false => self.open_order_test(trade, order).await,
+        }
+    }
+
+    async fn open_order_test(
+        &mut self,
+        trade: TradeData<TradeIn>,
+        order: TradeData<Order>,
+    ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
+        let mut date_in = to_dbtime(Local::now());
 
         let symbol = &order.symbol;
         let order = order.data;
+        let trade = trade.data;
+
         let size = order.size;
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
@@ -1051,14 +1068,18 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => self
-                .get_instrument_tick_test(&symbol, order.target_price)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
+            _ => {
+                date_in = trade.date_in;
+                self.get_instrument_tick_test(&symbol, order.target_price)
+                    .await
+                    .unwrap()
+                    .payload
+                    .unwrap()
+            }
         };
 
+        let ask = tick.ask();
+        let bid = tick.bid();
         let spread = tick.spread();
 
         let trade_type = match order.order_type.is_long() {
@@ -1067,21 +1088,49 @@ impl BrokerStream for Xtb {
         };
 
         let price_in = match trade_type.is_long() {
-            true => tick.ask(),
-            false => tick.bid(),
+            true => ask,
+            false => bid,
         };
 
+        // let accepted = match order.order_type.is_long() {
+        //     true => order.target_price >= bid,
+        //     false => order.target_price >= ask,
+        // };
+
+        let accepted = true;
+
+        let str_accepted = match accepted {
+            true => "accepted",
+            false => "NOT accepted",
+        };
+
+        let status = match accepted {
+            true => TradeStatus::Fulfilled,
+            false => TradeStatus::Rejected,
+        };
+
+        let trade_result_log = format!(
+            "{} Test TradeIn Order {} at ask: {} bid: {} tick",
+            symbol, str_accepted, ask, bid
+        );
+
+        if accepted {
+            log::info!("{}", trade_result_log)
+        } else {
+            log::error!("{}", trade_result_log);
+        }
+
         let trade_in = TradeIn {
-            id: uuid::generate_ts_id(Local::now()),
-            index_in: order.index_created,
+            id: uuid::generate_ts_id(from_dbtime(&date_in)),
+            index_in: trade.index_in,
             size,
             origin_price: order.origin_price,
             price_in,
-            ask: tick.ask(),
+            ask: ask,
             spread,
             trade_type,
-            date_in: to_dbtime(Local::now()),
-            status: TradeStatus::Fulfilled,
+            date_in: date_in,
+            status,
         };
 
         let res = ResponseBody {
@@ -1104,7 +1153,7 @@ impl BrokerStream for Xtb {
 
         match is_prod {
             true => self.close_trade_real(trade).await,
-            false => self.close_trade_test(trade).await,
+            false => self.close_order_test(trade, order).await,
         }
     }
     async fn close_order_test(
@@ -1112,10 +1161,10 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
-        let symbol = &trade.symbol;
+        let symbol = &order.symbol;
+        let order_data = order.data;
         let mut trade_data = trade.data;
-        let order = order.data;
-
+        let mut date_out = to_dbtime(Local::now());
         let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
@@ -1124,12 +1173,14 @@ impl BrokerStream for Xtb {
                 .unwrap()
                 .payload
                 .unwrap(),
-            _ => self
-                .get_instrument_tick_test(&symbol, order.target_price)
-                .await
-                .unwrap()
-                .payload
-                .unwrap(),
+            _ => {
+                date_out = trade_data.date_out;
+                self.get_instrument_tick_test(&symbol, order_data.target_price)
+                    .await
+                    .unwrap()
+                    .payload
+                    .unwrap()
+            }
         };
 
         let ask = tick.ask();
@@ -1137,15 +1188,15 @@ impl BrokerStream for Xtb {
         let spread = tick.spread();
 
         let trade_type = trade_data.trade_type.clone();
-        let order_type = order.order_type;
+        let order_type = order_data.order_type;
 
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = trade_data.price_in;
 
         let price_out = match trade_type.is_stop() {
             true => match trade_type.is_long() {
-                true => order.target_price,
-                false => order.target_price + spread,
+                true => order_data.target_price,
+                false => order_data.target_price + spread,
             },
             false => match trade_type.is_long() {
                 true => bid,
@@ -1189,9 +1240,20 @@ impl BrokerStream for Xtb {
             profit
         );
 
-        trade_data.id = uuid::generate_ts_id(Local::now());
+        let trade_result_log = format!(
+            "{:?} {} {} with profit {}",
+            order_type, trade.symbol, str_accepted, profit
+        );
+
+        if accepted {
+            log::info!("{}", trade_result_log)
+        } else {
+            log::error!("{}", trade_result_log);
+        }
+
+        trade_data.id = uuid::generate_ts_id(from_dbtime(&date_out));
         trade_data.price_out = price_out;
-        trade_data.date_out = to_dbtime(Local::now());
+        trade_data.date_out = date_out;
         trade_data.bid = bid;
         trade_data.ask = ask;
         trade_data.spread_out = spread;
@@ -1200,7 +1262,7 @@ impl BrokerStream for Xtb {
         let res = ResponseBody {
             response: ResponseType::TradeOutFulfilled,
             payload: Some(TradeResponse {
-                symbol: trade.symbol,
+                symbol: "".to_owned(),
                 accepted,
                 data: trade_data,
             }),

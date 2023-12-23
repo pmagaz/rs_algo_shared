@@ -794,7 +794,7 @@ where
 
 pub fn update_last<T>(trades: &mut Vec<T>, new_trade: T) -> bool
 where
-    T: Trade + Clone,
+    T: Trade + Clone + std::fmt::Debug,
 {
     if let Some(last_trade) = trades.last_mut() {
         if last_trade.get_index() == new_trade.get_index() {
@@ -803,6 +803,7 @@ where
             true
         } else {
             log::error!("Cant update {} trade data", last_trade.get_index());
+            panic!();
 
             false
         }
