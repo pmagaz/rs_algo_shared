@@ -848,10 +848,20 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeIn>,
         _orders: Option<Vec<Order>>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
         let symbol = &trade.symbol;
         let mut data = trade.data;
         let mut date_in = to_dbtime(Local::now());
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let trade_type = data.trade_type.clone();
+        let percentage_slipagge = 0.5;
+        let slipagge = data.price_in * (percentage_slipagge / 100.0);
+
+        let final_price = match trade_type.is_long() {
+            true => data.price_in + slipagge,
+            false => data.price_in - slipagge,
+        };
+
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -862,7 +872,7 @@ impl BrokerStream for Xtb {
 
             _ => {
                 date_in = data.date_in;
-                self.get_instrument_tick_test(&symbol, data.price_in)
+                self.get_instrument_tick_test(&symbol, final_price)
                     .await
                     .unwrap()
                     .payload
@@ -873,7 +883,6 @@ impl BrokerStream for Xtb {
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-        let trade_type = data.trade_type.clone();
 
         let price_in = match trade_type.is_long() {
             true => ask,
@@ -922,11 +931,21 @@ impl BrokerStream for Xtb {
         &mut self,
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
         let symbol = &trade.symbol;
         let mut data = trade.data;
+        let trade_type = data.trade_type.clone();
 
         let mut date_out = to_dbtime(Local::now());
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let percentage_slipagge = 0.5;
+        let slipagge = data.price_in * (percentage_slipagge / 100.0);
+
+        let final_price = match trade_type.is_long() {
+            true => data.price_in - slipagge,
+            false => data.price_in + slipagge,
+        };
+
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -936,7 +955,7 @@ impl BrokerStream for Xtb {
                 .unwrap(),
             _ => {
                 date_out = data.date_out;
-                self.get_instrument_tick_test(&symbol, data.price_out)
+                self.get_instrument_tick_test(&symbol, final_price)
                     .await
                     .unwrap()
                     .payload
@@ -947,8 +966,6 @@ impl BrokerStream for Xtb {
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-
-        let trade_type = data.trade_type.clone();
 
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = data.price_in;
@@ -1053,14 +1070,27 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeIn>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
         let mut date_in = to_dbtime(Local::now());
 
         let symbol = &order.symbol;
         let order = order.data;
         let trade = trade.data;
-
+        let trade_type = match order.order_type.is_long() {
+            true => TradeType::OrderInLong,
+            false => TradeType::OrderInShort,
+        };
         let size = order.size;
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+        let percentage_slipagge = 0.5;
+        let slipagge = order.target_price * (percentage_slipagge / 100.0);
+
+        let final_price = match trade_type.is_long() {
+            true => order.target_price + slipagge,
+            false => order.target_price - slipagge,
+        };
+
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -1070,7 +1100,7 @@ impl BrokerStream for Xtb {
                 .unwrap(),
             _ => {
                 date_in = trade.date_in;
-                self.get_instrument_tick_test(&symbol, order.target_price)
+                self.get_instrument_tick_test(&symbol, final_price)
                     .await
                     .unwrap()
                     .payload
@@ -1081,11 +1111,6 @@ impl BrokerStream for Xtb {
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-
-        let trade_type = match order.order_type.is_long() {
-            true => TradeType::OrderInLong,
-            false => TradeType::OrderInShort,
-        };
 
         let price_in = match trade_type.is_long() {
             true => ask,
@@ -1161,11 +1186,23 @@ impl BrokerStream for Xtb {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
+        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
         let symbol = &order.symbol;
         let order_data = order.data;
         let mut trade_data = trade.data;
         let mut date_out = to_dbtime(Local::now());
-        let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+        let trade_type = trade_data.trade_type.clone();
+        let order_type = order_data.order_type;
+
+        let percentage_slipagge = 0.5;
+        let slipagge = order_data.target_price * (percentage_slipagge / 100.0);
+
+        let final_price = match trade_type.is_long() {
+            true => order_data.target_price - slipagge,
+            false => order_data.target_price + slipagge,
+        };
+
         let tick = match execution_mode {
             mode::ExecutionMode::Bot => self
                 .get_instrument_tick(&symbol)
@@ -1175,7 +1212,7 @@ impl BrokerStream for Xtb {
                 .unwrap(),
             _ => {
                 date_out = trade_data.date_out;
-                self.get_instrument_tick_test(&symbol, order_data.target_price)
+                self.get_instrument_tick_test(&symbol, final_price)
                     .await
                     .unwrap()
                     .payload
@@ -1186,9 +1223,6 @@ impl BrokerStream for Xtb {
         let ask = tick.ask();
         let bid = tick.bid();
         let spread = tick.spread();
-
-        let trade_type = trade_data.trade_type.clone();
-        let order_type = order_data.order_type;
 
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = trade_data.price_in;
