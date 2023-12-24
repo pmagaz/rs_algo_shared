@@ -873,17 +873,6 @@ impl BrokerStream for Xtb {
                 .unwrap(),
 
             _ => {
-                // let slippage_per = &env::var("SLIPPAGE_PIPS")
-                //     .unwrap()
-                //     .parse::<f64>()
-                //     .unwrap();
-
-                // let slippage = data.price_in * (slippage_per / 100.0);
-
-                // let price_with_slippage = match trade_type.is_long() {
-                //     true => data.price_in + slippage,
-                //     false => data.price_in - slippage,
-                // };
                 date_in = data.date_in;
                 self.get_instrument_tick_test(&symbol, data.price_in, &trade_type)
                     .await
@@ -1097,17 +1086,6 @@ impl BrokerStream for Xtb {
                 .payload
                 .unwrap(),
             _ => {
-                // let slippage_per = &env::var("SLIPPAGE_PIPS")
-                //     .unwrap()
-                //     .parse::<f64>()
-                //     .unwrap();
-                // let slippage = order.target_price * (slippage_per / 100.0);
-
-                // let price_with_slippage = match trade_type.is_long() {
-                //     true => order.target_price + slippage,
-                //     false => order.target_price - slippage,
-                // };
-
                 date_in = trade.date_in;
                 self.get_instrument_tick_test(&symbol, order.target_price, &trade_type)
                     .await
@@ -1212,15 +1190,6 @@ impl BrokerStream for Xtb {
                 .payload
                 .unwrap(),
             _ => {
-                let slippage_per = &env::var("SLIPPAGE_PIPS").unwrap().parse::<f64>().unwrap();
-
-                // let slippage = order_data.target_price * (slippage_per / 100.0);
-
-                // let price_with_slippage = match trade_type.is_long() {
-                //     true => order_data.target_price - slippage,
-                //     false => order_data.target_price + slippage,
-                // };
-
                 date_out = trade_data.date_out;
                 self.get_instrument_tick_test(&symbol, order_data.target_price, &trade_type)
                     .await

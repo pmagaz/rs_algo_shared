@@ -154,7 +154,7 @@ pub fn total_drawdown(trades_out: &[TradeOut], initial_equity: f64) -> f64 {
     if max_peak == 0.0 {
         0.0
     } else {
-        ((min_peak - max_peak) / max_peak * 100.0).abs()
+        ((min_peak - max_peak) / max_peak * 100.0).abs() * 100.
     }
 }
 
