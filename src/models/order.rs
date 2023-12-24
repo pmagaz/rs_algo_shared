@@ -574,7 +574,8 @@ fn is_activated_order(
                     calculate_order_price_origin(&execution_mode, &candle, activation_source);
 
                 if order.is_long() == order.is_entry() {
-                    (price_over + spread, price_below + spread)
+                    (price_over, price_below)
+                    //(price_over + spread, price_below + spread)
                 } else {
                     (price_over, price_below)
                 }
@@ -583,7 +584,8 @@ fn is_activated_order(
             false => {
                 let (price_over, price_below) = if use_tick_price {
                     if order.is_long() == order.is_entry() {
-                        (tick.ask(), tick.ask())
+                        (tick.bid(), tick.bid())
+                        //(tick.ask(), tick.ask())
                     } else {
                         (tick.bid(), tick.bid())
                     }
@@ -617,9 +619,9 @@ fn is_activated_order(
                 cross_over = price_over >= target_price && is_next_bar && is_closed;
             }
 
-            if is_stop {
-                cross_over = is_closed && candle.high() >= target_price;
-            }
+            // if is_stop {
+            //     cross_over = price_over >= target_price
+            // }
 
             if cross_over {
                 log::info!(
@@ -642,9 +644,9 @@ fn is_activated_order(
                 cross_below = price_below <= target_price && is_next_bar && is_closed;
             }
 
-            if is_stop {
-                cross_below = is_closed && candle.low() <= target_price;
-            }
+            // if is_stop {
+            //     cross_below = price_below <= target_price
+            // }
 
             if cross_below {
                 log::info!(
