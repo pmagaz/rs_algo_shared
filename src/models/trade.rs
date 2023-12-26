@@ -392,7 +392,7 @@ pub fn resolve_trade_in(
         let spread = tick.spread();
 
         let current_candle = match execution_mode.is_back_test() {
-            true => instrument.data().get(index).unwrap(),
+            true => instrument.data().get(index + 1).unwrap(),
             false => instrument.data().last().unwrap(),
         };
 
@@ -500,10 +500,12 @@ pub fn resolve_trade_out(
         false => (trade_in.price_in, price_out),
     };
 
-    let bid = match trade_type.is_long() {
-        true => price_out + spread,
-        false => price_out,
-    };
+    // let bid = match trade_type.is_long() {
+    //     true => price_out + spread,
+    //     false => price_out,
+    // };
+
+    let bid = price_out;
 
     let index_out = match execution_mode.is_back_test() {
         true => index,

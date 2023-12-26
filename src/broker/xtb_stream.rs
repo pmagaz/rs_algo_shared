@@ -421,10 +421,15 @@ impl BrokerStream for Xtb {
             false => price - calc::to_pips(slippage_pips, &tick),
         };
 
+        let final_price = match trade_type.is_stop() {
+            true => price,
+            false => price_with_slippage,
+        };
+
         let tick = InstrumentTick::new()
             .symbol(symbol.to_string())
-            .ask(price_with_slippage + tick.spread())
-            .bid(price_with_slippage)
+            .ask(final_price + tick.spread())
+            .bid(final_price)
             .high(0.0)
             .low(0.0)
             .spread(tick.spread())
@@ -1001,7 +1006,7 @@ impl BrokerStream for Xtb {
         );
 
         if accepted {
-            log::info!("{}", trade_result_log)
+            log::info!("{}", trade_result_log);
         } else {
             log::error!("{}", trade_result_log);
         }
@@ -1127,7 +1132,7 @@ impl BrokerStream for Xtb {
         );
 
         if accepted {
-            log::info!("{}", trade_result_log)
+            log::info!("{}", trade_result_log);
         } else {
             log::error!("{}", trade_result_log);
         }
@@ -1240,18 +1245,10 @@ impl BrokerStream for Xtb {
             false => "NOT accepted",
         };
 
-        let status = match accepted {
+        let mut status = match accepted {
             true => TradeStatus::Fulfilled,
             false => TradeStatus::Rejected,
         };
-
-        log::info!(
-            "{:?} {} {} with profit {}",
-            order_type,
-            trade.symbol,
-            str_accepted,
-            profit
-        );
 
         let trade_result_log = format!(
             "{:?} {} {} with profit {}",
@@ -1259,9 +1256,14 @@ impl BrokerStream for Xtb {
         );
 
         if accepted {
-            log::info!("{}", trade_result_log)
+            log::info!("{}", trade_result_log);
         } else {
             log::error!("{}", trade_result_log);
+        }
+
+        if trade_type.is_stop() && is_profitable {
+            log::error!("Profitable StopLoss");
+            status = TradeStatus::Rejected;
         }
 
         trade_data.id = uuid::generate_ts_id(from_dbtime(&date_out));

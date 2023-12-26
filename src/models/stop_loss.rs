@@ -70,20 +70,23 @@ pub fn create_stop_loss_order(
         false => instrument.data().last().unwrap(),
     };
 
-    let current_open = current_candle.open();
+    let current_price = match execution_mode.is_back_test() {
+        true => current_candle.open(),
+        false => current_candle.close(),
+    };
 
     let target_price = match stop_loss_type {
         StopLossType::Atr(atr_stop_value) => match order_direction {
-            OrderDirection::Up => (current_open + spread_value) + (atr_stop_value * atr_value),
-            OrderDirection::Down => (current_open - spread_value) - (atr_stop_value * atr_value),
+            OrderDirection::Up => (current_price + spread_value) + (atr_stop_value * atr_value),
+            OrderDirection::Down => (current_price - spread_value) - (atr_stop_value * atr_value),
         },
         StopLossType::Price(target_price) => match order_direction {
             OrderDirection::Up => *target_price,
             OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (current_open + spread_value) + calc::to_pips(*pips, tick),
-            OrderDirection::Down => (current_open - spread_value) - calc::to_pips(*pips, tick),
+            OrderDirection::Up => (current_price + spread_value) + calc::to_pips(*pips, tick),
+            OrderDirection::Down => (current_price - spread_value) - calc::to_pips(*pips, tick),
         },
         StopLossType::None => todo!(),
     };
