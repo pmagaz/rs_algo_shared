@@ -42,15 +42,12 @@ pub fn init_stop_loss(stop_type: StopLossType, value: f64) -> StopLoss {
 pub fn create_stop_loss_order(
     index: usize,
     trade_id: usize,
+    buy_price: f64,
     instrument: &Instrument,
     order_direction: &OrderDirection,
     stop_loss_type: &StopLossType,
     tick: &InstrumentTick,
 ) -> Order {
-    let spread = tick.spread();
-
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
     let order_size = std::env::var("ORDER_SIZE").unwrap().parse::<f64>().unwrap();
 
     let stop_loss_spread = std::env::var("STOP_LOSS_SPREAD")
@@ -58,45 +55,39 @@ pub fn create_stop_loss_order(
         .parse::<bool>()
         .unwrap();
 
+    let spread = tick.spread();
+
     let spread_value = match stop_loss_spread {
         true => spread,
         false => 0.,
     };
 
-    let atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap();
-
-    let current_candle = match execution_mode.is_back_test() {
-        true => instrument.data().get(index + 1).unwrap(),
-        false => instrument.data().last().unwrap(),
-    };
-
-    let current_price = match execution_mode.is_back_test() {
-        true => current_candle.open(),
-        false => current_candle.close(),
-    };
+    let current_atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap();
 
     let target_price = match stop_loss_type {
         StopLossType::Atr(atr_stop_value) => match order_direction {
-            OrderDirection::Up => (current_price + spread_value) + (atr_stop_value * atr_value),
-            OrderDirection::Down => (current_price - spread_value) - (atr_stop_value * atr_value),
+            OrderDirection::Up => (buy_price + spread_value) + (atr_stop_value * current_atr_value),
+            OrderDirection::Down => {
+                (buy_price - spread_value) - (atr_stop_value * current_atr_value)
+            }
         },
         StopLossType::Price(target_price) => match order_direction {
             OrderDirection::Up => *target_price,
             OrderDirection::Down => *target_price,
         },
         StopLossType::Pips(pips) => match order_direction {
-            OrderDirection::Up => (current_price + spread_value) + calc::to_pips(*pips, tick),
-            OrderDirection::Down => (current_price - spread_value) - calc::to_pips(*pips, tick),
+            OrderDirection::Up => (buy_price + spread_value) + calc::to_pips(*pips, tick),
+            OrderDirection::Down => (buy_price - spread_value) - calc::to_pips(*pips, tick),
         },
         StopLossType::None => todo!(),
     };
 
     let stop_loss = match order_direction {
         OrderDirection::Up => {
-            OrderType::StopLossShort(order_direction.clone(), stop_loss_type.clone())
+            OrderType::StopLossShort(order_direction.clone(), buy_price, stop_loss_type.clone())
         }
         OrderDirection::Down => {
-            OrderType::StopLossLong(order_direction.clone(), stop_loss_type.clone())
+            OrderType::StopLossLong(order_direction.clone(), buy_price, stop_loss_type.clone())
         }
     };
 

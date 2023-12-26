@@ -399,17 +399,24 @@ pub fn resolve_trade_in(
         let current_date = current_candle.date();
         let id = uuid::generate_ts_id(current_date);
 
+        let final_price = match execution_mode.is_back_test() {
+            true => current_candle.open(),
+            false => current_candle.close(),
+        };
+
+        //CONTINUE HERE
+        //CHECK WHY price_in is not resolved equally as buy_price 4444444444444444444444444444
         let price = match order_engine.as_ref() {
             "broker" => match order {
                 Some(order) => order.target_price,
-                None => current_candle.open(),
+                None => final_price,
             },
             "bot" | _ => match order {
                 Some(order) => match activation_source.as_ref() {
-                    "close" => current_candle.open(),
+                    "close" => final_price,
                     "highs_lows" | _ => order.target_price,
                 },
-                None => current_candle.open(),
+                None => final_price,
             },
         };
 
@@ -470,10 +477,11 @@ pub fn resolve_trade_out(
     let size = trade_in.size;
 
     let index = calculate_trade_index(index, order, &execution_mode);
-    let current_candle = instrument.data.get(index).unwrap();
-    let current_date = current_candle.date();
-    let id = uuid::generate_ts_id(current_date);
-    let price_origin = *trade_in.get_price_in();
+
+    let current_candle = match execution_mode.is_back_test() {
+        true => instrument.data().get(index + 1).unwrap(),
+        false => instrument.data().last().unwrap(),
+    };
 
     let close_trade_price = match trade_type.is_order() {
         true => order.unwrap().target_price,
@@ -482,6 +490,12 @@ pub fn resolve_trade_out(
             false => current_candle.close(),
         },
     };
+
+    let current_date = current_candle.date();
+    let date_out = to_dbtime(current_candle.date());
+
+    let id = uuid::generate_ts_id(current_date);
+    let price_origin = *trade_in.get_price_in();
 
     let price_out = match order_engine.as_ref() {
         "broker" => match order {
@@ -500,11 +514,6 @@ pub fn resolve_trade_out(
         false => (trade_in.price_in, price_out),
     };
 
-    // let bid = match trade_type.is_long() {
-    //     true => price_out + spread,
-    //     false => price_out,
-    // };
-
     let bid = price_out;
 
     let index_out = match execution_mode.is_back_test() {
@@ -522,16 +531,14 @@ pub fn resolve_trade_out(
         _ => false,
     };
 
-    let date_out = to_dbtime(current_candle.date());
-
     if trade_type.is_stop() && profit > 0. {
         log::error!(
             "Profitable stop loss! {} @ {:?} {} ",
             index,
-            (price_in, price_out),
+            (price_in, price_out, order),
             profit
         );
-        //panic!();
+        panic!();
     }
 
     // let profit_check = match non_profitable_outs {
@@ -801,6 +808,7 @@ where
     if let Some(last_trade) = trades.last_mut() {
         if last_trade.get_index() == new_trade.get_index() {
             log::info!("Updating {} trade data", last_trade.get_index());
+
             *last_trade = new_trade;
             true
         } else {

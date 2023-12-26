@@ -571,7 +571,7 @@ impl BrokerStream for Xtb {
                     OrderType::SellOrderLong(_, _, _) | OrderType::SellOrderShort(_, _, _) => {
                         sell_order_price = Some(round(order.target_price, 5));
                     }
-                    OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
+                    OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => {
                         stop_loss_order_price = Some(round(order.target_price, 5));
                     }
                     _ => {}
@@ -866,6 +866,7 @@ impl BrokerStream for Xtb {
 
         let symbol = &trade.symbol;
         let mut data = trade.data;
+
         let mut date_in = to_dbtime(Local::now());
         let trade_type = data.trade_type.clone();
 
@@ -897,8 +898,8 @@ impl BrokerStream for Xtb {
         };
 
         let trade_result_log = format!(
-            "{} Test TradeIn accepted at ask: {} bid: {} tick",
-            symbol, ask, bid
+            "{} Test TradeIn {} accepted at ask: {} bid: {} tick",
+            symbol, data.id, ask, bid
         );
 
         log::info!("{}", trade_result_log);
@@ -1001,8 +1002,8 @@ impl BrokerStream for Xtb {
         };
 
         let trade_result_log = format!(
-            "Test {:?} {} {} with profit {}",
-            trade_type, trade.symbol, str_accepted, profit
+            "Test {:?} {} {} {} with profit {}",
+            trade_type, data.id, trade.symbol, str_accepted, profit
         );
 
         if accepted {
@@ -1127,8 +1128,8 @@ impl BrokerStream for Xtb {
         };
 
         let trade_result_log = format!(
-            "{} Test TradeIn Order {} at ask: {} bid: {} tick",
-            symbol, str_accepted, ask, bid
+            "{} Test MarketOrderIn {} Order {} at ask: {} bid: {} tick",
+            symbol, trade.id, str_accepted, ask, bid
         );
 
         if accepted {
@@ -1251,8 +1252,8 @@ impl BrokerStream for Xtb {
         };
 
         let trade_result_log = format!(
-            "{:?} {} {} with profit {}",
-            order_type, trade.symbol, str_accepted, profit
+            "{:?} {} {} {} with profit {}",
+            order_type, trade_data.id, trade.symbol, str_accepted, profit
         );
 
         if accepted {
@@ -1262,7 +1263,7 @@ impl BrokerStream for Xtb {
         }
 
         if trade_type.is_stop() && is_profitable {
-            log::error!("Profitable StopLoss");
+            log::error!("Profitable {} StopLoss!!", trade.symbol);
             status = TradeStatus::Rejected;
         }
 
@@ -1739,11 +1740,14 @@ impl Xtb {
                 let stop_order_type = match trade_type.is_long() {
                     true => OrderType::StopLossLong(
                         OrderDirection::Down,
+                        price_in,
                         StopLossType::Price(stop_loss),
                     ),
-                    false => {
-                        OrderType::StopLossShort(OrderDirection::Up, StopLossType::Price(stop_loss))
-                    }
+                    false => OrderType::StopLossShort(
+                        OrderDirection::Up,
+                        price_in,
+                        StopLossType::Price(stop_loss),
+                    ),
                 };
 
                 let sell_order_type = match trade_type.is_long() {
