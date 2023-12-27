@@ -55,15 +55,12 @@ pub fn create_stop_loss_order(
         .parse::<bool>()
         .unwrap();
 
-    let spread = tick.spread();
-
     let spread_value = match stop_loss_spread {
-        true => spread,
+        true => tick.spread(),
         false => 0.,
     };
 
     let current_atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap();
-
     let target_price = match stop_loss_type {
         StopLossType::Atr(atr_stop_value) => match order_direction {
             OrderDirection::Up => (buy_price + spread_value) + (atr_stop_value * current_atr_value),
@@ -91,12 +88,5 @@ pub fn create_stop_loss_order(
         }
     };
 
-    order::create_order(
-        index,
-        trade_id,
-        instrument,
-        &stop_loss,
-        &target_price,
-        &order_size,
-    )
+    order::create_order(index, instrument, &stop_loss, &target_price, &order_size)
 }

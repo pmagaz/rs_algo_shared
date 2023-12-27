@@ -438,7 +438,7 @@ pub fn resolve_trade_in(
         TradeResult::TradeIn(TradeIn {
             id,
             index_in,
-            origin_price: price,
+            origin_price: price_in,
             price_in,
             ask,
             spread,
@@ -532,10 +532,18 @@ pub fn resolve_trade_out(
     };
 
     if trade_type.is_stop() && profit > 0. {
+        log::info!("3333333 {:?}", (order, trade_in));
+
         log::error!(
             "Profitable stop loss! {} @ {:?} {} ",
             index,
-            (price_in, price_out, order),
+            (
+                price_in,
+                price_out,
+                close_trade_price,
+                order.unwrap().target_price,
+                trade_type.is_order()
+            ),
             profit
         );
         panic!();

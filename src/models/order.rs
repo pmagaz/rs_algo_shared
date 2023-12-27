@@ -2,7 +2,7 @@ use std::env;
 
 use super::mode::{self, ExecutionMode};
 use super::tick::InstrumentTick;
-use super::trade::{Trade, TradeType};
+use super::trade::{Trade, TradeIn, TradeType};
 
 use crate::helpers::uuid;
 use crate::helpers::{date, date::*};
@@ -151,12 +151,28 @@ impl Order {
         self.trade_id = val
     }
 
+    pub fn trade_id(&self) -> usize {
+        self.trade_id
+    }
+
+    pub fn set_origin_price(&mut self, val: f64) {
+        self.origin_price = val
+    }
+
     pub fn set_valid_until(&mut self, val: DbDateTime) {
         self.valid_until = Some(val)
     }
 
     pub fn size(&self) -> f64 {
         self.size
+    }
+
+    pub fn has_active_trade(&self) -> bool {
+        if self.trade_id() > 0 {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn update_tick(&mut self, origin_price: f64, target_price: f64) {
@@ -282,21 +298,15 @@ pub fn prepare_orders(
             | OrderType::TakeProfitLong(direction, order_size, target_price)
             | OrderType::TakeProfitShort(direction, order_size, target_price) => {
                 if validate_target_price(order_type, direction, &current_price, target_price) {
-                    let order = create_order(
-                        index,
-                        trade_id,
-                        instrument,
-                        order_type,
-                        target_price,
-                        order_size,
-                    );
+                    let order =
+                        create_order(index, instrument, order_type, target_price, order_size);
 
                     match order_type.is_entry() {
                         true => {
                             buy_order_target = match order_type.is_long() {
                                 true => match order_with_spread {
                                     true => order.target_price,
-                                    false => order.target_price + tick.spread(),
+                                    false => order.target_price - tick.spread(),
                                 },
                                 false => order.target_price,
                             }
@@ -307,7 +317,7 @@ pub fn prepare_orders(
                                 true => order.target_price,
                                 false => match order_with_spread {
                                     true => order.target_price,
-                                    false => order.target_price + tick.spread(),
+                                    false => order.target_price - tick.spread(),
                                 },
                             }
                         }
@@ -345,7 +355,6 @@ pub fn prepare_orders(
             OrderType::StopLossLong(direction, buy_price, stop_loss_type)
             | OrderType::StopLossShort(direction, buy_price, stop_loss_type) => {
                 is_stop_loss = true;
-
                 //STOP LOSS SHOULD USE BUY_PRICE AND NO CURRENT_PRICE!
                 if is_valid_buy_sell_order {
                     let stop_loss = create_stop_loss_order(
@@ -360,6 +369,11 @@ pub fn prepare_orders(
 
                     stop_order_target = stop_loss.target_price;
                     stop_loss_direction = direction.clone();
+
+                    let buy_order_target = match stop_loss_direction {
+                        OrderDirection::Down => *buy_price,
+                        OrderDirection::Up => *buy_price + tick.spread(),
+                    };
 
                     match stop_loss_direction == OrderDirection::Down {
                         true => {
@@ -429,7 +443,6 @@ pub fn validate_target_price(
 
 pub fn create_order(
     index: usize,
-    trade_id: usize,
     instrument: &Instrument,
     order_type: &OrderType,
     target_price: &f64,
@@ -463,7 +476,7 @@ pub fn create_order(
         id: uuid::generate_ts_id(*current_date),
         index_created: index,
         index_fulfilled: 0,
-        trade_id,
+        trade_id: 0,
         order_type: order_type.clone(),
         status: OrderStatus::Pending,
         origin_price: current_price,
@@ -484,11 +497,9 @@ pub fn resolve_active_orders(
     use_tick_price: bool,
 ) -> Position {
     let mut order_position: Position = Position::None;
-    for (_id, order) in orders
-        .iter()
-        .enumerate()
-        .filter(|(_id, order)| order.status == OrderStatus::Pending)
-    {
+    for (_id, order) in orders.iter().enumerate().filter(|(_id, order)| {
+        order.status == OrderStatus::Pending && (order.has_active_trade() || order.is_entry())
+    }) {
         match is_activated_order(index, order, instrument, tick, use_tick_price) {
             true => {
                 match order.order_type {
@@ -526,7 +537,7 @@ fn calculate_order_price_origin(
 ) -> (f64, f64) {
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
 
-    match execution_mode.is_bot() {
+    match execution_mode.is_bot() || execution_mode.is_bot_test() {
         true => (candle.close(), candle.close()),
         false => match order_engine.as_ref() {
             "broker" => (candle.high(), candle.low()),
@@ -628,11 +639,12 @@ fn is_activated_order(
 
             if cross_over {
                 log::info!(
-                    "{} Over {:?} activated. Price {:?} > {} target",
+                    "{} Over {:?} activated. Price {:?} > {} target {:?}",
                     source,
                     order.order_type,
                     price_over,
-                    target_price
+                    target_price,
+                    order.target_price
                 );
             }
 
@@ -839,11 +851,14 @@ pub fn cancel_pending_expired_orders(
     }
 }
 
-pub fn extend_all_pending_orders(orders: &mut Vec<Order>) {
+pub fn update_trade_pending_orders(orders: &mut Vec<Order>, trade_in: &TradeIn) {
     for order in orders {
         if order.status == OrderStatus::Pending {
             let current_valid = from_dbtime(&order.valid_until.unwrap());
             let new_valid_date = current_valid + date::Duration::days(365 * 10);
+
+            order.set_trade_id(trade_in.id);
+            order.set_origin_price(trade_in.price_in);
             order.set_valid_until(to_dbtime(new_valid_date));
         }
     }
