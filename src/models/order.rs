@@ -218,6 +218,13 @@ impl Order {
         }
     }
 
+    pub fn is_stop(&self) -> bool {
+        match self.order_type {
+            OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_entry(&self) -> bool {
         self.order_type.is_entry()
     }
@@ -587,7 +594,9 @@ fn is_activated_order(
                 let (price_over, price_below) =
                     calculate_order_price_origin(&execution_mode, &candle, activation_source);
 
-                if order.is_long() == order.is_entry() {
+                if order.is_stop() && order.is_short() {
+                    (price_over + spread, price_below + spread)
+                } else if order.is_entry() == order.is_long() {
                     (price_over, price_below)
                     //(price_over + spread, price_below + spread)
                 } else {
@@ -597,9 +606,10 @@ fn is_activated_order(
             //PRODUCTION BOT
             false => {
                 let (price_over, price_below) = if use_tick_price {
-                    if order.is_long() == order.is_entry() {
+                    if order.is_stop() && order.is_short() {
+                        (tick.ask(), tick.ask())
+                    } else if order.is_entry() == order.is_long() {
                         (tick.bid(), tick.bid())
-                        //(tick.ask(), tick.ask())
                     } else {
                         (tick.bid(), tick.bid())
                     }
