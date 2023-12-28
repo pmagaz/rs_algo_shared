@@ -15,14 +15,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrderType {
-    BuyOrderLong(OrderDirection, f64, f64),
-    BuyOrderShort(OrderDirection, f64, f64),
-    SellOrderLong(OrderDirection, f64, f64),
-    SellOrderShort(OrderDirection, f64, f64),
-    TakeProfitLong(OrderDirection, f64, f64),
-    TakeProfitShort(OrderDirection, f64, f64),
-    StopLossLong(OrderDirection, f64, StopLossType),
-    StopLossShort(OrderDirection, f64, StopLossType),
+    BuyOrderLong(f64, f64),
+    BuyOrderShort(f64, f64),
+    SellOrderLong(f64, f64),
+    SellOrderShort(f64, f64),
+    TakeProfitLong(f64, f64),
+    TakeProfitShort(f64, f64),
+    StopLossLong(StopLossType, f64),
+    StopLossShort(StopLossType, f64),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -48,46 +48,46 @@ pub enum OrderStatus {
 impl OrderType {
     pub fn is_long(&self) -> bool {
         match self {
-            OrderType::BuyOrderLong(_, _, _)
-            | OrderType::SellOrderLong(_, _, _)
-            | OrderType::TakeProfitLong(_, _, _) => true,
+            OrderType::BuyOrderLong(_, _)
+            | OrderType::SellOrderLong(_, _)
+            | OrderType::TakeProfitLong(_, _) => true,
             _ => false,
         }
     }
 
     pub fn is_entry(&self) -> bool {
         match *self {
-            OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => true,
+            OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => true,
             _ => false,
         }
     }
 
     pub fn get_direction(&self) -> &OrderDirection {
         match self {
-            OrderType::BuyOrderLong(d, _, _) => d,
-            OrderType::BuyOrderShort(d, _, _) => d,
-            OrderType::SellOrderLong(d, _, _) => d,
-            OrderType::SellOrderShort(d, _, _) => d,
-            OrderType::TakeProfitLong(d, _, _) => d,
-            OrderType::TakeProfitShort(d, _, _) => d,
-            OrderType::StopLossLong(d, _, _) => d,
-            OrderType::StopLossShort(d, _, _) => d,
+            OrderType::BuyOrderLong(_, _)
+            | OrderType::SellOrderLong(_, _)
+            | OrderType::TakeProfitLong(_, _)
+            | OrderType::StopLossShort(_, _) => &OrderDirection::Up,
+            OrderType::BuyOrderShort(_, _)
+            | OrderType::SellOrderShort(_, _)
+            | OrderType::TakeProfitShort(_, _)
+            | OrderType::StopLossLong(_, _) => &OrderDirection::Down,
         }
     }
 
     pub fn is_exit(&self) -> bool {
         match *self {
-            OrderType::SellOrderLong(_, _, _)
-            | OrderType::SellOrderShort(_, _, _)
-            | OrderType::TakeProfitLong(_, _, _)
-            | OrderType::TakeProfitShort(_, _, _) => true,
+            OrderType::SellOrderLong(_, _)
+            | OrderType::SellOrderShort(_, _)
+            | OrderType::TakeProfitLong(_, _)
+            | OrderType::TakeProfitShort(_, _) => true,
             _ => false,
         }
     }
 
     pub fn is_stop(&self) -> bool {
         match self {
-            OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => true,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => true,
             _ => false,
         }
     }
@@ -118,7 +118,7 @@ impl Default for Order {
             index_created: 0,
             index_fulfilled: 0,
             size: 0.0,
-            order_type: OrderType::BuyOrderLong(OrderDirection::Up, 0.0, 0.0),
+            order_type: OrderType::BuyOrderLong(0.0, 0.0),
             status: OrderStatus::Pending,
             origin_price: 0.0,
             target_price: 0.0,
@@ -201,26 +201,26 @@ impl Order {
 
     pub fn is_long(&self) -> bool {
         match self.order_type {
-            OrderType::BuyOrderLong(_, _, _)
-            | OrderType::SellOrderLong(_, _, _)
-            | OrderType::TakeProfitLong(_, _, _)
-            | OrderType::StopLossLong(_, _, _) => true,
+            OrderType::BuyOrderLong(_, _)
+            | OrderType::SellOrderLong(_, _)
+            | OrderType::TakeProfitLong(_, _)
+            | OrderType::StopLossLong(_, _) => true,
             _ => false,
         }
     }
     pub fn is_short(&self) -> bool {
         match self.order_type {
-            OrderType::BuyOrderShort(_, _, _)
-            | OrderType::SellOrderShort(_, _, _)
-            | OrderType::TakeProfitShort(_, _, _)
-            | OrderType::StopLossShort(_, _, _) => true,
+            OrderType::BuyOrderShort(_, _)
+            | OrderType::SellOrderShort(_, _)
+            | OrderType::TakeProfitShort(_, _)
+            | OrderType::StopLossShort(_, _) => true,
             _ => false,
         }
     }
 
     pub fn is_stop(&self) -> bool {
         match self.order_type {
-            OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => true,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => true,
             _ => false,
         }
     }
@@ -245,16 +245,16 @@ impl Order {
 
     pub fn to_trade_type(&self) -> TradeType {
         match self.order_type {
-            OrderType::BuyOrderLong(_, _, _) => TradeType::MarketInLong,
-            OrderType::SellOrderLong(_, _, _) | OrderType::TakeProfitLong(_, _, _) => {
+            OrderType::BuyOrderLong(_, _) => TradeType::MarketInLong,
+            OrderType::SellOrderLong(_, _) | OrderType::TakeProfitLong(_, _) => {
                 TradeType::MarketOutLong
             }
-            OrderType::StopLossLong(_, _, _) => TradeType::StopLossLong,
-            OrderType::BuyOrderShort(_, _, _) => TradeType::MarketInShort,
-            OrderType::SellOrderShort(_, _, _) | OrderType::TakeProfitShort(_, _, _) => {
+            OrderType::StopLossLong(_, _) => TradeType::StopLossLong,
+            OrderType::BuyOrderShort(_, _) => TradeType::MarketInShort,
+            OrderType::SellOrderShort(_, _) | OrderType::TakeProfitShort(_, _) => {
                 TradeType::MarketOutShort
             }
-            OrderType::StopLossShort(_, _, _) => TradeType::StopLossShort,
+            OrderType::StopLossShort(_, _) => TradeType::StopLossShort,
         }
     }
 
@@ -298,12 +298,13 @@ pub fn prepare_orders(
 
     for order_type in order_types {
         match order_type {
-            OrderType::BuyOrderLong(direction, order_size, target_price)
-            | OrderType::BuyOrderShort(direction, order_size, target_price)
-            | OrderType::SellOrderLong(direction, order_size, target_price)
-            | OrderType::SellOrderShort(direction, order_size, target_price)
-            | OrderType::TakeProfitLong(direction, order_size, target_price)
-            | OrderType::TakeProfitShort(direction, order_size, target_price) => {
+            OrderType::BuyOrderLong(order_size, target_price)
+            | OrderType::BuyOrderShort(order_size, target_price)
+            | OrderType::SellOrderLong(order_size, target_price)
+            | OrderType::SellOrderShort(order_size, target_price)
+            | OrderType::TakeProfitLong(order_size, target_price)
+            | OrderType::TakeProfitShort(order_size, target_price) => {
+                let direction = order_type.get_direction();
                 if validate_target_price(order_type, direction, &current_price, target_price) {
                     let order =
                         create_order(index, instrument, order_type, target_price, order_size);
@@ -359,14 +360,14 @@ pub fn prepare_orders(
                     log::error!("{:?} not valid", &order_type,);
                 }
             }
-            OrderType::StopLossLong(direction, buy_price, stop_loss_type)
-            | OrderType::StopLossShort(direction, buy_price, stop_loss_type) => {
+            OrderType::StopLossLong(stop_loss_type, buy_price)
+            | OrderType::StopLossShort(stop_loss_type, buy_price) => {
                 is_stop_loss = true;
+                let direction = order_type.get_direction();
                 //STOP LOSS SHOULD USE BUY_PRICE AND NO CURRENT_PRICE!
                 if is_valid_buy_sell_order {
                     let stop_loss = create_stop_loss_order(
                         index,
-                        trade_id,
                         *buy_price,
                         instrument,
                         direction,
@@ -479,11 +480,16 @@ pub fn create_order(
         false => *current_date + date::Duration::hours(valid_until_bars * time_frame.to_hours()),
     };
 
+    let trade_id = match execution_mode.is_back_test() {
+        true => 1,
+        false => 0,
+    };
+
     Order {
         id: uuid::generate_ts_id(*current_date),
         index_created: index,
         index_fulfilled: 0,
-        trade_id: 0,
+        trade_id,
         order_type: order_type.clone(),
         status: OrderStatus::Pending,
         origin_price: current_price,
@@ -510,15 +516,15 @@ pub fn resolve_active_orders(
         match is_activated_order(index, order, instrument, tick, use_tick_price) {
             true => {
                 match order.order_type {
-                    OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
+                    OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => {
                         order_position = Position::MarketInOrder(order.clone());
                     }
-                    OrderType::SellOrderLong(_, _, _)
-                    | OrderType::SellOrderShort(_, _, _)
-                    | OrderType::TakeProfitLong(_, _, _)
-                    | OrderType::TakeProfitShort(_, _, _)
-                    | OrderType::StopLossLong(_, _, _)
-                    | OrderType::StopLossShort(_, _, _) => {
+                    OrderType::SellOrderLong(_, _)
+                    | OrderType::SellOrderShort(_, _)
+                    | OrderType::TakeProfitLong(_, _)
+                    | OrderType::TakeProfitShort(_, _)
+                    | OrderType::StopLossLong(_, _)
+                    | OrderType::StopLossShort(_, _) => {
                         order_position = Position::MarketOutOrder(order.clone());
                     }
                     _ => todo!(),
@@ -717,14 +723,14 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .iter()
         .filter(|order| order.status == OrderStatus::Pending)
         .filter(|order| match order.order_type {
-            OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => {
+            OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => {
                 buy_orders < max_buy_orders && stop_losses < max_stop_losses
             }
-            OrderType::SellOrderLong(_, _, _)
-            | OrderType::SellOrderShort(_, _, _)
-            | OrderType::TakeProfitLong(_, _, _)
-            | OrderType::TakeProfitShort(_, _, _) => sell_orders < max_sell_orders,
-            OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => {
+            OrderType::SellOrderLong(_, _)
+            | OrderType::SellOrderShort(_, _)
+            | OrderType::TakeProfitLong(_, _)
+            | OrderType::TakeProfitShort(_, _) => sell_orders < max_sell_orders,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                 stop_losses < max_stop_losses
             }
         })
@@ -813,14 +819,12 @@ pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
         .filter(|x| x.status == OrderStatus::Pending)
     {
         match order.order_type {
-            OrderType::BuyOrderLong(_, _, _) | OrderType::BuyOrderShort(_, _, _) => buy_orders += 1,
-            OrderType::SellOrderLong(_, _, _)
-            | OrderType::SellOrderShort(_, _, _)
-            | OrderType::TakeProfitLong(_, _, _)
-            | OrderType::TakeProfitShort(_, _, _) => sell_orders += 1,
-            OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => {
-                stop_losses += 1
-            }
+            OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => buy_orders += 1,
+            OrderType::SellOrderLong(_, _)
+            | OrderType::SellOrderShort(_, _)
+            | OrderType::TakeProfitLong(_, _)
+            | OrderType::TakeProfitShort(_, _) => sell_orders += 1,
+            OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => stop_losses += 1,
         };
     }
     (buy_orders, sell_orders, stop_losses)

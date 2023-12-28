@@ -41,7 +41,6 @@ pub fn init_stop_loss(stop_type: StopLossType, value: f64) -> StopLoss {
 
 pub fn create_stop_loss_order(
     index: usize,
-    trade_id: usize,
     buy_price: f64,
     instrument: &Instrument,
     order_direction: &OrderDirection,
@@ -80,12 +79,8 @@ pub fn create_stop_loss_order(
     };
 
     let stop_loss = match order_direction {
-        OrderDirection::Up => {
-            OrderType::StopLossShort(order_direction.clone(), buy_price, stop_loss_type.clone())
-        }
-        OrderDirection::Down => {
-            OrderType::StopLossLong(order_direction.clone(), buy_price, stop_loss_type.clone())
-        }
+        OrderDirection::Up => OrderType::StopLossShort(stop_loss_type.clone(), buy_price),
+        OrderDirection::Down => OrderType::StopLossLong(stop_loss_type.clone(), buy_price),
     };
 
     order::create_order(index, instrument, &stop_loss, &target_price, &order_size)

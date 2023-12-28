@@ -568,10 +568,10 @@ impl BrokerStream for Xtb {
         if let Some(orders) = orders {
             for order in orders.iter() {
                 match order.order_type {
-                    OrderType::SellOrderLong(_, _, _) | OrderType::SellOrderShort(_, _, _) => {
+                    OrderType::SellOrderLong(_, _) | OrderType::SellOrderShort(_, _) => {
                         sell_order_price = Some(round(order.target_price, 5));
                     }
-                    OrderType::StopLossLong(_, _, _) | OrderType::StopLossShort(_, _, _) => {
+                    OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
                         stop_loss_order_price = Some(round(order.target_price, 5));
                     }
                     _ => {}
@@ -1738,23 +1738,13 @@ impl Xtb {
                 };
 
                 let stop_order_type = match trade_type.is_long() {
-                    true => OrderType::StopLossLong(
-                        OrderDirection::Down,
-                        price_in,
-                        StopLossType::Price(stop_loss),
-                    ),
-                    false => OrderType::StopLossShort(
-                        OrderDirection::Up,
-                        price_in,
-                        StopLossType::Price(stop_loss),
-                    ),
+                    true => OrderType::StopLossLong(StopLossType::Price(stop_loss), price_in),
+                    false => OrderType::StopLossShort(StopLossType::Price(stop_loss), price_in),
                 };
 
                 let sell_order_type = match trade_type.is_long() {
-                    true => OrderType::SellOrderLong(OrderDirection::Up, size, sell_order_target),
-                    false => {
-                        OrderType::SellOrderShort(OrderDirection::Down, size, sell_order_target)
-                    }
+                    true => OrderType::SellOrderLong(size, sell_order_target),
+                    false => OrderType::SellOrderShort(size, sell_order_target),
                 };
 
                 trade_in = TradeIn {
