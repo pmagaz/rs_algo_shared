@@ -416,17 +416,17 @@ pub fn prepare_orders(
 pub fn validate_target_price(
     order_type: &OrderType,
     direction: &OrderDirection,
-    close_price: &f64,
+    current_price: &f64,
     target_price: &f64,
 ) -> bool {
     match direction {
         OrderDirection::Up => {
-            if close_price >= target_price {
+            if current_price > target_price {
                 log::error!(
                     "{:?} not valid. Target price {} is higher than {}",
                     order_type,
                     target_price,
-                    close_price,
+                    current_price,
                 );
                 panic!();
             } else {
@@ -434,12 +434,12 @@ pub fn validate_target_price(
             }
         }
         OrderDirection::Down => {
-            if close_price <= target_price {
+            if current_price < target_price {
                 log::error!(
                     "{:?} not valid. Target price {} is lower than {}",
                     order_type,
                     target_price,
-                    close_price,
+                    current_price,
                 );
                 panic!();
             } else {

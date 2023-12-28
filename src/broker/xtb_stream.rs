@@ -1310,7 +1310,7 @@ impl BrokerStream for Xtb {
 
         let arrival_time = match is_prod {
             true => 1,
-            false => 1,
+            false => 1000,
         };
 
         self.symbol = symbol.to_owned();
