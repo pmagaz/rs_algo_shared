@@ -31,12 +31,34 @@ pub fn calculate_profit(
     leverage: f64,
     trade_type: &TradeType,
 ) -> f64 {
+    // Log or print intermediate values for debugging
+    println!(
+        "size: {}, price_in: {}, price_out: {}, leverage: {} is_long: {}",
+        size,
+        price_in,
+        price_out,
+        leverage,
+        trade_type.is_long()
+    );
+
     let profit_without_leverage = match trade_type.is_long() {
         true => size * (price_out - price_in),
         false => size * (price_in - price_out),
     };
 
-    profit_without_leverage * leverage
+    // Log or print intermediate value for debugging
+    println!("profit_without_leverage: {}", profit_without_leverage);
+
+    let total_profit = profit_without_leverage * leverage;
+
+    // Log or print the final result for debugging
+    println!("total_profit: {}", total_profit);
+
+    if total_profit == 0.0 {
+        panic!();
+    }
+
+    total_profit
 }
 
 pub fn calculate_profit_per(total_profit: f64, size: f64, price_in: f64, leverage: f64) -> f64 {
