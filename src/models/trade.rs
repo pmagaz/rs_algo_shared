@@ -735,15 +735,8 @@ pub fn calculate_trade_stats(
     trade_out: &TradeOut,
     data: &Vec<Candle>,
 ) -> TradeOut {
-    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
-
+    log::info!("Calculating Trade stats");
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
-
-    let _trade_type = &trade_in.trade_type;
-    let _date_out = match execution_mode {
-        mode::ExecutionMode::Bot => trade_out.date_out,
-        _ => to_dbtime(data.last().unwrap().date()),
-    };
 
     let trade_type = &trade_in.trade_type;
     let price_in = trade_in.price_in;

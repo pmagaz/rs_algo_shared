@@ -32,7 +32,7 @@ pub fn calculate_profit(
     trade_type: &TradeType,
 ) -> f64 {
     // Log or print intermediate values for debugging
-    println!(
+    log::info!(
         "size: {}, price_in: {}, price_out: {}, leverage: {} is_long: {}",
         size,
         price_in,
@@ -47,15 +47,15 @@ pub fn calculate_profit(
     };
 
     // Log or print intermediate value for debugging
-    println!("profit_without_leverage: {}", profit_without_leverage);
+    log::info!("profit_without_leverage: {}", profit_without_leverage);
 
     let total_profit = profit_without_leverage * leverage;
 
     // Log or print the final result for debugging
-    println!("total_profit: {}", total_profit);
+    log::info!("total_profit: {}", total_profit);
 
     if total_profit == 0.0 {
-        panic!();
+        log::error!("Zero Profit!");
     }
 
     total_profit

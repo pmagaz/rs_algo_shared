@@ -112,8 +112,7 @@ pub fn calculate_strategy_stats(
     equity: f64,
     commission: f64,
 ) -> StrategyStats {
-    log::info!("Calculating stats");
-    let _size = 1.;
+    log::info!("Calculating Strategy stats");
     let data = &instrument.data;
     if !trades_out.is_empty() {
         let current_candle = data.last().unwrap();
