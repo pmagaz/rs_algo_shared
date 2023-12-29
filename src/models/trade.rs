@@ -743,10 +743,6 @@ pub fn calculate_trade_stats(
     let price_out = trade_out.price_out;
     let size = trade_in.size;
 
-    if price_in == price_out {
-        log::error!("Equal price in / out {:?}", (trade_in.price_in));
-    }
-
     let quantity = calculate_quantity(size, price_in);
     let profit = calculate_trade_profit(quantity, price_in, price_out, leverage, trade_type);
     let profit_per = calculate_trade_profit_per(profit, size, price_in, leverage);

@@ -979,7 +979,7 @@ impl BrokerStream for Xtb {
         };
 
         let size = data.size;
-        let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
+        let leverage = 0.0;
         let profit = calculate_profit(size, price_in, price_out, leverage, &trade_type);
 
         let is_profitable = match profit {
@@ -1225,7 +1225,7 @@ impl BrokerStream for Xtb {
         };
 
         let size = trade_data.size;
-        let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
+        let leverage = 0.0;
         let profit = calculate_profit(size, price_in, price_out, leverage, &trade_type);
 
         let is_profitable = match profit {
