@@ -24,35 +24,19 @@ pub fn get_max_price(data: &Vec<Candle>, index_in: usize, index_out: usize) -> f
         .unwrap()
 }
 
-pub fn calculate_profit(
+pub fn calculate_trade_profit(
     size: f64,
     price_in: f64,
     price_out: f64,
     leverage: f64,
     trade_type: &TradeType,
 ) -> f64 {
-    // Log or print intermediate values for debugging
-    log::info!(
-        "size: {}, price_in: {}, price_out: {}, leverage: {} is_long: {}",
-        size,
-        price_in,
-        price_out,
-        leverage,
-        trade_type.is_long()
-    );
-
     let profit_without_leverage = match trade_type.is_long() {
         true => size * (price_out - price_in),
         false => size * (price_in - price_out),
     };
 
-    // Log or print intermediate value for debugging
-    log::info!("profit_without_leverage: {}", profit_without_leverage);
-
     let total_profit = profit_without_leverage * leverage;
-
-    // Log or print the final result for debugging
-    log::info!("total_profit: {}", total_profit);
 
     if total_profit == 0.0 {
         log::error!("Zero Profit!");
@@ -61,7 +45,12 @@ pub fn calculate_profit(
     total_profit
 }
 
-pub fn calculate_profit_per(total_profit: f64, size: f64, price_in: f64, leverage: f64) -> f64 {
+pub fn calculate_trade_profit_per(
+    total_profit: f64,
+    size: f64,
+    price_in: f64,
+    leverage: f64,
+) -> f64 {
     let effective_investment = size * price_in * leverage; // Leveraged investment
     (total_profit / effective_investment) * 100.0
 }
@@ -350,22 +339,8 @@ pub fn get_trade_max_price(data: &Vec<Candle>) -> f64 {
         .unwrap()
 }
 
-pub fn calculate_trade_profit(
-    size: f64,
-    price_in: f64,
-    price_out: f64,
-    leverage: f64,
-    trade_type: &TradeType,
-) -> f64 {
-    calculate_profit(size, price_in, price_out, leverage, trade_type)
-}
-
-pub fn calculate_trade_profit_per(profit: f64, size: f64, price_in: f64, leverage: f64) -> f64 {
-    calculate_profit_per(profit, size, price_in, leverage)
-}
-
-pub fn calculate_quantity(order_size: f64, price: f64) -> f64 {
-    round(order_size / price, 3)
+pub fn calculate_quantity(size: f64, price: f64) -> f64 {
+    round(size / price, 3)
 }
 
 pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {

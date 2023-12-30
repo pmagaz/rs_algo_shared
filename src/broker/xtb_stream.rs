@@ -1,6 +1,6 @@
 use crate::broker::models::*;
 use crate::error::{Result, RsAlgoErrorKind};
-use crate::helpers::calc::calculate_profit;
+use crate::helpers::calc::calculate_trade_profit;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
@@ -979,8 +979,8 @@ impl BrokerStream for Xtb {
         };
 
         let size = data.size;
-        let leverage = 1.0;
-        let profit = calculate_profit(size, price_in, price_out, leverage, &trade_type);
+        let leverage = 30.;
+        let profit = calculate_trade_profit(size, price_in, price_out, leverage, &trade_type);
 
         let is_profitable = match profit {
             _ if profit > 0. => true,
@@ -1225,8 +1225,8 @@ impl BrokerStream for Xtb {
         };
 
         let size = trade_data.size;
-        let leverage = 1.0;
-        let profit = calculate_profit(size, price_in, price_out, leverage, &trade_type);
+        let leverage = 30.;
+        let profit = calculate_trade_profit(size, price_in, price_out, leverage, &trade_type);
 
         let is_profitable = match profit {
             _ if profit > 0. => true,

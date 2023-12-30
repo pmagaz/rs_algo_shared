@@ -1,5 +1,4 @@
 use std::env;
-use std::fmt::Display;
 
 use super::mode::{self, ExecutionMode};
 use super::order::{Order, OrderType};
@@ -385,6 +384,7 @@ pub fn resolve_trade_in(
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
+
     let index = calculate_trade_index(index, order, &execution_mode);
     let size = trade_size;
 
@@ -567,12 +567,14 @@ pub fn resolve_trade_out(
         };
 
         let profit = match execution_mode.is_back_test() {
-            true => calc::calculate_profit(size, price_in, price_out, leverage, trade_in_type),
+            true => {
+                calc::calculate_trade_profit(size, price_in, price_out, leverage, trade_in_type)
+            }
             false => 0.,
         };
 
         let profit_per = match execution_mode.is_back_test() {
-            true => calc::calculate_profit_per(profit, size, price_in, leverage),
+            true => calc::calculate_trade_profit_per(profit, size, price_in, leverage),
             false => 0.,
         };
 
@@ -742,9 +744,7 @@ pub fn calculate_trade_stats(
     let price_in = trade_in.price_in;
     let price_out = trade_out.price_out;
     let size = trade_in.size;
-
-    let quantity = calculate_quantity(size, price_in);
-    let profit = calculate_trade_profit(quantity, price_in, price_out, leverage, trade_type);
+    let profit = calculate_trade_profit(size, price_in, price_out, leverage, trade_type);
     let profit_per = calculate_trade_profit_per(profit, size, price_in, leverage);
 
     let run_up = calculate_trade_runup(data, price_in, trade_type);
