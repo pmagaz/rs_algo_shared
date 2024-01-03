@@ -404,8 +404,6 @@ pub fn resolve_trade_in(
             false => current_candle.close(),
         };
 
-        //CONTINUE HERE
-        //CHECK WHY price_in is not resolved equally as buy_price 4444444444444444444444444444
         let price = match order_engine.as_ref() {
             "broker" => match order {
                 Some(order) => order.target_price,
@@ -435,6 +433,11 @@ pub fn resolve_trade_in(
             false => id,
         };
 
+        let status = match execution_mode.is_back_test() {
+            true => TradeStatus::Fulfilled,
+            false => TradeStatus::default(),
+        };
+
         TradeResult::TradeIn(TradeIn {
             id,
             index_in,
@@ -445,7 +448,7 @@ pub fn resolve_trade_in(
             size,
             date_in: to_dbtime(current_date),
             trade_type: trade_type.clone(),
-            status: TradeStatus::default(),
+            status,
         })
     } else {
         TradeResult::None
@@ -532,8 +535,6 @@ pub fn resolve_trade_out(
     };
 
     if trade_type.is_stop() && profit > 0. {
-        log::info!("3333333 {:?}", (order, trade_in));
-
         log::error!(
             "Profitable stop loss! {} @ {:?} {} ",
             index,
@@ -598,7 +599,10 @@ pub fn resolve_trade_out(
             false => 0.,
         };
 
-        let status = TradeStatus::default();
+        let status = match execution_mode.is_back_test() {
+            true => TradeStatus::Fulfilled,
+            false => TradeStatus::default(),
+        };
 
         TradeResult::TradeOut(TradeOut {
             id: trade_in.id,

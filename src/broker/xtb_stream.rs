@@ -1213,11 +1213,19 @@ impl BrokerStream for Xtb {
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = trade_data.price_in;
 
+        // let price_out = match trade_type.is_stop() {
+        //     true => match trade_type.is_long() {
+        //         true => order_data.target_price,
+        //         false => order_data.target_price,
+        //     },
+        //     false => match trade_type.is_long() {
+        //         true => bid,
+        //         false => ask,
+        //     },
+        // };
+
         let price_out = match trade_type.is_stop() {
-            true => match trade_type.is_long() {
-                true => order_data.target_price,
-                false => order_data.target_price + spread,
-            },
+            true => order_data.target_price,
             false => match trade_type.is_long() {
                 true => bid,
                 false => ask,
