@@ -6,14 +6,15 @@ use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
 use crate::helpers::{calc, date::*};
+use crate::models::environment;
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
+use crate::models::status::Status;
 use crate::models::stop_loss::StopLossType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
-use crate::models::{environment, trade};
 use crate::ws::message::{
     InstrumentData, Message, ResponseBody, ResponseType, TradeData, TradeResponse,
 };
@@ -1407,56 +1408,76 @@ impl BrokerStream for Xtb {
                         payload: Some(tick),
                     };
                     Some(serde_json::to_string(&msg).unwrap())
-                // } else if command == "trade" {
-                //     let id = data["returnData"]["order"].as_u64().unwrap();
-                //     let index_in = id;
-                //     let comment = obj["customComment"].as_str().unwrap().to_owned();
-                //     let trans_comments: TransactionComments =
-                //         serde_json::from_str(&comment).unwrap();
-                //     let trade_type = trans_comments.trade_type;
-                //     let date_out = parse_time_seconds(
-                //         data["returnData"]["close_time"].as_i64().unwrap() / 1000,
-                //     );
-                //     // let ask = data["returnData"]["ask"].as_f64().unwrap();
-                //     // let bid = data["returnData"]["bid"].as_f64().unwrap();
-                //     let message = "".to_owned(); //data["returnData"]["message"].as_str().unwrap().to_owned();
-                //     let command_type =
-                //         TransactionCommand::from_value(data["returnData"]["cmd"].as_i64().unwrap());
+                } else if command == "trade" {
+                    let id = data["position"].as_u64().unwrap() as usize;
 
-                //     let comment = data["returnData"]["customComment"]
-                //         .as_str()
-                //         .unwrap()
-                //         .to_owned();
+                    let size = data["volume"].as_f64().unwrap();
+                    let ask = data["ask"].as_f64().unwrap();
+                    let bid = data["bid"].as_f64().unwrap();
+                    let profit = data["profit"].as_f64().unwrap();
 
-                //     let leches = TradeResult::TradeOut(TradeOut {
-                //         id,
-                //         index_in,
-                //         price_in,
-                //         size,
-                //         trade_type: trade_type.clone(),
-                //         date_in,
-                //         spread_in,
-                //         ask: price_in,
-                //         index_out,
-                //         price_origin,
-                //         price_out,
-                //         bid,
-                //         spread_out: spread,
-                //         date_out,
-                //         profit,
-                //         profit_per,
-                //         run_up,
-                //         run_up_per,
-                //         draw_down,
-                //         draw_down_per,
-                //     });
+                    let spread_out = data["spreadRaw"].as_f64().unwrap();
+                    let price_in = data["open_price"].as_f64().unwrap();
+                    let price_out = data["close_price"].as_f64().unwrap();
+                    let close_time =
+                        parse_time_seconds(data["close_time"].as_i64().unwrap() / 1000);
+                    let date_in = to_dbtime(parse_time_seconds(
+                        data["open_time"].as_i64().unwrap() / 1000,
+                    ));
+                    let date_out = to_dbtime(close_time);
 
-                //     let msg: ResponseBody<TransactionStatusnResponse> = ResponseBody {
-                //         response: ResponseType::SubscribeTrades,
-                //         payload: Some(status),
-                //     };
+                    let index_out = uuid::generate_ts_id(close_time);
+                    let comment = obj["customComment"].as_str().unwrap().to_owned();
+                    let trans_comments: TransactionComments =
+                        serde_json::from_str(&comment).unwrap();
+                    let index_in = trans_comments.index_in;
+                    let spread_in = trans_comments.spread;
+                    let trade_type = match trans_comments.trade_type.is_long() {
+                        true => TradeType::StopLossLong,
+                        false => TradeType::StopLossShort,
+                    };
 
-                //     Some(serde_json::to_string(&msg).unwrap())
+                    let profit_per = 0.;
+                    let run_up = 0.;
+                    let run_up_per = 0.;
+                    let draw_down = 0.;
+                    let draw_down_per = 0.;
+                    let status = TradeStatus::Fulfilled;
+
+                    log::info!("BROKER STOP LOSS WITH ask: {} bid:{}, open_price: {} close_price: {} and profit {}",
+                    ask, bid, price_in, price_out, profit
+                    );
+
+                    let trade_out = TradeResult::TradeOut(TradeOut {
+                        id,
+                        index_in,
+                        price_in,
+                        status,
+                        size,
+                        trade_type: trade_type.clone(),
+                        date_in,
+                        spread_in,
+                        ask: price_in,
+                        index_out,
+                        price_origin: price_in,
+                        price_out,
+                        bid,
+                        spread_out,
+                        date_out,
+                        profit,
+                        profit_per,
+                        run_up,
+                        run_up_per,
+                        draw_down,
+                        draw_down_per,
+                    });
+
+                    let msg: ResponseBody<TradeResult> = ResponseBody {
+                        response: ResponseType::SubscribeTrades,
+                        payload: Some(trade_out),
+                    };
+
+                    Some(serde_json::to_string(&msg).unwrap())
                 } else {
                     None
                 }

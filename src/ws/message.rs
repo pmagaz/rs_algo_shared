@@ -9,7 +9,7 @@ use crate::models::order::Order;
 use crate::models::strategy::StrategyType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::TimeFrameType;
-use crate::models::trade::{PositionResult, TradeIn, TradeOut};
+use crate::models::trade::{PositionResult, TradeIn, TradeOut, TradeResult};
 
 use serde::{Deserialize, Serialize};
 
@@ -155,6 +155,7 @@ pub struct ReconnectOptions {
 pub enum MessageType {
     StreamResponse(ResponseBody<InstrumentData<DOHLC>>),
     StreamTickResponse(ResponseBody<InstrumentTick>),
+    StreamTradesResponse(ResponseBody<TradeResult>),
     InstrumentData(ResponseBody<InstrumentData<VEC_DOHLC>>),
     InstrumentTick(ResponseBody<InstrumentTick>),
     ActivePositions(ResponseBody<PositionResult>),
