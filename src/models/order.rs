@@ -94,6 +94,11 @@ impl OrderType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MetaData {
+    pub sl: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Order {
     pub id: usize,
     pub trade_id: usize,
@@ -108,6 +113,7 @@ pub struct Order {
     pub updated_at: Option<DbDateTime>,
     pub full_filled_at: Option<DbDateTime>,
     pub valid_until: Option<DbDateTime>,
+    pub meta: Option<MetaData>,
 }
 
 impl Default for Order {
@@ -126,6 +132,7 @@ impl Default for Order {
             updated_at: None,
             full_filled_at: None,
             valid_until: None,
+            meta: None,
         }
     }
 }
@@ -404,6 +411,13 @@ pub fn prepare_orders(
                         }
                     }
 
+                    //FIXME WORKARROUND
+                    if let Some(order) = orders.last_mut() {
+                        order.meta = Some(MetaData {
+                            sl: stop_order_target,
+                        });
+                    }
+
                     orders.push(stop_loss);
                 }
             }
@@ -499,6 +513,7 @@ pub fn create_order(
         updated_at: None,
         full_filled_at: None,
         valid_until: Some(to_dbtime(valid_until)),
+        meta: None,
     }
 }
 
@@ -510,10 +525,18 @@ pub fn resolve_active_orders(
     use_tick_price: bool,
 ) -> Position {
     let mut order_position: Position = Position::None;
-    for (_id, order) in orders.iter().enumerate().filter(|(_id, order)| {
-        order.status == OrderStatus::Pending && (order.has_active_trade() || order.is_entry())
-    }) {
-        match is_activated_order(index, order, instrument, tick, use_tick_price) {
+
+    let filtered_orders: Vec<Order> = orders
+        .iter()
+        .filter(|order| {
+            order.status == OrderStatus::Pending && (order.has_active_trade() || order.is_entry())
+        })
+        .map(|order| order)
+        .cloned()
+        .collect();
+
+    for (_id, order) in filtered_orders.iter().enumerate() {
+        match is_activated_order(index, &order, instrument, tick, use_tick_price) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => {
@@ -630,14 +653,14 @@ fn is_activated_order(
             }
         };
 
-    // log::info!(
-    //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
-    //     source,
-    //     order.target_price,
-    //     price_over,
-    //     price_below,
-    //     (tick.ask(), tick.bid())
-    // );
+    log::info!(
+        "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
+        source,
+        order.target_price,
+        price_over,
+        price_below,
+        (tick.ask(), tick.bid())
+    );
 
     match direction {
         OrderDirection::Up => {

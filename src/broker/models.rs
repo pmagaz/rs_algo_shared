@@ -341,6 +341,15 @@ pub struct TransactionStatusnResponse {
     pub status: TransactionState,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionDetails {
+    pub id: usize,
+    pub open_price: f64,
+    pub close_price: f64,
+    // pub open_date: usize,
+    // pub close_date: usize,
+}
+
 //TO PUT HERE index_in, ask, spread, trade_type
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionComments {
