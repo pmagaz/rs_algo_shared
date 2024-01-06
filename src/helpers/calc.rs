@@ -151,22 +151,25 @@ pub fn total_drawdown(trades_out: &[TradeOut], initial_equity: f64) -> f64 {
     }
 
     let mut max_peak = initial_equity;
-    let mut min_peak = initial_equity;
+    let mut current_drawdown = 0.0;
+    let mut max_drawdown = 0.0;
 
     for equity in &equity_curve {
         if *equity > max_peak {
             max_peak = *equity;
-            min_peak = *equity;
-        } else if *equity < min_peak {
-            min_peak = *equity;
+            current_drawdown = 0.0;
+        } else {
+            let drawdown = (max_peak - *equity) / max_peak * 100.0;
+            if drawdown > current_drawdown {
+                current_drawdown = drawdown;
+            }
+            if current_drawdown > max_drawdown {
+                max_drawdown = current_drawdown;
+            }
         }
     }
 
-    if max_peak == 0.0 {
-        0.0
-    } else {
-        ((min_peak - max_peak) / max_peak * 100.0).abs() * 100.
-    }
+    max_drawdown
 }
 
 // OJO
