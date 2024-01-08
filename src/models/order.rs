@@ -414,10 +414,12 @@ pub fn prepare_orders(
                     }
 
                     //FIXME WORKARROUND
-                    if let Some(order) = orders.last_mut() {
-                        order.meta = Some(MetaData {
-                            sl: stop_order_target,
-                        });
+                    if execution_mode.is_bot() {
+                        if let Some(order) = orders.last_mut() {
+                            order.meta = Some(MetaData {
+                                sl: stop_order_target,
+                            });
+                        }
                     }
 
                     orders.push(stop_loss);
@@ -792,40 +794,6 @@ pub fn get_pending(orders: &Vec<Order>) -> Vec<Order> {
 
     pending_orders
 }
-
-// pub fn has_executed_buy_order(orders: &Vec<Order>, operation: &Position) -> bool {
-//     let max_buy_orders = env::var("MAX_BUY_ORDERS")
-//         .unwrap()
-//         .parse::<usize>()
-//         .unwrap();
-
-//     let (pending_buy_orders, pending_sell_orders, pending_stop_losses) =
-//         get_num_pending_orders(orders);
-
-//     if pending_buy_orders == 0 {
-//         return false;
-//     }
-
-//     log::info!(
-//         "55555555 {:?}",
-//         (
-//             pending_buy_orders,
-//             pending_sell_orders,
-//             max_buy_orders,
-//             pending_stop_losses
-//         )
-//     );
-
-//     match operation {
-//         Position::MarketOutOrder(_) => match pending_buy_orders.cmp(&max_buy_orders) {
-//             //No Active buy
-//             std::cmp::Ordering::Equal => false,
-//             //Aactive buy
-//             _ => true,
-//         },
-//         _ => true,
-//     }
-// }
 
 pub fn get_num_pending_orders(orders: &Vec<Order>) -> (usize, usize, usize) {
     let max_pending_orders = env::var("MAX_PENDING_ORDERS")

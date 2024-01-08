@@ -633,110 +633,110 @@ impl BrokerStream for Xtb {
             false => TransactionCommand::SellMarket.value(),
         };
 
-        while !accepted && attempts < MAX_RETRIES {
-            let trade_type = trade_in.trade_type.clone();
-            let start = Local::now();
-            let (ask, bid) = self.get_ask_bid(&symbol).await.unwrap();
-            let spread = ask - bid;
+        //while !accepted && attempts < MAX_RETRIES {
+        let trade_type = trade_in.trade_type.clone();
+        let start = Local::now();
+        let (ask, bid) = self.get_ask_bid(&symbol).await.unwrap();
+        let spread = ask - bid;
 
-            let comment = serde_json::to_string(&TransactionComments {
-                strategy_name: strategy_name.clone(),
-                index_in: trade_in.index_in.clone(),
-                sell_order_price,
-                stop_loss_order_price,
-                trade_type,
-                spread: spread,
-                bid: bid,
-            })
-            .unwrap();
+        let comment = serde_json::to_string(&TransactionComments {
+            strategy_name: strategy_name.clone(),
+            index_in: trade_in.index_in.clone(),
+            sell_order_price,
+            stop_loss_order_price,
+            trade_type,
+            spread: spread,
+            bid: bid,
+        })
+        .unwrap();
 
-            let opening_price = 1.;
+        let opening_price = 1.;
 
-            let trade_command: Command<TransactionInfo> = Command {
-                command: "tradeTransaction".to_owned(),
-                arguments: TransactionInfo {
-                    tradeTransInfo: TradeTransactionInfo {
-                        cmd: command,
-                        symbol: symbol.to_owned(),
-                        trans_type: TransactionAction::Open.value(),
-                        customComment: comment,
-                        expiration: valid_until,
-                        order: 0,
-                        price: opening_price,
-                        offset: 0,
-                        sl: stop_loss_order_price.unwrap(),
-                        tp: 0.,
-                        volume: trade_size,
-                    },
+        let trade_command: Command<TransactionInfo> = Command {
+            command: "tradeTransaction".to_owned(),
+            arguments: TransactionInfo {
+                tradeTransInfo: TradeTransactionInfo {
+                    cmd: command,
+                    symbol: symbol.to_owned(),
+                    trans_type: TransactionAction::Open.value(),
+                    customComment: comment,
+                    expiration: valid_until,
+                    order: 0,
+                    price: opening_price,
+                    offset: 0,
+                    sl: stop_loss_order_price.unwrap(),
+                    tp: 0.,
+                    volume: trade_size,
                 },
-            };
+            },
+        };
 
-            self.send(&trade_command).await.unwrap();
-            let msg = self.socket.read().await.unwrap();
+        self.send(&trade_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
 
-            log::info!("Real Opening {} {:?} trade", &symbol, &trade_in.trade_type,);
+        log::info!("Real Opening {} {:?} trade", &symbol, &trade_in.trade_type,);
 
-            match msg {
-                Message::Text(txt) => {
-                    let end = Local::now();
+        match msg {
+            Message::Text(txt) => {
+                let end = Local::now();
 
-                    let (executed, order_id) = self.get_order_id_executed(&txt).unwrap();
+                let (executed, order_id) = self.get_order_id_executed(&txt).unwrap();
 
-                    match executed {
-                        true => {
-                            let trans_status = self.get_transaction_status(order_id).await?;
-                            match trans_status.status.is_accepted() {
-                                true => {
-                                    let transaction_details = self
-                                        .get_transaction_details(&symbol, &strategy_name, None)
-                                        .await
-                                        .unwrap();
+                match executed {
+                    true => {
+                        let trans_status = self.get_transaction_status(order_id).await?;
+                        match trans_status.status.is_accepted() {
+                            true => {
+                                let transaction_details = self
+                                    .get_transaction_details(&symbol, &strategy_name, None)
+                                    .await
+                                    .unwrap();
 
-                                    log::info!(
-                                        "Real Opened {} {:?} trade {}. Openinig price: {}",
-                                        &symbol,
-                                        &trade_in.trade_type,
-                                        &transaction_details.id,
-                                        &transaction_details.open_price
-                                    );
+                                log::info!(
+                                    "Real Opened {} {:?} trade {}. Openinig price: {}",
+                                    &symbol,
+                                    &trade_in.trade_type,
+                                    &transaction_details.id,
+                                    &transaction_details.open_price
+                                );
 
-                                    trade_in.id = transaction_details.id;
-                                    trade_in.price_in = transaction_details.open_price;
-                                    trade_in.ask = trans_status.ask;
-                                    trade_in.spread = spread;
-                                    accepted = true;
-                                    status = TradeStatus::Fulfilled;
+                                trade_in.id = transaction_details.id;
+                                trade_in.price_in = transaction_details.open_price;
+                                trade_in.ask = trans_status.ask;
+                                trade_in.spread = spread;
+                                accepted = true;
+                                status = TradeStatus::Fulfilled;
 
-                                    log::info!(
-                                        "Operation total time: {:?}",
-                                        (end - start).num_milliseconds()
-                                    );
-                                }
-                                false => {
-                                    attempts += 1;
-                                }
+                                log::info!(
+                                    "Operation total time: {:?}",
+                                    (end - start).num_milliseconds()
+                                );
+                            }
+                            false => {
+                                attempts += 1;
                             }
                         }
-                        false => {
-                            attempts += 1;
-                        }
+                    }
+                    false => {
+                        attempts += 1;
                     }
                 }
-                _ => todo!(),
             }
-
-            trade_in.status = status.clone();
-
-            sleep(Duration::from_millis(RETRY_AFTER));
-
-            if !accepted {
-                log::error!(
-                    "{:?} {:?} in Broker. Retrying...",
-                    &trade_in.trade_type,
-                    &trade_in.status
-                );
-            }
+            _ => todo!(),
         }
+
+        trade_in.status = status.clone();
+
+        //sleep(Duration::from_millis(RETRY_AFTER));
+
+        if !accepted {
+            log::error!(
+                "{:?} {:?} in Broker. Retrying...",
+                &trade_in.trade_type,
+                &trade_in.status
+            );
+        }
+        // }
 
         Ok(ResponseBody {
             response: ResponseType::TradeInFulfilled,
@@ -1586,7 +1586,6 @@ impl BrokerStream for Xtb {
     }
 
     async fn keepalive_ping(&mut self) -> Result<String> {
-        //log::info!("Server sending keepalive ping");
         let ping_command = Ping {
             command: "ping".to_owned(),
         };
