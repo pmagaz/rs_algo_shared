@@ -32,8 +32,8 @@ pub fn calculate_trade_profit(
     trade_type: &TradeType,
 ) -> f64 {
     let profit_without_leverage = match trade_type.is_long() {
-        true => size * (price_out - price_in),
-        false => size * (price_in - price_out),
+        true => (price_out - price_in) * size,
+        false => (price_in - price_out) * size,
     };
 
     let total_profit = profit_without_leverage * leverage;
@@ -42,16 +42,16 @@ pub fn calculate_trade_profit(
         log::error!("Zero Profit!");
     }
 
-    total_profit
+    profit_without_leverage
 }
 
 pub fn calculate_trade_profit_per(
     total_profit: f64,
     size: f64,
     price_in: f64,
-    leverage: f64,
+    _leverage: f64,
 ) -> f64 {
-    let effective_investment = size * price_in * leverage; // Leveraged investment
+    let effective_investment = size * price_in; // * leverage; // Leveraged investment
     (total_profit / effective_investment) * 100.0
 }
 

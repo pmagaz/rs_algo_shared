@@ -105,17 +105,19 @@ pub struct TradeOptions {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TradeData<T> {
     pub symbol: String,
+    pub strategy_name: String,
     pub data: T,
     pub options: TradeOptions,
 }
 
 impl<T> TradeData<T> {
-    pub fn new(symbol: &str, data: T, options: TradeOptions) -> Self
+    pub fn new(symbol: &str, strategy_name: &str, data: T, options: TradeOptions) -> Self
     where
         for<'de> T: Serialize + Deserialize<'de>,
     {
         Self {
             symbol: symbol.to_string(),
+            strategy_name: strategy_name.to_string(),
             data,
             options: options,
         }

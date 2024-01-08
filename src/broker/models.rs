@@ -66,6 +66,13 @@ impl TransactionCommand {
             TransactionCommand::Balance | TransactionCommand::Credit
         )
     }
+
+    pub fn is_stop(&self) -> bool {
+        matches!(
+            self,
+            TransactionCommand::BuyStop | TransactionCommand::SellStop
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -327,6 +334,12 @@ pub struct GetTrades {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GetTradesHistory {
+    pub start: i64,
+    pub end: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetTrade {
     pub orders: Vec<usize>,
 }
@@ -353,6 +366,7 @@ pub struct TransactionDetails {
 //TO PUT HERE index_in, ask, spread, trade_type
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionComments {
+    pub strategy_name: String,
     pub index_in: usize,
     pub sell_order_price: Option<f64>,
     pub stop_loss_order_price: Option<f64>,

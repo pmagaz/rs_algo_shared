@@ -12,6 +12,8 @@ use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
+use std::thread::sleep;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrderType {
@@ -653,15 +655,14 @@ fn is_activated_order(
             }
         };
 
-    log::info!(
-        "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
-        source,
-        order.target_price,
-        price_over,
-        price_below,
-        (tick.ask(), tick.bid())
-    );
-
+    // log::info!(
+    //     "Source: {} Target: {} Over: {} Below: {} Ask/Bid: {:?}",
+    //     source,
+    //     order.target_price,
+    //     price_over,
+    //     price_below,
+    //     (tick.ask(), tick.bid())
+    // );
     match direction {
         OrderDirection::Up => {
             let mut cross_over = false;
@@ -671,11 +672,6 @@ fn is_activated_order(
             } else {
                 cross_over = price_over >= target_price && is_next_bar && is_closed;
             }
-
-            // if !is_stop {
-            //     cross_over = true; //price_over >= target_price
-            //                        //cross_over = price_over >= target_price
-            // }
 
             if cross_over {
                 log::info!(
@@ -688,7 +684,11 @@ fn is_activated_order(
                 );
             }
 
-            cross_over
+            if execution_mode.is_bot() && is_stop {
+                false
+            } else {
+                cross_over
+            }
         }
         OrderDirection::Down => {
             let mut cross_below = false;
@@ -698,11 +698,6 @@ fn is_activated_order(
             } else {
                 cross_below = price_below <= target_price && is_next_bar && is_closed;
             }
-
-            // if !is_stop {
-            //     cross_below = true
-            //     //cross_below = price_below <= target_price
-            // }
 
             if cross_below {
                 log::info!(
@@ -714,7 +709,11 @@ fn is_activated_order(
                 );
             }
 
-            cross_below
+            if execution_mode.is_bot() && is_stop {
+                false
+            } else {
+                cross_below
+            }
         }
     }
 }
@@ -903,7 +902,7 @@ pub fn update_trade_pending_orders(orders: &mut Vec<Order>, trade_in: &TradeIn) 
     }
 }
 
-pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) {
+pub fn update_state_pending_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>) {
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
     match execution_mode.is_back_test() {
         true => {
@@ -920,8 +919,11 @@ pub fn cancel_trade_pending_orders<T: Trade>(trade: &T, orders: &mut Vec<Order>)
         false => {
             for order in orders {
                 if order.status == OrderStatus::Pending {
-                    log::info!("Canceling Pending order to {:?}", order.id);
-                    order.cancel_order(*trade.get_date());
+                    if trade.get_type().is_stop() {
+                        order.fulfill_order(*trade.get_index_out(), from_dbtime(trade.get_date()));
+                    } else {
+                        order.cancel_order(*trade.get_date());
+                    }
                 }
             }
         }

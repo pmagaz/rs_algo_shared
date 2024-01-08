@@ -27,7 +27,9 @@ impl Default for TradeStatus {
 
 pub trait Trade {
     fn get_id(&self) -> &usize;
-    fn get_index(&self) -> &usize;
+    //fn get_key(&self) -> &usize;
+    fn get_index_in(&self) -> &usize;
+    fn get_index_out(&self) -> &usize;
     fn get_date(&self) -> &DbDateTime;
     fn get_chrono_date(&self) -> DateTime<Local>;
     fn get_price_in(&self) -> &f64;
@@ -247,7 +249,10 @@ impl Trade for TradeIn {
     fn get_id(&self) -> &usize {
         &self.id
     }
-    fn get_index(&self) -> &usize {
+    fn get_index_in(&self) -> &usize {
+        &self.index_in
+    }
+    fn get_index_out(&self) -> &usize {
         &self.index_in
     }
     fn get_date(&self) -> &DbDateTime {
@@ -319,7 +324,10 @@ impl Trade for TradeOut {
     fn get_id(&self) -> &usize {
         &self.id
     }
-    fn get_index(&self) -> &usize {
+    fn get_index_in(&self) -> &usize {
+        &self.index_in
+    }
+    fn get_index_out(&self) -> &usize {
         &self.index_out
     }
     fn get_date(&self) -> &DbDateTime {
@@ -802,23 +810,25 @@ where
     updated
 }
 
-pub fn update_last<T>(trades: &mut Vec<T>, new_trade: T) -> bool
+pub fn update_last<T>(trades_out: &mut Vec<T>, new_trade: T) -> bool
 where
     T: Trade + Clone + std::fmt::Debug,
 {
-    if let Some(last_trade) = trades.last_mut() {
-        if last_trade.get_index() == new_trade.get_index() {
-            log::info!("Updating {} trade data", last_trade.get_index());
+    if let Some(last_trade) = trades_out.last_mut() {
+        if last_trade.get_index_in() == new_trade.get_index_in() {
+            log::info!("Updating {} trade data", last_trade.get_index_in());
 
             *last_trade = new_trade;
             true
         } else {
-            log::error!("Cant update {} trade data", last_trade.get_index());
+            log::error!("Cant update {} trade data", last_trade.get_index_in());
             panic!();
             false
         }
     } else {
-        false
+        log::info!("No last tradeOut to update. Adding...");
+        trades_out.push(new_trade);
+        true
     }
 }
 
