@@ -112,6 +112,12 @@ pub struct CompactPatterns {
     pub extrema_patterns: Vec<CompactPattern>,
 }
 
+impl Default for Patterns {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Patterns {
     pub fn new() -> Self {
         Patterns {

@@ -19,6 +19,12 @@ pub struct Peaks {
     pub extrema_minima: Vec<(usize, f64)>,
 }
 
+impl Default for Peaks {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Peaks {
     pub fn new() -> Peaks {
         Self {

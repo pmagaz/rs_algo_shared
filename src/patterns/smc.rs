@@ -16,13 +16,7 @@ pub fn is_bullish_fair_value_gap(candles: &[Candle]) -> bool {
     let gap_size = (left_candle.high - right_candle.low).abs();
     let gap_size_percentage = (gap_size / right_candle.low) * 100.0;
 
-    if middle_candle_body_to_wick_ratio >= body_wick_ratio
-        && gap_size_percentage >= min_gap_percentage
-    {
-        true
-    } else {
-        false
-    }
+    middle_candle_body_to_wick_ratio >= body_wick_ratio && gap_size_percentage >= min_gap_percentage
 }
 
 pub fn is_bullish_reversal(candles: &[Candle]) -> bool {

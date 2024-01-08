@@ -13,17 +13,15 @@ use crate::scanner::instrument::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum TradeStatus {
+    #[default]
     Pending,
     Fulfilled,
     Rejected,
 }
 
-impl Default for TradeStatus {
-    fn default() -> Self {
-        TradeStatus::Pending
-    }
-}
+
 
 pub trait Trade {
     fn get_id(&self) -> &usize;
@@ -275,20 +273,12 @@ impl Trade for TradeIn {
     }
 
     fn is_fulfilled(&self) -> bool {
-        if self.get_status() == &TradeStatus::Fulfilled {
-            true
-        } else {
-            false
-        }
+        self.get_status() == &TradeStatus::Fulfilled
     }
 
     fn is_last_trade_fulfilled<T: Trade>(trades: &Vec<&T>) -> bool {
         if let Some(last_trade) = trades.last() {
-            if last_trade.get_status() == &TradeStatus::Fulfilled {
-                true
-            } else {
-                false
-            }
+            last_trade.get_status() == &TradeStatus::Fulfilled
         } else {
             false
         }
@@ -349,20 +339,12 @@ impl Trade for TradeOut {
         &self.status
     }
     fn is_fulfilled(&self) -> bool {
-        if self.get_status() == &TradeStatus::Fulfilled {
-            true
-        } else {
-            false
-        }
+        self.get_status() == &TradeStatus::Fulfilled
     }
 
     fn is_last_trade_fulfilled<T: Trade>(trades: &Vec<&T>) -> bool {
         if let Some(last_trade) = trades.last() {
-            if last_trade.get_status() == &TradeStatus::Fulfilled {
-                true
-            } else {
-                false
-            }
+            last_trade.get_status() == &TradeStatus::Fulfilled
         } else {
             false
         }
@@ -833,9 +815,5 @@ where
 }
 
 pub fn delete_last<T>(trades: &mut Vec<T>) -> bool {
-    if trades.pop().is_some() {
-        true
-    } else {
-        false
-    }
+    trades.pop().is_some()
 }

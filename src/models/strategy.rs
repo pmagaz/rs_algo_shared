@@ -82,6 +82,12 @@ pub struct StrategyStats {
     pub annual_return: f64,
 }
 
+impl Default for StrategyStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StrategyStats {
     pub fn new() -> StrategyStats {
         StrategyStats {

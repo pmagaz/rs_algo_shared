@@ -28,6 +28,12 @@ pub struct HorizontalLevels {
     pub lows: Vec<HorizontalLevel>,
 }
 
+impl Default for HorizontalLevels {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HorizontalLevels {
     pub fn new() -> HorizontalLevels {
         Self {

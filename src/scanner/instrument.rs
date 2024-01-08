@@ -611,6 +611,12 @@ pub struct InstrumentBuilder {
     //indicators: Option<Indicators>,
 }
 
+impl Default for InstrumentBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InstrumentBuilder {
     pub fn new() -> InstrumentBuilder {
         Self {

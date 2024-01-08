@@ -180,6 +180,12 @@ pub struct CandleBuilder {
     logarithmic: Option<bool>,
 }
 
+impl Default for CandleBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CandleBuilder {
     pub fn new() -> Self {
         Self {
@@ -528,7 +534,7 @@ impl CandleBuilder {
         let candle_types = env::var("CANDLE_TYPES").unwrap().parse::<bool>().unwrap();
         let selected_candle_types_str = env::var("SELECTED_CANDLE_TYPES").unwrap_or_default();
 
-        let selected_candle_types: HashMap<CandleType, bool> = selected_candle_types_str
+        let _selected_candle_types: HashMap<CandleType, bool> = selected_candle_types_str
             .split(',')
             .filter_map(|s| CandleType::from_str(s).map(|ct| (ct, true)))
             .collect();

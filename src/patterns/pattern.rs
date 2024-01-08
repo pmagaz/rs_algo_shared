@@ -20,6 +20,12 @@ pub struct Patterns {
     pub extrema_patterns: Vec<Pattern>,
 }
 
+impl Default for Patterns {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Patterns {
     pub fn new() -> Self {
         Patterns {

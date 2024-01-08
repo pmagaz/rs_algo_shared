@@ -12,8 +12,8 @@ use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
-use std::thread::sleep;
-use std::time::Duration;
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrderType {
@@ -177,11 +177,7 @@ impl Order {
     }
 
     pub fn has_active_trade(&self) -> bool {
-        if self.trade_id() > 0 {
-            true
-        } else {
-            false
-        }
+        self.trade_id() > 0
     }
 
     pub fn update_tick(&mut self, origin_price: f64, target_price: f64) {
@@ -299,7 +295,7 @@ pub fn prepare_orders(
         false => current_candle.close(),
     };
 
-    let trade_id = uuid::generate_ts_id(current_candle.date());
+    let _trade_id = uuid::generate_ts_id(current_candle.date());
     let order_with_spread = env::var("ORDER_WITH_SPREAD")
         .unwrap()
         .parse::<bool>()
@@ -535,12 +531,11 @@ pub fn resolve_active_orders(
         .filter(|order| {
             order.status == OrderStatus::Pending && (order.has_active_trade() || order.is_entry())
         })
-        .map(|order| order)
         .cloned()
         .collect();
 
     for (_id, order) in filtered_orders.iter().enumerate() {
-        match is_activated_order(index, &order, instrument, tick, use_tick_price) {
+        match is_activated_order(index, order, instrument, tick, use_tick_price) {
             true => {
                 match order.order_type {
                     OrderType::BuyOrderLong(_, _) | OrderType::BuyOrderShort(_, _) => {
@@ -562,7 +557,7 @@ pub fn resolve_active_orders(
     }
 
     let (_, _, pending_stop_losses) = get_num_pending_orders(orders);
-    let has_active_trade = if pending_stop_losses > 0 { true } else { false };
+    let has_active_trade = pending_stop_losses > 0;
 
     match has_active_trade {
         true => order_position,
@@ -625,7 +620,7 @@ fn is_activated_order(
             //ONLY BACKTESTING & BOT BACKTESTING, NO TICK PRICING
             true => {
                 let (price_over, price_below) =
-                    calculate_order_price_origin(&execution_mode, &candle, activation_source);
+                    calculate_order_price_origin(&execution_mode, candle, activation_source);
 
                 if order.is_stop() && order.is_short() {
                     (price_over + spread, price_below + spread)
@@ -648,7 +643,7 @@ fn is_activated_order(
                     }
                 } else {
                     let (price_over, price_below) =
-                        calculate_order_price_origin(&execution_mode, &candle, activation_source);
+                        calculate_order_price_origin(&execution_mode, candle, activation_source);
 
                     (price_over, price_below)
                 };
