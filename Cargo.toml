@@ -78,7 +78,10 @@ git = "https://github.com/pmagaz/ta-rs"
 branch = "master"
 features = ["serde"]
 
+[profile.dev]
+opt-level = 0
+
 [profile.release]
+opt-level = 3
 strip = true
 lto = true
-codegen-units = 1

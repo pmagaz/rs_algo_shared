@@ -359,6 +359,7 @@ pub struct TransactionDetails {
     pub id: usize,
     pub open_price: f64,
     pub close_price: f64,
+    pub profit: f64,
     // pub open_date: usize,
     // pub close_date: usize,
 }

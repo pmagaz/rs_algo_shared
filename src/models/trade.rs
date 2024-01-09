@@ -12,16 +12,13 @@ use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub enum TradeStatus {
     #[default]
     Pending,
     Fulfilled,
     Rejected,
 }
-
-
 
 pub trait Trade {
     fn get_id(&self) -> &usize;
@@ -733,14 +730,19 @@ pub fn calculate_trade_stats(
 ) -> TradeOut {
     log::info!("Calculating Trade stats");
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
+    let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let trade_type = &trade_in.trade_type;
     let price_in = trade_in.price_in;
     let price_out = trade_out.price_out;
     let size = trade_in.size;
-    let profit = calculate_trade_profit(size, price_in, price_out, leverage, trade_type);
-    let profit_per = calculate_trade_profit_per(profit, size, price_in, leverage);
 
+    let profit = match execution_mode.is_bot() {
+        true => trade_out.profit,
+        false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type),
+    };
+
+    let profit_per = calculate_trade_profit_per(profit, size, price_in, leverage);
     let run_up = calculate_trade_runup(data, price_in, trade_type);
     let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
     let draw_down = calculate_trade_drawdown(data, price_in, trade_type);

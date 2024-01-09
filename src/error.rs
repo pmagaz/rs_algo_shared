@@ -21,6 +21,8 @@ pub enum RsAlgoErrorKind {
     SendingAfter,
     #[error("Can't read socket!")]
     CantRead,
+    #[error("No response!")]
+    NoResponse,
 }
 
 #[derive(Debug, Error)]

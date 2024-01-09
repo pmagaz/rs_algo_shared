@@ -1,5 +1,5 @@
 use crate::broker::models::*;
-use crate::error::{Result, RsAlgoErrorKind};
+use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::helpers::calc::calculate_trade_profit;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
@@ -26,9 +26,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
-use std::thread::sleep;
 use std::time::Duration;
 use tokio::net::TcpStream;
+use tokio::time::sleep;
 use tokio_tungstenite::MaybeTlsStream;
 use tokio_tungstenite::WebSocketStream;
 
@@ -341,6 +341,7 @@ impl BrokerStream for Xtb {
                         id,
                         open_price,
                         close_price,
+                        profit: 0.,
                     });
                 }
             }
@@ -384,11 +385,13 @@ impl BrokerStream for Xtb {
                 {
                     let open_price = obj["open_price"].as_f64().unwrap();
                     let close_price = obj["close_price"].as_f64().unwrap();
+                    let profit = obj["profit"].as_f64().unwrap();
 
                     return Some(TransactionDetails {
                         id,
                         open_price,
                         close_price,
+                        profit,
                     });
                 }
             }
@@ -713,6 +716,7 @@ impl BrokerStream for Xtb {
                                 );
                             }
                             false => {
+                                log::error!("Position {} not accepted by Broker:", order_id);
                                 attempts += 1;
                             }
                         }
@@ -833,6 +837,7 @@ impl BrokerStream for Xtb {
                                 );
 
                                 trade_out.price_out = transaction_details.close_price;
+                                trade_out.profit = transaction_details.profit;
                                 trade_out.date_out = to_dbtime(Local::now());
                                 trade_out.bid = trans_status.bid;
                                 trade_out.ask = trans_status.ask;
@@ -885,20 +890,22 @@ impl BrokerStream for Xtb {
         &mut self,
         order_id: u64,
     ) -> Result<TransactionStatusnResponse> {
+        const MAX_RETRIES: usize = 5;
+        let retry_after = Duration::from_millis(1000);
+        let mut attempts = 0;
+
         let status_command = Command {
             command: "tradeTransactionStatus".to_owned(),
             arguments: TransactionStatus { order: order_id },
         };
 
-        let retry_after = 250;
-
-        loop {
+        while attempts < MAX_RETRIES {
             self.send(&status_command).await.unwrap();
             let msg = self.socket.read().await.unwrap();
 
             match msg {
                 Message::Text(txt) => {
-                    let transaction_status = self.parse_trade_status_data(txt).unwrap();
+                    let transaction_status = self.parse_trade_status_data(txt)?;
                     let status = &transaction_status.status;
 
                     if !transaction_status.status.is_pending() {
@@ -909,15 +916,21 @@ impl BrokerStream for Xtb {
                             "Transaction {:?} status {:?}. Retry after {} ms",
                             order_id,
                             status,
-                            retry_after
+                            retry_after.as_millis()
                         );
 
-                        sleep(Duration::from_millis(retry_after));
+                        sleep(retry_after).await;
                     }
                 }
                 _ => todo!(),
             };
+
+            attempts += 1;
         }
+
+        Err(RsAlgoError {
+            err: RsAlgoErrorKind::NoResponse,
+        })
     }
 
     async fn open_trade_test(
@@ -1486,15 +1499,6 @@ impl BrokerStream for Xtb {
                                 let size = data["volume"].as_f64().unwrap();
                                 let price_in = data["open_price"].as_f64().unwrap();
                                 let price_out = data["close_price"].as_f64().unwrap();
-                                let profit = 0.; //data["profit"].as_f64().unwrap();
-                                let spread_out = 0.;
-
-                                let close_time = Local::now();
-                                let date_in = to_dbtime(parse_time_seconds(
-                                    data["open_time"].as_i64().unwrap() / 1000,
-                                ));
-                                let date_out = to_dbtime(close_time);
-                                let index_out = uuid::generate_ts_id(close_time);
 
                                 let comments = data["customComment"].as_str().unwrap();
                                 let trans_comments: TransactionComments =
@@ -1502,6 +1506,26 @@ impl BrokerStream for Xtb {
 
                                 let index_in = trans_comments.index_in;
                                 let spread_in = trans_comments.spread;
+                                let strategy_name = trans_comments.strategy_name;
+
+                                let profit = if let Some(profit_value) = data["profit"].as_f64() {
+                                    profit_value
+                                } else {
+                                    // let transaction_details = self
+                                    //     .get_transactions_history(&symbol, &strategy_name, Some(id))
+                                    //     .await
+                                    //     .unwrap();
+                                    // transaction_details.profit
+                                    0.0
+                                };
+
+                                let spread_out = 0.;
+                                let close_time = Local::now();
+                                let date_in = to_dbtime(parse_time_seconds(
+                                    data["open_time"].as_i64().unwrap() / 1000,
+                                ));
+                                let date_out = to_dbtime(close_time);
+                                let index_out = uuid::generate_ts_id(close_time);
 
                                 let trade_type = match is_stop {
                                     true => match trans_comments.trade_type.is_long() {
