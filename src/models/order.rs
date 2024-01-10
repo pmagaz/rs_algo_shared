@@ -13,8 +13,6 @@ use crate::scanner::instrument::*;
 
 use serde::{Deserialize, Serialize};
 
-
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OrderType {
     BuyOrderLong(f64, f64),
@@ -369,7 +367,7 @@ pub fn prepare_orders(
             | OrderType::StopLossShort(stop_loss_type, buy_price) => {
                 is_stop_loss = true;
                 let direction = order_type.get_direction();
-                //STOP LOSS SHOULD USE BUY_PRICE AND NO CURRENT_PRICE!
+
                 if is_valid_buy_sell_order {
                     let stop_loss = create_stop_loss_order(
                         index,

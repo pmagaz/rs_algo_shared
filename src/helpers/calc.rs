@@ -49,10 +49,11 @@ pub fn calculate_trade_profit_per(
     total_profit: f64,
     size: f64,
     price_in: f64,
+    equity: f64,
     _leverage: f64,
 ) -> f64 {
     let effective_investment = size * price_in; // * leverage; // Leveraged investment
-    (total_profit / effective_investment) * 100.0
+    (total_profit / effective_investment) * equity
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
@@ -367,4 +368,13 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
     let fraction = percentile * sorted_data.len() as f64 - 1.0 - rank as f64;
 
     lower + (upper - lower) * fraction
+}
+
+pub fn round_symbol_price(value: f64, symbol: &str) -> f64 {
+    let decimals = match symbol.contains("JPY") {
+        true => 3,
+        false => 5,
+    };
+
+    round(value, decimals)
 }

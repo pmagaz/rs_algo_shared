@@ -1,12 +1,11 @@
 use crate::broker::models::*;
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
-use crate::helpers::calc::calculate_trade_profit;
+use crate::helpers::calc::{calculate_trade_profit, round_symbol_price};
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
 use crate::helpers::{calc, date::*};
-use crate::models::environment;
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
@@ -14,6 +13,7 @@ use crate::models::stop_loss::StopLossType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
+use crate::models::{environment, trade};
 use crate::ws::message::{
     InstrumentData, Message, ResponseBody, ResponseType, TradeData, TradeResponse,
 };
@@ -21,7 +21,6 @@ use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
 
 use futures_util::{stream::SplitStream, Future};
-use round::round;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
@@ -107,7 +106,11 @@ pub trait BrokerStream {
         trade: TradeData<TradeOut>,
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn get_active_positions(&mut self, symbol: &str) -> Result<ResponseBody<PositionResult>>;
+    async fn get_active_positions(
+        &mut self,
+        symbol: &str,
+        strategy_name: &str,
+    ) -> Result<ResponseBody<PositionResult>>;
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
     async fn is_market_available(&mut self, symbol: &str) -> bool;
@@ -617,14 +620,15 @@ impl BrokerStream for Xtb {
                     | OrderType::TakeProfitShort(_, _) => {
                         //FIXME WORKAROUND
                         if let Some(meta) = &order.meta {
-                            stop_loss_order_price = Some(round(meta.sl, 5));
+                            stop_loss_order_price = Some(round_symbol_price(meta.sl, &symbol));
                         }
                     }
                     OrderType::SellOrderLong(_, _) | OrderType::SellOrderShort(_, _) => {
-                        sell_order_price = Some(round(order.target_price, 5));
+                        sell_order_price = Some(round_symbol_price(order.target_price, &symbol));
                     }
                     OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
-                        stop_loss_order_price = Some(round(order.target_price, 5));
+                        stop_loss_order_price =
+                            Some(round_symbol_price(order.target_price, &symbol));
                     }
                     _ => {}
                 }
@@ -829,11 +833,13 @@ impl BrokerStream for Xtb {
                                     .unwrap();
 
                                 log::info!(
-                                    "Real Closed {} {:?} trade {}. Closing price: {}",
+                                    "Real Closed {}_{} {:?} trade {}. Closing price: {} Profit: {}",
                                     &symbol,
+                                    &strategy_name,
                                     &trade_out.trade_type,
                                     &transaction_details.id,
                                     &transaction_details.close_price,
+                                    &transaction_details.profit,
                                 );
 
                                 trade_out.price_out = transaction_details.close_price;
@@ -1106,7 +1112,11 @@ impl BrokerStream for Xtb {
         Ok(res)
     }
 
-    async fn get_active_positions(&mut self, symbol: &str) -> Result<ResponseBody<PositionResult>> {
+    async fn get_active_positions(
+        &mut self,
+        symbol: &str,
+        strategy_name: &str,
+    ) -> Result<ResponseBody<PositionResult>> {
         let active_positions_command = Command {
             command: "getTrades".to_owned(),
             arguments: GetTrades { openedOnly: true },
@@ -1117,7 +1127,9 @@ impl BrokerStream for Xtb {
 
         let res = match msg {
             Message::Text(txt) => {
-                let position_result = self.parse_active_positions_data(txt, symbol).unwrap();
+                let position_result = self
+                    .parse_active_positions_data(txt, symbol, strategy_name)
+                    .unwrap();
                 ResponseBody {
                     response: ResponseType::GetActivePositions,
                     payload: Some(position_result),
@@ -1551,8 +1563,9 @@ impl BrokerStream for Xtb {
                                 let status = TradeStatus::Fulfilled;
 
                                 log::info!(
-                                    "Real Closed {} {:?} trade {}. Closing price: {} Profit: {}",
+                                    "Real Closed {}_{} {:?} trade {}. Closing price: {} Profit: {}",
                                     &symbol,
+                                    &strategy_name,
                                     &trade_type,
                                     &id,
                                     &price_out,
@@ -1854,28 +1867,32 @@ impl Xtb {
         &mut self,
         txt: String,
         symbol: &str,
+        strategy_name: &str,
     ) -> Result<PositionResult> {
         let data = self.parse_message(&txt).unwrap();
         let current_date = Local::now();
         let mut trade_in = TradeIn::default();
         let data = data["returnData"].as_array().unwrap();
+        let mut found = false;
 
         let mut orders: Vec<Order> = vec![];
         for obj in data {
             let order_symbol = obj["symbol"].as_str().unwrap();
-            if order_symbol == symbol {
+            let comment = obj["customComment"].as_str().unwrap().to_owned();
+            let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
+            let symbol_strategy_name = trans_comments.strategy_name;
+
+            if order_symbol == symbol && strategy_name == symbol_strategy_name {
+                found = true;
                 let id = obj["position"].as_i64().unwrap().try_into().unwrap();
                 let size = obj["volume"].as_f64().unwrap().try_into().unwrap();
                 let price_in = obj["open_price"].as_f64().unwrap().try_into().unwrap();
-                let close_price = obj["close_price"].as_f64().unwrap();
                 let origin_price = price_in;
                 let stop_loss = obj["sl"].as_f64().unwrap().try_into().unwrap();
                 let date_in = to_dbtime(date::parse_time_milliseconds(
                     obj["open_time"].as_i64().unwrap().try_into().unwrap(),
                 ));
 
-                let comment = obj["customComment"].as_str().unwrap().to_owned();
-                let trans_comments: TransactionComments = serde_json::from_str(&comment).unwrap();
                 let index_in = trans_comments.index_in;
                 let trade_type = trans_comments.trade_type;
                 let spread = trans_comments.spread;
@@ -1956,11 +1973,11 @@ impl Xtb {
             }
         }
 
-        let result = if data.len() > 0 {
-            PositionResult::MarketIn(TradeResult::TradeIn(trade_in), Some(orders))
-        } else {
-            PositionResult::None
+        let result = match found {
+            true => PositionResult::MarketIn(TradeResult::TradeIn(trade_in), Some(orders)),
+            false => PositionResult::None,
         };
+
         Ok(result)
     }
 

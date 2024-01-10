@@ -93,7 +93,8 @@ pub struct InstrumentData<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Symbol {
+pub struct StrategySymbol {
+    pub strategy_name: String,
     pub symbol: String,
 }
 
