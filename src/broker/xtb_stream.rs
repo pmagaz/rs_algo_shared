@@ -138,7 +138,7 @@ pub trait BrokerStream {
     async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
     async fn subscribe_trades(&mut self, symbol: &str) -> Result<()>;
-    async fn parse_stream_data(msg: Message) -> Option<String>;
+    async fn parse_stream_data(msg: Message, symbol: &str, strategy_name: &str) -> Option<String>;
     async fn keepalive_ping(&mut self) -> Result<String>;
     async fn disconnect(&mut self) -> Result<()>;
 }
@@ -1440,7 +1440,7 @@ impl BrokerStream for Xtb {
     {
     }
 
-    async fn parse_stream_data(msg: Message) -> Option<String> {
+    async fn parse_stream_data(msg: Message, symbol: &str, strategy_name: &str) -> Option<String> {
         let txt = match msg {
             Message::Text(txt) => txt,
             _ => "".to_owned(),
@@ -1497,24 +1497,26 @@ impl BrokerStream for Xtb {
                 } else if command == "trade" {
                     match data["closed"].as_bool() {
                         Some(is_closed) => {
-                            let cmd = TransactionCommand::from_value(
-                                data["cmd"].as_u64().unwrap() as i64
-                            )
-                            .unwrap();
-
+                            // let cmd = TransactionCommand::from_value(
+                            //     data["cmd"].as_u64().unwrap() as i64
+                            // )
+                            // .unwrap();
                             let comment = data["comment"].as_str().unwrap_or_default();
                             let is_stop = comment == "[S/L]";
+                            let stream_symbol = data["symbol"].as_str().unwrap();
+                            let comments = data["customComment"].as_str().unwrap();
+                            let trans_comments: TransactionComments =
+                                serde_json::from_str(&comments).unwrap();
 
-                            if is_closed && is_stop {
+                            if is_closed
+                                && is_stop
+                                && symbol == stream_symbol
+                                && strategy_name == trans_comments.strategy_name
+                            {
                                 let id = data["position"].as_u64().unwrap() as usize;
-                                let symbol = data["symbol"].as_str().unwrap();
                                 let size = data["volume"].as_f64().unwrap();
                                 let price_in = data["open_price"].as_f64().unwrap();
                                 let price_out = data["close_price"].as_f64().unwrap();
-
-                                let comments = data["customComment"].as_str().unwrap();
-                                let trans_comments: TransactionComments =
-                                    serde_json::from_str(&comments).unwrap();
 
                                 let index_in = trans_comments.index_in;
                                 let spread_in = trans_comments.spread;
