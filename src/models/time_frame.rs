@@ -37,10 +37,10 @@ pub struct TimeFrame {}
 impl TimeFrame {
     pub fn new(time_frame: &str) -> TimeFrameType {
         match time_frame {
-            "M15" => TimeFrameType::M5,
             "M1" => TimeFrameType::M1,
+            "M5" => TimeFrameType::M5,
             "M15" => TimeFrameType::M15,
-            "H1" => TimeFrameType::M30,
+            "M30" => TimeFrameType::M30,
             "H1" => TimeFrameType::H1,
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
@@ -53,23 +53,20 @@ impl TimeFrame {
     pub fn get_starting_bar(
         num_bars: i64,
         time_frame: &TimeFrameType,
-        _execution_mode: &ExecutionMode,
+        _: &ExecutionMode,
     ) -> DateTime<Local> {
-        // let bars_time_frame = match execution_mode {
-        //     mode::ExecutionMode::Scanner | mode::ExecutionMode::ScannerBackTest => num_bars,
-        //     _ => num_bars, // * time_frame.to_minutes(),
-        // };
+        let duration = match time_frame {
+            TimeFrameType::D | TimeFrameType::W => Duration::days(num_bars),
+            TimeFrameType::H4
+            | TimeFrameType::H1
+            | TimeFrameType::M30
+            | TimeFrameType::M15
+            | TimeFrameType::M5
+            | TimeFrameType::M1 => Duration::minutes(num_bars),
+            _ => Duration::days(num_bars),
+        };
 
-        match time_frame {
-            TimeFrameType::D | TimeFrameType::W => Local::now() - Duration::days(num_bars),
-            TimeFrameType::H4 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::H1 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M30 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M15 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M5 => Local::now() - Duration::minutes(num_bars),
-            TimeFrameType::M1 => Local::now() - Duration::minutes(num_bars),
-            _ => Local::now() - Duration::days(num_bars),
-        }
+        Local::now() - duration
     }
 }
 
@@ -92,15 +89,15 @@ impl TimeFrameType {
     pub fn from_str(time_frame: &str) -> TimeFrameType {
         match time_frame {
             "M1" => TimeFrameType::M1,
-            "M15" => TimeFrameType::M5,
+            "M5" => TimeFrameType::M5,
             "M15" => TimeFrameType::M15,
-            "H1" => TimeFrameType::M30,
+            "M30" => TimeFrameType::M30,
             "H1" => TimeFrameType::H1,
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
             "W" => TimeFrameType::W,
             "MN" => TimeFrameType::MN,
-            _ => TimeFrameType::ERR,
+            &_ => TimeFrameType::ERR,
         }
     }
 
