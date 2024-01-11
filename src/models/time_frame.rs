@@ -37,10 +37,10 @@ pub struct TimeFrame {}
 impl TimeFrame {
     pub fn new(time_frame: &str) -> TimeFrameType {
         match time_frame {
-            "M5" => TimeFrameType::M5,
+            "M15" => TimeFrameType::M5,
             "M1" => TimeFrameType::M1,
             "M15" => TimeFrameType::M15,
-            "M30" => TimeFrameType::M30,
+            "H1" => TimeFrameType::M30,
             "H1" => TimeFrameType::H1,
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,
@@ -92,9 +92,9 @@ impl TimeFrameType {
     pub fn from_str(time_frame: &str) -> TimeFrameType {
         match time_frame {
             "M1" => TimeFrameType::M1,
-            "M5" => TimeFrameType::M5,
+            "M15" => TimeFrameType::M5,
             "M15" => TimeFrameType::M15,
-            "M30" => TimeFrameType::M30,
+            "H1" => TimeFrameType::M30,
             "H1" => TimeFrameType::H1,
             "H4" => TimeFrameType::H4,
             "D" => TimeFrameType::D,

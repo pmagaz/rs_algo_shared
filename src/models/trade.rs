@@ -741,7 +741,7 @@ pub fn calculate_trade_stats(
 
     let profit = match execution_mode.is_bot() {
         true => trade_out.profit,
-        false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type),
+        false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type) * 100.000,
     };
 
     let profit_per = calc::calculate_trade_profit_per(profit, price_in);
