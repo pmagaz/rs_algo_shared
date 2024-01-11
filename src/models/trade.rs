@@ -563,7 +563,7 @@ pub fn resolve_trade_out(
         };
 
         let profit_per = match execution_mode.is_back_test() {
-            true => calc::calculate_trade_profit_per(profit, size, price_in, equity, leverage),
+            true => calc::calculate_trade_profit_per(profit, price_in),
             false => 0.,
         };
 
@@ -744,7 +744,7 @@ pub fn calculate_trade_stats(
         false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type),
     };
 
-    let profit_per = calculate_trade_profit_per(profit, size, price_in, equity, leverage);
+    let profit_per = calc::calculate_trade_profit_per(profit, price_in);
     let run_up = calculate_trade_runup(data, price_in, trade_type);
     let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
     let draw_down = calculate_trade_drawdown(data, price_in, trade_type);

@@ -45,15 +45,19 @@ pub fn calculate_trade_profit(
     profit_without_leverage
 }
 
-pub fn calculate_trade_profit_per(
-    total_profit: f64,
-    size: f64,
-    price_in: f64,
-    equity: f64,
-    _leverage: f64,
-) -> f64 {
-    let effective_investment = size * price_in; // * leverage; // Leveraged investment
-    (total_profit / effective_investment) * equity
+// pub fn calculate_trade_profit_per(
+//     total_profit: f64,
+//     size: f64,
+//     price_in: f64,
+//     equity: f64,
+//     _leverage: f64,
+// ) -> f64 {
+//     let effective_investment = size * price_in; // * leverage; // Leveraged investment
+//     (total_profit / effective_investment) * equity
+// }
+
+pub fn calculate_trade_profit_per(profit: f64, price_in: f64) -> f64 {
+    (profit / price_in) * 100.0
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
