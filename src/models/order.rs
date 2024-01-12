@@ -4,7 +4,7 @@ use super::mode::{self, ExecutionMode};
 use super::tick::InstrumentTick;
 use super::trade::{Trade, TradeIn, TradeType};
 
-use crate::helpers::uuid;
+use crate::helpers::{calc, uuid};
 use crate::helpers::{date, date::*};
 use crate::models::stop_loss::*;
 use crate::models::trade::Position;
@@ -497,6 +497,8 @@ pub fn create_order(
         false => 0,
     };
 
+    let target_price = calc::format_symbol_price(*target_price, &instrument.symbol);
+
     Order {
         id: uuid::generate_ts_id(*current_date),
         index_created: index,
@@ -505,7 +507,7 @@ pub fn create_order(
         order_type: order_type.clone(),
         status: OrderStatus::Pending,
         origin_price: current_price,
-        target_price: *target_price,
+        target_price: target_price,
         size: *order_size,
         created_at: to_dbtime(*current_date),
         updated_at: None,

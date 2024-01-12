@@ -450,7 +450,7 @@ pub fn resolve_trade_out(
     order: Option<&Order>,
     tick: &InstrumentTick,
 ) -> TradeResult {
-    let _size = trade_in.size;
+    let symbol = &instrument.symbol;
     let data = &instrument.data;
     let spread = tick.spread();
     let trade_in_type = &trade_in.trade_type;
@@ -556,9 +556,7 @@ pub fn resolve_trade_out(
         };
 
         let profit = match execution_mode.is_back_test() {
-            true => {
-                calc::calculate_trade_profit(size, price_in, price_out, leverage, trade_in_type)
-            }
+            true => calculate_trade_profit(size, price_in, price_out, leverage, trade_type, symbol),
             false => 0.,
         };
 
@@ -730,6 +728,7 @@ pub fn calculate_trade_stats(
     data: &Vec<Candle>,
 ) -> TradeOut {
     log::info!("Calculating Trade stats");
+    let symbol = &env::var("SYMBOL").unwrap();
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
     //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
@@ -741,7 +740,7 @@ pub fn calculate_trade_stats(
 
     let profit = match execution_mode.is_bot() {
         true => trade_out.profit,
-        false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type) * 100000.,
+        false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type, symbol),
     };
 
     let profit_per = calc::calculate_trade_profit_per(profit, price_in);

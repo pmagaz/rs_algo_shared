@@ -1,6 +1,7 @@
 use super::order::{self, Order, OrderDirection, OrderType};
 use super::tick::InstrumentTick;
 
+use crate::helpers::calc::format_symbol_price;
 use crate::helpers::{calc, date::*};
 use crate::indicators::Indicator;
 use crate::scanner::instrument::Instrument;
@@ -79,8 +80,6 @@ pub fn create_stop_loss_order(
         OrderDirection::Up => OrderType::StopLossShort(stop_loss_type.clone(), buy_price),
         OrderDirection::Down => OrderType::StopLossLong(stop_loss_type.clone(), buy_price),
     };
-
-    log::info!("222222 {:?}", (spread_value, &stop_loss));
 
     order::create_order(index, instrument, &stop_loss, &target_price, &order_size)
 }

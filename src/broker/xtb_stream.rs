@@ -1,11 +1,12 @@
 use crate::broker::models::*;
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
-use crate::helpers::calc::{calculate_trade_profit, round_symbol_price};
+use crate::helpers::calc::*;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};
 use crate::helpers::http::request;
 use crate::helpers::http::HttpMethod;
 use crate::helpers::uuid;
 use crate::helpers::{calc, date::*};
+use crate::models::environment;
 use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
@@ -13,7 +14,6 @@ use crate::models::stop_loss::StopLossType;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
-use crate::models::{environment, trade};
 use crate::ws::message::{
     InstrumentData, Message, ResponseBody, ResponseType, TradeData, TradeResponse,
 };
@@ -471,8 +471,8 @@ impl BrokerStream for Xtb {
         };
 
         let final_price = match trade_type.is_stop() {
-            true => price,
-            false => price_with_slippage,
+            true => format_symbol_price(price, &symbol),
+            false => format_symbol_price(price_with_slippage, &symbol),
         };
 
         let tick = InstrumentTick::new()
@@ -624,15 +624,14 @@ impl BrokerStream for Xtb {
                     | OrderType::TakeProfitShort(_, _) => {
                         //FIXME WORKAROUND
                         if let Some(meta) = &order.meta {
-                            stop_loss_order_price = Some(round_symbol_price(meta.sl, &symbol));
+                            stop_loss_order_price = Some(meta.sl);
                         }
                     }
                     OrderType::SellOrderLong(_, _) | OrderType::SellOrderShort(_, _) => {
-                        sell_order_price = Some(round_symbol_price(order.target_price, &symbol));
+                        sell_order_price = Some(order.target_price);
                     }
                     OrderType::StopLossLong(_, _) | OrderType::StopLossShort(_, _) => {
-                        stop_loss_order_price =
-                            Some(round_symbol_price(order.target_price, &symbol));
+                        stop_loss_order_price = Some(order.target_price);
                     }
                     _ => {}
                 }
@@ -1065,7 +1064,8 @@ impl BrokerStream for Xtb {
 
         let size = data.size;
         let leverage = 30.;
-        let profit = calculate_trade_profit(size, price_in, price_out, leverage, &trade_type);
+        let profit =
+            calculate_trade_profit(size, price_in, price_out, leverage, &trade_type, symbol);
 
         let is_profitable = match profit {
             _ if profit > 0. => true,
@@ -1198,14 +1198,9 @@ impl BrokerStream for Xtb {
         let spread = tick.spread();
 
         let price_in = match trade_type.is_long() {
-            true => ask,
-            false => bid,
+            true => format_symbol_price(ask, &symbol),
+            false => format_symbol_price(bid, &symbol),
         };
-
-        // let accepted = match order.order_type.is_long() {
-        //     true => order.target_price >= bid,
-        //     false => order.target_price >= ask,
-        // };
 
         let accepted = true;
 
@@ -1304,17 +1299,6 @@ impl BrokerStream for Xtb {
         let non_profitable_outs = trade.options.non_profitable_out;
         let price_in = trade_data.price_in;
 
-        // let price_out = match trade_type.is_stop() {
-        //     true => match trade_type.is_long() {
-        //         true => order_data.target_price,
-        //         false => order_data.target_price,
-        //     },
-        //     false => match trade_type.is_long() {
-        //         true => bid,
-        //         false => ask,
-        //     },
-        // };
-
         let price_out = match trade_type.is_stop() {
             true => order_data.target_price,
             false => match trade_type.is_long() {
@@ -1323,9 +1307,12 @@ impl BrokerStream for Xtb {
             },
         };
 
+        //let price_out = price_out, &symbol;
+
         let size = trade_data.size;
         let leverage = 30.;
-        let profit = calculate_trade_profit(size, price_in, price_out, leverage, &trade_type);
+        let profit =
+            calculate_trade_profit(size, price_in, price_out, leverage, &trade_type, symbol);
 
         let is_profitable = match profit {
             _ if profit > 0. => true,
