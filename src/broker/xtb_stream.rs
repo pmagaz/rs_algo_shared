@@ -388,7 +388,11 @@ impl BrokerStream for Xtb {
                 {
                     let open_price = obj["open_price"].as_f64().unwrap();
                     let close_price = obj["close_price"].as_f64().unwrap();
-                    let profit = obj["profit"].as_f64().unwrap();
+
+                    let gross_profit = obj["profit"].as_f64().unwrap_or(0.0);
+                    let swap = obj["storage"].as_f64().unwrap_or(0.0);
+                    let commission = obj["commission"].as_f64().unwrap_or(0.0);
+                    let profit = gross_profit - swap - commission;
 
                     return Some(TransactionDetails {
                         id,
@@ -1522,16 +1526,10 @@ impl BrokerStream for Xtb {
                                 let spread_in = trans_comments.spread;
                                 let strategy_name = trans_comments.strategy_name;
 
-                                let profit = if let Some(profit_value) = data["profit"].as_f64() {
-                                    profit_value
-                                } else {
-                                    // let transaction_details = self
-                                    //     .get_transactions_history(&symbol, &strategy_name, Some(id))
-                                    //     .await
-                                    //     .unwrap();
-                                    // transaction_details.profit
-                                    0.0
-                                };
+                                let gross_profit = obj["profit"].as_f64().unwrap_or(0.0);
+                                let swap = obj["storage"].as_f64().unwrap_or(0.0);
+                                let commission = obj["commission"].as_f64().unwrap_or(0.0);
+                                let profit = gross_profit - swap - commission;
 
                                 let spread_out = 0.;
                                 let close_time = Local::now();
