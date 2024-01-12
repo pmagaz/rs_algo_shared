@@ -471,14 +471,17 @@ impl BrokerStream for Xtb {
         };
 
         let final_price = match trade_type.is_stop() {
-            true => format_symbol_price(price, &symbol),
-            false => format_symbol_price(price_with_slippage, &symbol),
+            true => price,
+            false => price_with_slippage,
         };
+
+        let ask = format_symbol_price(final_price + tick.spread(), &symbol);
+        let bid = format_symbol_price(final_price, &symbol);
 
         let tick = InstrumentTick::new()
             .symbol(symbol.to_string())
-            .ask(final_price + tick.spread())
-            .bid(final_price)
+            .ask(ask)
+            .bid(bid)
             .high(0.0)
             .low(0.0)
             .spread(tick.spread())
@@ -1198,8 +1201,8 @@ impl BrokerStream for Xtb {
         let spread = tick.spread();
 
         let price_in = match trade_type.is_long() {
-            true => ask, &symbol,
-            false => bid, &symbol,
+            true => ask,
+            false => bid,
         };
 
         let accepted = true;

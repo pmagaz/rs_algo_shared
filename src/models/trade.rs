@@ -372,6 +372,7 @@ pub fn resolve_trade_in(
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
 
+    let symbol = instrument.symbol();
     let index = calculate_trade_index(index, order, &execution_mode);
     let size = trade_size;
 
@@ -411,8 +412,8 @@ pub fn resolve_trade_in(
         };
 
         let price_in = match trade_type.is_long() {
-            true => ask,
-            false => price,
+            true => format_symbol_price(ask, &symbol),
+            false => format_symbol_price(price, &symbol),
         };
 
         let index_in = match execution_mode.is_back_test() {
@@ -464,7 +465,7 @@ pub fn resolve_trade_out(
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
 
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
-    let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
+    //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let size = trade_in.size;
 
     let index = calculate_trade_index(index, order, &execution_mode);
@@ -490,10 +491,10 @@ pub fn resolve_trade_out(
 
     let price_out = match order_engine.as_ref() {
         "broker" => match order {
-            Some(order) => order.target_price,
-            None => close_trade_price,
+            Some(order) => format_symbol_price(order.target_price, &symbol),
+            None => format_symbol_price(close_trade_price, &symbol),
         },
-        _ => close_trade_price,
+        _ => format_symbol_price(close_trade_price, &symbol),
     };
 
     let (price_in, price_out) = match execution_mode.is_back_test() || execution_mode.is_bot_test()

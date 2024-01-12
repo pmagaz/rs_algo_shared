@@ -33,8 +33,8 @@ pub fn calculate_trade_profit(
     symbol: &str,
 ) -> f64 {
     let profit_without_leverage = match trade_type.is_long() {
-        true => format_symbol_price((price_out - price_in * size), &symbol),
-        false => format_symbol_price((price_in - price_out * size), &symbol),
+        true => (price_out - price_in) * size,
+        false => (price_in - price_out) * size,
     };
 
     let total_profit = profit_without_leverage * leverage;
@@ -375,21 +375,11 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
     lower + (upper - lower) * fraction
 }
 
-// pub fn format_symbol_price(value: f64, symbol: &str) -> f64 {
-//     let decimals = match symbol.contains("JPY") {
-//         true => 3,
-//         false => 5,
-//     };
-
-//     round(value, decimals)
-// }
-
 pub fn format_symbol_price(value: f64, symbol: &str) -> f64 {
-    let decimals = match symbol {
-        s if s.contains("JPY") => 3,
-        _ => 5,
+    let decimals = match symbol.contains("JPY") {
+        true => 3,
+        false => 5,
     };
 
-    let factor = 10i64.pow(decimals) as f64;
-    (value * factor).round() / factor
+    round(value, decimals)
 }
