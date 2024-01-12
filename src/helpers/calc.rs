@@ -43,7 +43,7 @@ pub fn calculate_trade_profit(
         log::warn!("Zero Profit!");
     }
 
-    profit_without_leverage * format_symbol_price(100000., &symbol)
+    format_symbol_price(profit_without_leverage * 100000., &symbol)
 }
 
 // pub fn calculate_trade_profit_per(

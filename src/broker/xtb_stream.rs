@@ -1104,6 +1104,7 @@ impl BrokerStream for Xtb {
         data.price_out = price_out;
         data.date_out = date_out;
         data.bid = bid;
+        data.profit = profit;
         data.ask = ask;
         data.spread_out = spread;
         data.status = status;
