@@ -1198,8 +1198,8 @@ impl BrokerStream for Xtb {
         let spread = tick.spread();
 
         let price_in = match trade_type.is_long() {
-            true => format_symbol_price(ask, &symbol),
-            false => format_symbol_price(bid, &symbol),
+            true => ask, &symbol,
+            false => bid, &symbol,
         };
 
         let accepted = true;
