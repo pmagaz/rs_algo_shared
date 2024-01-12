@@ -731,7 +731,7 @@ pub fn calculate_trade_stats(
 ) -> TradeOut {
     log::info!("Calculating Trade stats");
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
-    let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
+    //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let trade_type = &trade_in.trade_type;
