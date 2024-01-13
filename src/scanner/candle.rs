@@ -313,19 +313,7 @@ impl CandleBuilder {
 
         let diff_size = (left_close - close).abs();
         let _diff_size_percentage = (diff_size / close) * 100.0;
-        // log::info!(
-        //     "1111111 {:?}",
-        //     (
-        //         close > open
-        //             && mid_close > mid_open
-        //             && left_close > left_open
-        //             && close > mid_close
-        //             && mid_close > left_close,
-        //         left_open,
-        //         mid_open,
-        //         open
-        //     )
-        // );
+
         close > open
             && mid_close > mid_open
             && left_close > left_open

@@ -43,7 +43,9 @@ pub fn calculate_trade_profit(
         log::warn!("Zero Profit!");
     }
 
-    format_symbol_price(profit_without_leverage * 100000., &symbol)
+    let symbol_factor = format_symbol_factor(&symbol);
+
+    format_symbol_price(profit_without_leverage * symbol_factor, &symbol)
 }
 
 // pub fn calculate_trade_profit_per(
@@ -57,8 +59,9 @@ pub fn calculate_trade_profit(
 //     (total_profit / effective_investment) * equity
 // }
 
-pub fn calculate_trade_profit_per(profit: f64, price_in: f64) -> f64 {
-    (profit / price_in) * 100.0
+pub fn calculate_trade_profit_per(profit: f64, price_in: f64, symbol: &str) -> f64 {
+    let symbol_factor = format_symbol_factor(&symbol);
+    (profit / symbol_factor / price_in) * 100.0
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
@@ -268,7 +271,9 @@ pub fn total_profitable_trades(winning_trades: usize, total_trades: usize) -> f6
 }
 
 pub fn total_profit_per(trades_out: &[TradeOut]) -> f64 {
-    trades_out.iter().map(|trade| trade.profit_per).sum()
+    let total_profit_per: f64 = trades_out.iter().map(|trade| trade.profit_per).sum();
+    let total_price_in: f64 = trades_out.iter().map(|trade| trade.price_in).sum();
+    (total_profit_per / total_price_in) * 100.0
 }
 
 pub fn total_profit_factor(gross_profits: f64, gross_losses: f64) -> f64 {
@@ -373,6 +378,14 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
     let fraction = percentile * sorted_data.len() as f64 - 1.0 - rank as f64;
 
     lower + (upper - lower) * fraction
+}
+
+pub fn format_symbol_factor(symbol: &str) -> f64 {
+    let symbol_factor = match symbol.contains("JPY") {
+        true => 1000.,
+        false => 100000.,
+    };
+    symbol_factor
 }
 
 pub fn format_symbol_price(value: f64, symbol: &str) -> f64 {
