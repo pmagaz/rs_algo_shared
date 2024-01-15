@@ -1516,12 +1516,27 @@ impl BrokerStream for Xtb {
                                 let index_in = trans_comments.index_in;
                                 let spread_in = trans_comments.spread;
                                 let strategy_name = trans_comments.strategy_name;
+                                log::info!("DATA {:?}", obj);
+                                //let gross_profit: f64 = obj["profit"].as_f64().unwrap_or(0.0);
+                                // let swap = obj["storage"].as_f64().unwrap_or(0.0);
+                                // let commission = obj["commission"].as_f64().unwrap_or(0.0);
+                                let gross_profit: f64 =
+                                    match obj.get("profit").and_then(|v| v.as_f64()) {
+                                        Some(value) => value,
+                                        None => 0.0,
+                                    };
+                                let swap: f64 = match obj.get("swap").and_then(|v| v.as_f64()) {
+                                    Some(value) => value,
+                                    None => 0.0,
+                                };
 
-                                let gross_profit = obj["profit"].as_f64().unwrap_or(0.0);
-                                let swap = obj["storage"].as_f64().unwrap_or(0.0);
-                                let commission = obj["commission"].as_f64().unwrap_or(0.0);
+                                let commission: f64 =
+                                    match obj.get("commission").and_then(|v| v.as_f64()) {
+                                        Some(value) => value,
+                                        None => 0.0,
+                                    };
+
                                 let profit = gross_profit - swap - commission;
-
                                 let spread_out = 0.;
                                 let close_time = Local::now();
                                 let date_in = to_dbtime(parse_time_seconds(
