@@ -67,7 +67,7 @@ impl Indicator for Adx {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.adx.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;
@@ -78,7 +78,7 @@ impl Indicator for Adx {
         self.adx_tmp.reset();
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.adx_tmp.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;

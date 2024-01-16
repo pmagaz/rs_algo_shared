@@ -73,7 +73,7 @@ impl Indicator for Stoch {
         self.stoch_tmp.next(value);
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.stoch.next(value);
         let b = self.ema.next(a);
         let last_a = self.data_a.last_mut().unwrap();
@@ -83,7 +83,7 @@ impl Indicator for Stoch {
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.stoch.next(value);
         let b = self.ema.next(a);
         let last_a = self.data_a.last_mut().unwrap();

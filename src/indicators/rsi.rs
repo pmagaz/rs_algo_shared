@@ -65,7 +65,7 @@ impl Indicator for Rsi {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.rsi.next(value);
         let _last_index = self.data_a.len() - 1;
         let last = self.data_a.last_mut().unwrap();
@@ -73,10 +73,12 @@ impl Indicator for Rsi {
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.rsi_tmp.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;
+        self.reset_tmp();
+
         Ok(())
     }
 

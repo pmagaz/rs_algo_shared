@@ -54,7 +54,7 @@ impl Indicator for StandardD {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.sd.next(value);
         let last_index = self.data_a.len() - 1;
         let last = self.data_a.last_mut().unwrap();
@@ -62,7 +62,7 @@ impl Indicator for StandardD {
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.sd.next(value);
         let last_index = self.data_a.len() - 1;
         let last = self.data_a.last_mut().unwrap();

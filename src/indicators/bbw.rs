@@ -67,7 +67,7 @@ impl Indicator for BollingerBW {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
@@ -78,7 +78,7 @@ impl Indicator for BollingerBW {
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.bb_tmp.next(value);
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
@@ -87,6 +87,7 @@ impl Indicator for BollingerBW {
         *last_a = a.upper;
         *last_b = a.lower;
         *last_c = a.average;
+        self.reset_tmp();
 
         Ok(())
     }

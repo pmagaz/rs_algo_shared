@@ -18,7 +18,6 @@ use crate::indicators::rsi::Rsi;
 use crate::models::time_frame::TimeFrameType;
 use crate::scanner::candle::Candle;
 
-
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::marker::Sized;
@@ -30,8 +29,8 @@ pub trait Indicator {
     fn next(&mut self, value: f64) -> Result<()>;
     fn next_tmp(&mut self, value: f64);
     fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()>;
-    fn update(&mut self, value: f64) -> Result<()>;
-    fn update_tmp(&mut self, value: f64) -> Result<()>;
+    fn next_update_last(&mut self, value: f64) -> Result<()>;
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()>;
     fn reset_tmp(&mut self);
     // fn get_mut_data_a(&mut self) -> &Vec<f64>;
     // fn get_mut_data_b(&mut self) -> &Vec<f64>;
@@ -131,7 +130,6 @@ impl Indicators {
         let close = OHLC.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-        //log::info!("INDICATORS  SIZE {:?}", self.ema_a().get_data_a().len());
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
@@ -229,7 +227,98 @@ impl Indicators {
         Ok(())
     }
 
-    pub fn next_update(
+    pub fn next_close_delete(
+        &mut self,
+        OHLC: (f64, f64, f64, f64),
+        time_frame: &TimeFrameType,
+    ) -> Result<()> {
+        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
+        let max_bars = num_bars / time_frame.clone().to_number() as usize;
+        log::info!("closing indicators");
+        self.next_update_lastests(OHLC, time_frame).unwrap();
+
+        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
+        //     self.adx.remove_a(0);
+        //     self.adx.next(close).unwrap();
+        // }
+
+        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap()
+            && self.atr.get_data_a().len() > max_bars
+        {
+            self.atr.remove_a(0);
+        }
+
+        if env::var("INDICATORS_MACD")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+            && self.macd.get_data_a().len() > max_bars
+        {
+            self.macd.remove_a(0);
+            self.macd.remove_b(0);
+        }
+
+        // if env::var("INDICATORS_STOCH")
+        //     .unwrap()
+        //     .parse::<bool>()
+        //     .unwrap()
+        // {
+        //     self.stoch.next_update_last(close).unwrap();
+        // }
+
+        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap()
+            && self.rsi.get_data_a().len() > max_bars
+        {
+            self.rsi.remove_a(0);
+        }
+
+        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap()
+            && self.bb.get_data_a().len() > max_bars
+        {
+            self.bb.remove_a(0);
+            self.bb.remove_b(0);
+            self.bb.remove_c(0);
+        }
+
+        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap()
+            && self.bbw.get_data_a().len() > max_bars
+        {
+            self.bbw.remove_a(0);
+            self.bbw.remove_b(0);
+            self.bbw.remove_c(0);
+        }
+
+        if env::var("INDICATORS_EMA_A")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+            && self.ema_a.get_data_a().len() > max_bars
+        {
+            self.ema_a.remove_a(0);
+        }
+
+        if env::var("INDICATORS_EMA_B")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+            && self.ema_b.get_data_a().len() > max_bars
+        {
+            self.ema_b.remove_a(0);
+        }
+
+        if env::var("INDICATORS_EMA_C")
+            .unwrap()
+            .parse::<bool>()
+            .unwrap()
+            && self.ema_c.get_data_a().len() > max_bars
+        {
+            self.ema_c.remove_a(0);
+        }
+
+        Ok(())
+    }
+
+    pub fn next_update_lastests(
         &mut self,
         OHLC: (f64, f64, f64, f64),
         _time_frame: &TimeFrameType,
@@ -242,7 +331,7 @@ impl Indicators {
         // }
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            self.atr.update(close).unwrap();
+            self.atr.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_MACD")
@@ -250,7 +339,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.macd.update(close).unwrap();
+            self.macd.next_update_last(close).unwrap();
         }
 
         // if env::var("INDICATORS_STOCH")
@@ -258,19 +347,19 @@ impl Indicators {
         //     .parse::<bool>()
         //     .unwrap()
         // {
-        //     self.stoch.update(close).unwrap();
+        //     self.stoch.next_update_last(close).unwrap();
         // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            self.rsi.update(close).unwrap();
+            self.rsi.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            self.bb.update(close).unwrap();
+            self.bb.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            self.bbw.update(close).unwrap();
+            self.bbw.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_EMA_A")
@@ -278,7 +367,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_a.update(close).unwrap();
+            self.ema_a.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_EMA_B")
@@ -286,7 +375,7 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_b.update(close).unwrap();
+            self.ema_b.next_update_last(close).unwrap();
         }
 
         if env::var("INDICATORS_EMA_C")
@@ -294,173 +383,29 @@ impl Indicators {
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_c.update(close).unwrap();
+            self.ema_c.next_update_last(close).unwrap();
         }
 
         Ok(())
     }
 
-    pub fn next_close_delete(
+    pub fn next_tmp_indicators(
         &mut self,
-        OHLC: (f64, f64, f64, f64),
-        time_frame: &TimeFrameType,
+        current_candle: &Candle,
+        data: &Vec<Candle>,
     ) -> Result<()> {
-        let _close = OHLC.3;
-        let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
-        let max_bars = num_bars / time_frame.clone().to_number() as usize;
+        let close = current_candle.close();
 
-        self.next_update(OHLC, time_frame).unwrap();
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
-
-        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() && self.atr.get_data_a().len() > max_bars {
-            self.atr.remove_a(0);
-        }
-
-        if env::var("INDICATORS_MACD")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap() && self.macd.get_data_a().len() > max_bars {
-            self.macd.remove_a(0);
-            self.macd.remove_b(0);
-        }
-
-        // if env::var("INDICATORS_STOCH")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap()
-        // {
-        //     self.stoch.update(close).unwrap();
-        // }
-
-        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() && self.rsi.get_data_a().len() > max_bars {
-            self.rsi.remove_a(0);
-        }
-
-        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() && self.bb.get_data_a().len() > max_bars {
-            self.bb.remove_a(0);
-            self.bb.remove_b(0);
-            self.bb.remove_c(0);
-        }
-
-        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() && self.bbw.get_data_a().len() > max_bars {
-            self.bbw.remove_a(0);
-            self.bbw.remove_b(0);
-            self.bbw.remove_c(0);
-        }
-
-        if env::var("INDICATORS_EMA_A")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap() && self.ema_a.get_data_a().len() > max_bars {
-            self.ema_a.remove_a(0);
-        }
-
-        if env::var("INDICATORS_EMA_B")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap() && self.ema_b.get_data_a().len() > max_bars {
-            self.ema_b.remove_a(0);
-        }
-
-        if env::var("INDICATORS_EMA_C")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap() && self.ema_c.get_data_a().len() > max_bars {
-            self.ema_c.remove_a(0);
-        }
-
-        Ok(())
-    }
-
-    pub fn update(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        let close = OHLC.3;
-
-        // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
-        //     self.adx.remove_a(0);
-        //     self.adx.next(close).unwrap();
-        // }
-
-        if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            self.atr.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_MACD")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.macd.update_tmp(close).unwrap();
-        }
-
-        // if env::var("INDICATORS_STOCH")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap()
-        // {
-        //     self.stoch.update(close).unwrap();
-        // }
-
-        if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            self.rsi.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            self.bb.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            self.bbw.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_EMA_A")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.ema_a.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_EMA_B")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.ema_b.update_tmp(close).unwrap();
-        }
-
-        if env::var("INDICATORS_EMA_C")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap()
-        {
-            self.ema_c.update_tmp(close).unwrap();
-        }
-
-        Ok(())
-    }
-
-    pub fn create_tmp_indicators(
-        &mut self,
-        candle: &Candle,
-        prev_data: &Vec<Candle>,
-    ) -> Result<()> {
-        let close = candle.close();
-
-        //WARMING
-        for prev_candle in prev_data
-            .iter()
-            .rev()
-            .take(50)
-            .rev()
-            .filter(|x| x.is_closed)
-        {
+        let num_warming_items = 5;
+        let len = data.len();
+        let num_items = num_warming_items.min(len);
+        //TAKE LATEST 50 ELEMENTS OF THE ARRAY FOR WARMING AND EXCLUDING THE LASTEST ONE
+        for prev_candle in &data[len - num_items..len - 1] {
             if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
                 self.atr.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
+                log::info!("0000000 {:?}", (prev_candle.date(), prev_candle.close()));
                 self.bb.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
@@ -500,64 +445,50 @@ impl Indicators {
         }
 
         //UPDATING LAST VALUE & RESET
-
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
-            self.atr.update_tmp(close).unwrap();
-            self.atr.reset_tmp();
+            self.atr.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            self.bb.update_tmp(close).unwrap();
-            self.bb.reset_tmp();
+            log::info!(
+                "1111111111 {:?}",
+                (current_candle.date(), current_candle.close())
+            );
+            self.bb.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
-            self.bbw.update_tmp(close).unwrap();
-            self.bbw.reset_tmp();
+            self.bbw.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_EMA_A")
             .unwrap()
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_a.update_tmp(close).unwrap();
-            self.ema_a.reset_tmp();
+            self.ema_a.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_EMA_B")
             .unwrap()
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_b.update_tmp(close).unwrap();
-            self.ema_b.reset_tmp();
+            self.ema_b.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_EMA_C")
             .unwrap()
             .parse::<bool>()
             .unwrap()
         {
-            self.ema_c.update_tmp(close).unwrap();
-            self.ema_c.reset_tmp();
+            self.ema_c.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_MACD")
             .unwrap()
             .parse::<bool>()
             .unwrap()
         {
-            self.macd.update_tmp(close).unwrap();
-            self.macd.reset_tmp();
+            self.macd.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {
-            self.rsi.update_tmp(close).unwrap();
-            self.rsi.reset_tmp();
+            self.rsi.next_update_last_tmp(close).unwrap();
         }
-
-        // if env::var("INDICATORS_STOCH")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap()
-        // {
-        //     self.stoch.update_tmp(close).unwrap();
-        //     self.stoch.reset_tmp();
-        // }
 
         Ok(())
     }
@@ -584,7 +515,7 @@ impl Indicators {
         //     .parse::<bool>()
         //     .unwrap()
         // {
-        //     self.stoch.update(close).unwrap();
+        //     self.stoch.next_update_last(close).unwrap();
         // }
 
         if env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap() {

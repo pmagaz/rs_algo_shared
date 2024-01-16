@@ -320,8 +320,8 @@ impl Instrument {
             .iter()
             .enumerate()
             .map(|(id, x)| {
-                let adapted_dohlcc = adapt_to_timeframe(*x, &self.time_frame, false);
-                let candle = self.process_candle(id, &data, adapted_dohlcc, logarithmic_scanner);
+                let formated_dohlcc = format_open_until(*x, &self.time_frame, false);
+                let candle = self.process_candle(id, &data, formated_dohlcc, logarithmic_scanner);
                 let _num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
 
                 let low = candle.low();
@@ -350,11 +350,12 @@ impl Instrument {
                 }
 
                 if process_indicators {
-                    let ohlc_indicators =
-                        self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
-                    let delete_previous = false;
-
                     if candle.is_closed() {
+                        let ohlc_indicators =
+                            self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
+                        let delete_previous = false;
+
+                        log::info!("88888888 {:?}", (&candle, ohlc_indicators));
                         self.indicators
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
@@ -457,23 +458,28 @@ impl Instrument {
 
         let next_id = self.data.len();
         let last_candle = &self.data().last().unwrap().clone();
+
         let time_frame = &self.time_frame.clone();
 
-        let adapted_dohlcc = adapt_to_timeframe(data, &self.time_frame, true);
+        let formated_dohlcc = format_open_until(data, &self.time_frame, true);
 
-        let candle = self.generate_candle(next_id, adapted_dohlcc, &self.data, logarithmic_scanner);
+        let formated_candle =
+            self.generate_candle(next_id, formated_dohlcc, &self.data, logarithmic_scanner);
 
-        if candle.is_closed() {
+        //CONTINUE HERE.  does it work for 3 closed as it is? IS THE CORRECT CANDLE?
+        if formated_candle.is_closed() {
+            log::info!("99999999 {:?}", (&last_candle, &formated_candle));
+
             self.close_last_candle();
-            self.close_indicators(last_candle);
+            self.close_indicators(&last_candle);
             //self.next_peaks(&last_candle);
         } else {
-            self.adapt_last_candle_tf(candle.clone(), last_candle, time_frame);
+            self.adapt_last_candle_tf(formated_candle.clone(), last_candle, time_frame);
             let updated_candle = &self.data.last().unwrap().clone();
-            self.update_indicators(updated_candle);
+            //self.update_indicators(updated_candle);
         }
 
-        Ok(candle)
+        Ok(formated_candle)
     }
 
     pub fn close_indicators(&mut self, candle: &Candle) {
@@ -489,16 +495,16 @@ impl Instrument {
             self.indicators
                 .next_close_delete(ohlc_indicators, &self.time_frame().clone())
                 .unwrap();
+
             self.indicators.duplicate_last().unwrap();
         }
     }
 
     pub fn update_indicators(&mut self, candle: &Candle) {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
-
         if process_indicators {
             self.indicators
-                .create_tmp_indicators(candle, &self.data)
+                .next_tmp_indicators(candle, &self.data)
                 .unwrap();
         }
     }
@@ -574,7 +580,7 @@ impl Instrument {
 
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
 
-        let adapted = adapt_to_timeframe(data, &self.time_frame, true);
+        let adapted = format_open_until(data, &self.time_frame, true);
         let open_from = get_open_from(data, &self.time_frame, true);
 
         let len = self.data.len();

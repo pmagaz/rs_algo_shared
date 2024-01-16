@@ -84,7 +84,7 @@ impl Indicator for Macd {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.ema_a.next(value) - self.ema_b.next(value);
         let b = self.ema_c.next(a);
         let last_a = self.data_a.last_mut().unwrap();
@@ -94,13 +94,15 @@ impl Indicator for Macd {
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.ema_a_tmp.next(value) - self.ema_b_tmp.next(value);
         let b = self.ema_c_tmp.next(a);
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
         *last_a = a;
         *last_b = b;
+        self.reset_tmp();
+
         Ok(())
     }
 

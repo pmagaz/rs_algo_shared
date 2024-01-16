@@ -76,17 +76,19 @@ impl Indicator for Ema {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.ema.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.ema_tmp.next(value);
         let last = self.data_a.last_mut().unwrap();
+
         *last = a;
+        self.reset_tmp();
         Ok(())
     }
 

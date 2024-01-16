@@ -71,17 +71,18 @@ impl Indicator for Atr {
         Ok(())
     }
 
-    fn update(&mut self, value: f64) -> Result<()> {
+    fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.atr.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
 
-    fn update_tmp(&mut self, value: f64) -> Result<()> {
+    fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.atr_tmp.next(value);
         let last = self.data_a.last_mut().unwrap();
         *last = a;
+        self.reset_tmp();
         Ok(())
     }
 

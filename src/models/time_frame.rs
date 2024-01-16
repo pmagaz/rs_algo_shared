@@ -296,8 +296,13 @@ pub fn get_open_from(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> Dat
     get_open_until(data, time_frame, next) - Duration::minutes(minutes_interval)
 }
 
-pub fn adapt_to_timeframe(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
+pub fn format_open_until(data: DOHLC, time_frame: &TimeFrameType, next: bool) -> DOHLCC {
     let date = data.0;
+    let open = data.1;
+    let high = data.2;
+    let low = data.3;
+    let close = data.4;
+    let volume = data.5;
     let now = Local::now();
     let minutes = date.minute() as i64;
     let num_minutes = time_frame.to_minutes();
@@ -336,8 +341,8 @@ pub fn adapt_to_timeframe(data: DOHLC, time_frame: &TimeFrameType, next: bool) -
     };
 
     let adapted: DOHLCC = match next {
-        true => (open_from, data.1, data.2, data.3, data.4, data.5, is_closed),
-        false => (data.0, data.1, data.2, data.3, data.4, data.5, is_closed),
+        true => (open_from, open, high, low, close, volume, is_closed),
+        false => (date, open, high, low, close, volume, is_closed),
     };
 
     adapted
