@@ -53,7 +53,6 @@ impl Indicator for BollingerB {
 
     fn next(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-        log::info!("next 4444444444 {:?}", (value, &a, &self.bb));
 
         self.data_a.push(a.upper);
         self.data_b.push(a.lower);
@@ -63,7 +62,6 @@ impl Indicator for BollingerB {
 
     fn next_tmp(&mut self, value: f64) {
         self.bb_tmp.next(value);
-        log::info!("next tmp 222222222 {:?}", (value, &self.bb_tmp));
     }
 
     fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
@@ -75,7 +73,6 @@ impl Indicator for BollingerB {
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
         let last_c = self.data_c.last_mut().unwrap();
-        log::info!("next 5555555555 {:?}", (value, &a, &self.bb));
 
         *last_a = a.upper;
         *last_b = a.lower;
@@ -86,8 +83,6 @@ impl Indicator for BollingerB {
 
     fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
         let a = self.bb_tmp.next(value);
-        log::info!("next tmp 333333333 {:?}", (value, &self.bb_tmp));
-
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();
         let last_c = self.data_c.last_mut().unwrap();

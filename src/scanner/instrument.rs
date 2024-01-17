@@ -355,7 +355,6 @@ impl Instrument {
                             self.get_scale_ohlc_indicators(&candle, logarithmic_scanner);
                         let delete_previous = false;
 
-                        log::info!("88888888 {:?}", (&candle, ohlc_indicators));
                         self.indicators
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
@@ -468,15 +467,12 @@ impl Instrument {
 
         //CONTINUE HERE.  does it work for 3 closed as it is? IS THE CORRECT CANDLE?
         if formated_candle.is_closed() {
-            log::info!("99999999 {:?}", (&last_candle, &formated_candle));
-
             self.close_last_candle();
             self.close_indicators(&last_candle);
-            //self.next_peaks(&last_candle);
         } else {
             self.adapt_last_candle_tf(formated_candle.clone(), last_candle, time_frame);
             let updated_candle = &self.data.last().unwrap().clone();
-            //self.update_indicators(updated_candle);
+            self.update_tmp_indicators(updated_candle);
         }
 
         Ok(formated_candle)
@@ -500,7 +496,7 @@ impl Instrument {
         }
     }
 
-    pub fn update_indicators(&mut self, candle: &Candle) {
+    pub fn update_tmp_indicators(&mut self, candle: &Candle) {
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
         if process_indicators {
             self.indicators

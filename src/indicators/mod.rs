@@ -396,7 +396,7 @@ impl Indicators {
     ) -> Result<()> {
         let close = current_candle.close();
 
-        let num_warming_items = 5;
+        let num_warming_items = 50;
         let len = data.len();
         let num_items = num_warming_items.min(len);
         //TAKE LATEST 50 ELEMENTS OF THE ARRAY FOR WARMING AND EXCLUDING THE LASTEST ONE
@@ -405,7 +405,6 @@ impl Indicators {
                 self.atr.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-                log::info!("0000000 {:?}", (prev_candle.date(), prev_candle.close()));
                 self.bb.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
@@ -449,10 +448,6 @@ impl Indicators {
             self.atr.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-            log::info!(
-                "1111111111 {:?}",
-                (current_candle.date(), current_candle.close())
-            );
             self.bb.next_update_last_tmp(close).unwrap();
         }
         if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
@@ -498,6 +493,7 @@ impl Indicators {
         //     self.adx.remove_a(0);
         //     self.adx.next(close).unwrap();
         // }
+
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.duplicate_last();
         }
