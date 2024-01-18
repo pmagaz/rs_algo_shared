@@ -482,7 +482,7 @@ pub fn create_order(
 
     let current_date = &current_candle.date();
     let time_frame = instrument.time_frame();
-    let valid_until_bars = &env::var("VALID_UNTIL_BARS")
+    let valid_until_bars = &env::var("ORDER_VALID_UNTIL_BARS")
         .unwrap()
         .parse::<i64>()
         .unwrap();
@@ -734,7 +734,7 @@ pub fn add_pending(orders: Vec<Order>, new_orders: Vec<Order>) -> Vec<Order> {
         .parse::<usize>()
         .unwrap();
 
-    let _overwrite_orders = env::var("OVERWRITE_ORDERS")
+    let _overwrite_orders = env::var("ORDERS_OVERWRITE")
         .unwrap()
         .parse::<bool>()
         .unwrap();
