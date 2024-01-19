@@ -459,13 +459,10 @@ impl Instrument {
         let last_candle = &self.data().last().unwrap().clone();
 
         let time_frame = &self.time_frame.clone();
-
         let formated_dohlcc = format_open_until(data, &self.time_frame, true);
-
         let formated_candle =
             self.generate_candle(next_id, formated_dohlcc, &self.data, logarithmic_scanner);
 
-        //CONTINUE HERE.  does it work for 3 closed as it is? IS THE CORRECT CANDLE?
         if formated_candle.is_closed() {
             self.close_last_candle();
             self.close_indicators(&last_candle);

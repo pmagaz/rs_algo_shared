@@ -131,8 +131,6 @@ impl Indicators {
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
 
-        log::info!("NEXT INDICATOR {:?}", close);
-
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next(close).unwrap();
 
@@ -410,10 +408,6 @@ impl Indicators {
                 self.atr.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap() {
-                // log::info!(
-                //     "NEXT TMP WARM {:?}",
-                //     (prev_candle.close(), prev_candle.date())
-                // );
                 self.bb.next_tmp(prev_candle.close());
             }
             if env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap() {
@@ -451,8 +445,6 @@ impl Indicators {
                 self.rsi.next_tmp(prev_candle.close());
             }
         }
-
-        log::info!("NEXT TMP {:?}", (close, date));
 
         //UPDATING LAST VALUE & RESET
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {

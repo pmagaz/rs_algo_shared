@@ -53,8 +53,6 @@ impl Indicator for BollingerB {
 
     fn next(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-        log::info!("BB NEXT VALUE {:?}", a);
-        log::info!("BB self VALUE {:?}", self.bb);
         self.data_a.push(a.upper);
         self.data_b.push(a.lower);
         self.data_c.push(a.average);
@@ -71,9 +69,6 @@ impl Indicator for BollingerB {
 
     fn next_update_last(&mut self, value: f64) -> Result<()> {
         let a = self.bb.next(value);
-
-        log::info!("BB NEXT UPDATE VALUE {:?}", a);
-        log::info!("BB self VALUE {:?}", self.bb);
 
         let last_a = self.data_a.last_mut().unwrap();
         let last_b = self.data_b.last_mut().unwrap();

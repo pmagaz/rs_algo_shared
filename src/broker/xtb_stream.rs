@@ -1391,7 +1391,6 @@ impl BrokerStream for Xtb {
         };
 
         self.send_stream(&command).await.unwrap();
-
         Ok(())
     }
 
