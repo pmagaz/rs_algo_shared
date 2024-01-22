@@ -397,9 +397,8 @@ impl Indicators {
         data: &Vec<Candle>,
     ) -> Result<()> {
         let close = current_candle.close();
-        let date = current_candle.date();
 
-        let num_warming_items = 50;
+        let num_warming_items = 40;
         let len = data.len();
         let num_items = num_warming_items.min(len);
         //TAKE LATEST 50 ELEMENTS OF THE ARRAY FOR WARMING AND EXCLUDING THE LASTEST ONE
