@@ -234,7 +234,7 @@ impl Indicators {
     ) -> Result<()> {
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-        log::info!("closing indicators");
+
         self.next_update_lastests(OHLC, time_frame).unwrap();
 
         // if env::var("INDICATORS_ADX").unwrap().parse::<bool>().unwrap() {
@@ -329,8 +329,6 @@ impl Indicators {
         //     self.adx.remove_a(0);
         //     self.adx.next(close).unwrap();
         // }
-
-        log::info!("UPDATE CLOSE INDICATOR {:?}", close);
 
         if env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap() {
             self.atr.next_update_last(close).unwrap();

@@ -1500,75 +1500,64 @@ impl BrokerStream for Xtb {
                             let comment = data["comment"].as_str().unwrap_or_default();
                             let is_stop = comment == "[S/L]";
                             let stream_symbol = data["symbol"].as_str().unwrap();
-                            let comments = data["customComment"].as_str().unwrap();
-                            let trans_comments: TransactionComments =
-                                serde_json::from_str(&comments).unwrap();
 
-                            if is_closed
-                                && is_stop
-                                && symbol == stream_symbol
-                                && strategy_name == trans_comments.strategy_name
-                            {
-                                let id = data["position"].as_u64().unwrap() as usize;
-                                let size = data["volume"].as_f64().unwrap();
-                                let price_in = data["open_price"].as_f64().unwrap();
-                                let price_out = data["close_price"].as_f64().unwrap();
+                            //FILTER ONLY STOPS FOR NOW
+                            if is_closed && is_stop {
+                                let comments = data["customComment"].as_str().unwrap();
+                                let trans_comments: TransactionComments =
+                                    serde_json::from_str(&comments).unwrap();
 
-                                let index_in = trans_comments.index_in;
-                                let spread_in = trans_comments.spread;
-                                let strategy_name = trans_comments.strategy_name;
-                                //let gross_profit: f64 = obj["profit"].as_f64().unwrap_or(0.0);
-                                // let swap = obj["storage"].as_f64().unwrap_or(0.0);
-                                // let commission = obj["commission"].as_f64().unwrap_or(0.0);
-                                let gross_profit: f64 =
-                                    match obj.get("profit").and_then(|v| v.as_f64()) {
-                                        Some(value) => value,
-                                        None => 0.0,
+                                // TAKING ONLY THE OWN SYMBOL & STRATEGY COMBINATION
+                                if symbol == stream_symbol
+                                    && strategy_name == trans_comments.strategy_name
+                                {
+                                    let id = data["position"].as_u64().unwrap() as usize;
+                                    let size = data["volume"].as_f64().unwrap();
+                                    let price_in = data["open_price"].as_f64().unwrap();
+                                    let price_out = data["close_price"].as_f64().unwrap();
+
+                                    let index_in = trans_comments.index_in;
+                                    let spread_in = trans_comments.spread;
+                                    let strategy_name = trans_comments.strategy_name;
+
+                                    let gross_profit = data["profit"].as_f64().unwrap();
+                                    let swap = data["storage"].as_f64().unwrap_or(0.0);
+                                    let comission = data["commission"].as_f64().unwrap_or(0.0);
+
+                                    let profit = gross_profit - swap - comission;
+                                    let spread_out = 0.;
+                                    let close_time = Local::now();
+                                    let date_in = to_dbtime(parse_time_seconds(
+                                        data["open_time"].as_i64().unwrap() / 1000,
+                                    ));
+
+                                    let date_out = to_dbtime(close_time);
+                                    let index_out = uuid::generate_ts_id(close_time);
+
+                                    let trade_type = match is_stop {
+                                        true => match trans_comments.trade_type.is_long() {
+                                            true => TradeType::StopLossLong,
+                                            false => TradeType::StopLossShort,
+                                        },
+                                        false => match trans_comments.trade_type.is_long() {
+                                            true => TradeType::MarketOutLong,
+                                            false => TradeType::MarketOutShort,
+                                        },
                                     };
-                                let swap: f64 = match obj.get("swap").and_then(|v| v.as_f64()) {
-                                    Some(value) => value,
-                                    None => 0.0,
-                                };
 
-                                let commission: f64 =
-                                    match obj.get("commission").and_then(|v| v.as_f64()) {
-                                        Some(value) => value,
-                                        None => 0.0,
+                                    let bid = match trade_type.is_long() {
+                                        true => price_out,
+                                        false => price_out + spread_out,
                                     };
 
-                                let profit = gross_profit - swap - commission;
-                                let spread_out = 0.;
-                                let close_time = Local::now();
-                                let date_in = to_dbtime(parse_time_seconds(
-                                    data["open_time"].as_i64().unwrap() / 1000,
-                                ));
-                                let date_out = to_dbtime(close_time);
-                                let index_out = uuid::generate_ts_id(close_time);
+                                    let profit_per = 0.;
+                                    let run_up = 0.;
+                                    let run_up_per = 0.;
+                                    let draw_down = 0.;
+                                    let draw_down_per = 0.;
+                                    let status = TradeStatus::Fulfilled;
 
-                                let trade_type = match is_stop {
-                                    true => match trans_comments.trade_type.is_long() {
-                                        true => TradeType::StopLossLong,
-                                        false => TradeType::StopLossShort,
-                                    },
-                                    false => match trans_comments.trade_type.is_long() {
-                                        true => TradeType::MarketOutLong,
-                                        false => TradeType::MarketOutShort,
-                                    },
-                                };
-
-                                let bid = match trade_type.is_long() {
-                                    true => price_out,
-                                    false => price_out + spread_out,
-                                };
-
-                                let profit_per = 0.;
-                                let run_up = 0.;
-                                let run_up_per = 0.;
-                                let draw_down = 0.;
-                                let draw_down_per = 0.;
-                                let status = TradeStatus::Fulfilled;
-
-                                log::info!(
+                                    log::info!(
                                     "Real Closed {}_{} {:?} trade {}. Closing price: {} Profit: {}",
                                     &symbol,
                                     &strategy_name,
@@ -1578,40 +1567,43 @@ impl BrokerStream for Xtb {
                                     &profit,
                                 );
 
-                                let trade_out = TradeOut {
-                                    id,
-                                    index_in,
-                                    price_in,
-                                    status,
-                                    size,
-                                    trade_type: trade_type.clone(),
-                                    date_in,
-                                    spread_in,
-                                    ask: price_in,
-                                    index_out,
-                                    price_origin: price_in,
-                                    price_out,
-                                    bid,
-                                    spread_out,
-                                    date_out,
-                                    profit,
-                                    profit_per,
-                                    run_up,
-                                    run_up_per,
-                                    draw_down,
-                                    draw_down_per,
-                                };
+                                    let trade_out = TradeOut {
+                                        id,
+                                        index_in,
+                                        price_in,
+                                        status,
+                                        size,
+                                        trade_type: trade_type.clone(),
+                                        date_in,
+                                        spread_in,
+                                        ask: price_in,
+                                        index_out,
+                                        price_origin: price_in,
+                                        price_out,
+                                        bid,
+                                        spread_out,
+                                        date_out,
+                                        profit,
+                                        profit_per,
+                                        run_up,
+                                        run_up_per,
+                                        draw_down,
+                                        draw_down_per,
+                                    };
 
-                                let msg = ResponseBody {
-                                    response: ResponseType::TradeOutFulfilled,
-                                    payload: Some(TradeResponse {
-                                        symbol: symbol.to_owned(),
-                                        accepted: true,
-                                        data: trade_out,
-                                    }),
-                                };
+                                    let msg = ResponseBody {
+                                        response: ResponseType::TradeOutFulfilled,
+                                        payload: Some(TradeResponse {
+                                            symbol: symbol.to_owned(),
+                                            accepted: true,
+                                            data: trade_out,
+                                        }),
+                                    };
 
-                                Some(serde_json::to_string(&msg).unwrap())
+                                    Some(serde_json::to_string(&msg).unwrap())
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }
