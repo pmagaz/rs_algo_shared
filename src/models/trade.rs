@@ -465,7 +465,7 @@ pub fn resolve_trade_out(
     let order_engine = &env::var("ORDER_ENGINE").unwrap();
 
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
-    //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
+    let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let size = trade_in.size;
 
     let index = calculate_trade_index(index, order, &execution_mode);
@@ -562,7 +562,7 @@ pub fn resolve_trade_out(
         };
 
         let profit_per = match execution_mode.is_back_test() {
-            true => calc::calculate_trade_profit_per(profit, price_in, symbol),
+            true => calc::calculate_trade_profit_per(equity, profit, price_in, symbol),
             false => 0.,
         };
 
@@ -731,6 +731,7 @@ pub fn calculate_trade_stats(
     log::info!("Calculating Trade stats");
     let symbol = &env::var("SYMBOL").unwrap();
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
+    let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
@@ -744,7 +745,7 @@ pub fn calculate_trade_stats(
         false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type, symbol),
     };
 
-    let profit_per = calculate_trade_profit_per(profit, price_in, symbol);
+    let profit_per = calculate_trade_profit_per(equity, profit, price_in, symbol);
     let run_up = calculate_trade_runup(data, price_in, trade_type);
     let run_up_per = calculate_trade_runup_per(run_up, price_in, trade_type);
     let draw_down = calculate_trade_drawdown(data, price_in, trade_type);

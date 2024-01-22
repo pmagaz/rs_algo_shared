@@ -1495,14 +1495,15 @@ impl BrokerStream for Xtb {
                             //     data["cmd"].as_u64().unwrap() as i64
                             // )
                             // .unwrap();
-                            log::info!("DATA {:?}", obj);
 
                             let comment = data["comment"].as_str().unwrap_or_default();
                             let is_stop = comment == "[S/L]";
-                            let stream_symbol = data["symbol"].as_str().unwrap();
 
                             //FILTER ONLY STOPS FOR NOW
                             if is_closed && is_stop {
+                                log::info!("DATA {:?}", obj);
+
+                                let stream_symbol = data["symbol"].as_str().unwrap();
                                 let comments = data["customComment"].as_str().unwrap();
                                 let trans_comments: TransactionComments =
                                     serde_json::from_str(&comments).unwrap();

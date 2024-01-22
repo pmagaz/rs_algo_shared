@@ -59,9 +59,10 @@ pub fn calculate_trade_profit(
 //     (total_profit / effective_investment) * equity
 // }
 
-pub fn calculate_trade_profit_per(profit: f64, price_in: f64, symbol: &str) -> f64 {
+pub fn calculate_trade_profit_per(equity: f64, profit: f64, price_in: f64, symbol: &str) -> f64 {
     let symbol_factor = format_symbol_factor(&symbol);
-    (profit / symbol_factor / price_in) * 100.0
+    let position_value_at_entry = equity * price_in / symbol_factor;
+    (profit / position_value_at_entry) * 100.0
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
