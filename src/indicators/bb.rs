@@ -2,6 +2,7 @@ use super::Indicator;
 use crate::error::Result;
 
 use serde::{Deserialize, Serialize};
+use std::env;
 use ta::indicators::BollingerBands;
 use ta::{Next, Reset};
 
@@ -18,9 +19,12 @@ pub struct BollingerB {
 
 impl Indicator for BollingerB {
     fn new() -> Result<Self> {
+        let period = env::var("BB_PERIOD").unwrap().parse::<usize>().unwrap();
+        let multiplier = env::var("BB_MULTIPLIER").unwrap().parse::<f64>().unwrap();
+
         Ok(Self {
-            bb: BollingerBands::new(20, 2.0).unwrap(),
-            bb_tmp: BollingerBands::new(20, 2.0).unwrap(),
+            bb: BollingerBands::new(period, multiplier).unwrap(),
+            bb_tmp: BollingerBands::new(period, multiplier).unwrap(),
             data_a: vec![],
             data_b: vec![],
             data_c: vec![],

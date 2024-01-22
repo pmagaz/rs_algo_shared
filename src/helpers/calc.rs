@@ -270,10 +270,14 @@ pub fn total_profitable_trades(winning_trades: usize, total_trades: usize) -> f6
     ((winning_trades as f64 / total_trades as f64) * 100.).abs()
 }
 
+// pub fn total_profit_per(trades_out: &[TradeOut]) -> f64 {
+//     let total_profit_per: f64 = trades_out.iter().map(|trade| trade.profit_per).sum();
+//     let total_price_in: f64 = trades_out.iter().map(|trade| trade.price_in).sum();
+//     (total_profit_per / total_price_in) * 100.0
+// }
+
 pub fn total_profit_per(trades_out: &[TradeOut]) -> f64 {
-    let total_profit_per: f64 = trades_out.iter().map(|trade| trade.profit_per).sum();
-    let total_price_in: f64 = trades_out.iter().map(|trade| trade.price_in).sum();
-    (total_profit_per / total_price_in) * 100.0
+    trades_out.iter().map(|trade| trade.profit_per).sum()
 }
 
 pub fn total_profit_factor(gross_profits: f64, gross_losses: f64) -> f64 {
