@@ -360,7 +360,7 @@ impl BrokerStream for Xtb {
         strategy_name: &str,
         position_id: Option<usize>,
     ) -> Option<TransactionDetails> {
-        let start = (Local::now() - date::Duration::minutes(1)).timestamp_millis();
+        let start = (Local::now() - date::Duration::seconds(5)).timestamp_millis();
         let command = Command {
             command: "getTradesHistory".to_owned(),
             arguments: GetTradesHistory {
@@ -389,10 +389,18 @@ impl BrokerStream for Xtb {
                     let open_price = obj["open_price"].as_f64().unwrap();
                     let close_price = obj["close_price"].as_f64().unwrap();
 
-                    let gross_profit = obj["profit"].as_f64().unwrap_or(0.0);
+                    let gross_profit = obj["profit"].as_f64().unwrap();
                     let swap = obj["storage"].as_f64().unwrap_or(0.0);
                     let commission = obj["commission"].as_f64().unwrap_or(0.0);
                     let profit = gross_profit - swap - commission;
+
+                    log::info!(
+                        "PROFIT DATA Gross Profit: {} Swap: {} Comission: {} Net Profit: {}",
+                        gross_profit,
+                        swap,
+                        commission,
+                        profit
+                    );
 
                     return Some(TransactionDetails {
                         id,
@@ -1501,8 +1509,6 @@ impl BrokerStream for Xtb {
 
                             //FILTER ONLY STOPS FOR NOW
                             if is_closed && is_stop {
-                                log::info!("DATA {:?}", obj);
-
                                 let stream_symbol = data["symbol"].as_str().unwrap();
                                 let comments = data["customComment"].as_str().unwrap();
                                 let trans_comments: TransactionComments =
@@ -1523,9 +1529,12 @@ impl BrokerStream for Xtb {
 
                                     let gross_profit = data["profit"].as_f64().unwrap();
                                     let swap = data["storage"].as_f64().unwrap_or(0.0);
-                                    let comission = data["commission"].as_f64().unwrap_or(0.0);
+                                    let commission = data["commission"].as_f64().unwrap_or(0.0);
 
-                                    let profit = gross_profit - swap - comission;
+                                    let profit = gross_profit - swap - commission;
+
+                                    log::info!("PROFIT DATA Gross Profit: {} Swap: {} Comission: {} Net Profit: {}", gross_profit, swap, commission, profit);
+
                                     let spread_out = 0.;
                                     let close_time = Local::now();
                                     let date_in = to_dbtime(parse_time_seconds(
