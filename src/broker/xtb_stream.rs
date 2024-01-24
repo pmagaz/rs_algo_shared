@@ -360,7 +360,7 @@ impl BrokerStream for Xtb {
         strategy_name: &str,
         position_id: Option<usize>,
     ) -> Option<TransactionDetails> {
-        let start = (Local::now() - date::Duration::seconds(5)).timestamp_millis();
+        let start = (Local::now() - date::Duration::seconds(3)).timestamp_millis();
         let command = Command {
             command: "getTradesHistory".to_owned(),
             arguments: GetTradesHistory {
@@ -392,7 +392,8 @@ impl BrokerStream for Xtb {
                     let gross_profit = obj["profit"].as_f64().unwrap();
                     let swap = obj["storage"].as_f64().unwrap_or(0.0);
                     let commission = obj["commission"].as_f64().unwrap_or(0.0);
-                    let profit = gross_profit - swap - commission;
+
+                    let profit = gross_profit + swap + commission;
 
                     log::info!(
                         "PROFIT DATA Gross Profit: {} Swap: {} Comission: {} Net Profit: {}",
@@ -1527,11 +1528,11 @@ impl BrokerStream for Xtb {
                                     let spread_in = trans_comments.spread;
                                     let strategy_name = trans_comments.strategy_name;
 
-                                    let gross_profit = data["profit"].as_f64().unwrap();
-                                    let swap = data["storage"].as_f64().unwrap_or(0.0);
-                                    let commission = data["commission"].as_f64().unwrap_or(0.0);
+                                    let gross_profit = obj["profit"].as_f64().unwrap();
+                                    let swap = obj["storage"].as_f64().unwrap_or(0.0);
+                                    let commission = obj["commission"].as_f64().unwrap_or(0.0);
 
-                                    let profit = gross_profit - swap - commission;
+                                    let profit = gross_profit + swap + commission;
 
                                     log::info!("PROFIT DATA Gross Profit: {} Swap: {} Comission: {} Net Profit: {}", gross_profit, swap, commission, profit);
 
