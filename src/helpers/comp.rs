@@ -73,6 +73,34 @@ pub fn average_usize(numbers: &Vec<usize>) -> usize {
     }
 }
 
+pub fn is_upward_trend(data: &[f64]) -> bool {
+    if data.len() < 2 {
+        return false; // Not enough data to determine a trend
+    }
+
+    for i in 0..data.len() - 1 {
+        if data[i] > data[i + 1] {
+            return false; // Not an upward trend
+        }
+    }
+
+    true // It's an upward trend
+}
+
+pub fn is_downward_trend(data: &[f64]) -> bool {
+    if data.len() < 2 {
+        return false; // Not enough data to determine a trend
+    }
+
+    for i in 0..data.len() - 1 {
+        if data[i] < data[i + 1] {
+            return false; // Not a downward trend
+        }
+    }
+
+    true // It's a downward trend
+}
+
 pub fn symbol_in_list(symbol: &str, sp_symbols: &Vec<String>) -> bool {
     let mut result = false;
     for sp_symbol in sp_symbols {
