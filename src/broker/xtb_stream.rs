@@ -1519,6 +1519,7 @@ impl BrokerStream for Xtb {
                                 if symbol == stream_symbol
                                     && strategy_name == trans_comments.strategy_name
                                 {
+                                    log::info!("DATA {:?}", data);
                                     let id = data["position"].as_u64().unwrap() as usize;
                                     let size = data["volume"].as_f64().unwrap();
                                     let price_in = data["open_price"].as_f64().unwrap();
@@ -1528,7 +1529,7 @@ impl BrokerStream for Xtb {
                                     let spread_in = trans_comments.spread;
                                     let strategy_name = trans_comments.strategy_name;
 
-                                    let gross_profit = obj["profit"].as_f64().unwrap();
+                                    let gross_profit = obj["profit"].as_f64().unwrap_or(0.0);
                                     let swap = obj["storage"].as_f64().unwrap_or(0.0);
                                     let commission = obj["commission"].as_f64().unwrap_or(0.0);
 
