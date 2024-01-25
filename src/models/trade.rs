@@ -797,25 +797,26 @@ where
     updated
 }
 
-pub fn update_last<T>(trades_out: &mut Vec<T>, new_trade: T) -> bool
+pub fn update_last<T>(trades_out: &mut Vec<T>, new_trade: T)
 where
     T: Trade + Clone + std::fmt::Debug,
 {
-    if let Some(last_trade) = trades_out.last_mut() {
-        if last_trade.get_index_in() == new_trade.get_index_in() {
+    match trades_out.last() {
+        Some(last_trade) if last_trade.get_index_in() == new_trade.get_index_in() => {
             log::info!("Updating {} trade data", last_trade.get_index_in());
-
-            *last_trade = new_trade;
-            true
-        } else {
-            log::error!("Cant update {} trade data", last_trade.get_index_in());
-            panic!();
-            false
+            *trades_out.last_mut().unwrap() = new_trade;
         }
-    } else {
-        log::info!("No last tradeOut to update. Adding...");
-        trades_out.push(new_trade);
-        true
+        Some(last_trade) => {
+            log::error!(
+                "Can't find {} trade. Adding it...",
+                last_trade.get_index_in()
+            );
+            trades_out.push(new_trade);
+        }
+        None => {
+            log::info!("No last tradeOut to update. Addingit ...");
+            trades_out.push(new_trade);
+        }
     }
 }
 

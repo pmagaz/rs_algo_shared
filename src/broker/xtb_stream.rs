@@ -1519,7 +1519,6 @@ impl BrokerStream for Xtb {
                                 if symbol == stream_symbol
                                     && strategy_name == trans_comments.strategy_name
                                 {
-                                    //log::info!("DATA {:?}", data);
                                     let id = data["position"].as_u64().unwrap() as usize;
                                     let size = data["volume"].as_f64().unwrap();
                                     let price_in = data["open_price"].as_f64().unwrap();
@@ -1570,7 +1569,7 @@ impl BrokerStream for Xtb {
                                     let status = TradeStatus::Fulfilled;
 
                                     log::info!(
-                                    "Real Closed {}_{} {:?} trade {}. Closing price: {} Profit: {}",
+                                    "Real StopLoss {}_{} {:?} trade {}. Closing price: {} Profit: {}",
                                     &symbol,
                                     &strategy_name,
                                     &trade_type,
