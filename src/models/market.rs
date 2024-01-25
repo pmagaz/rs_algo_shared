@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::helpers::date;
 use crate::helpers::date::{DateTime, Duration, Local, Timelike};
 use serde::{Deserialize, Serialize};
@@ -146,7 +148,10 @@ impl MarketHours {
         let opening_hours = sunday.from;
         let diff_days = 7 - weekday as i64;
         let mut opening_date = current_date + Duration::days(diff_days);
-        let mut secs = 30;
+        let mut secs = env::var("DISCONNECTED_RETRY")
+            .unwrap()
+            .parse::<u64>()
+            .unwrap();
 
         let ten_random_secs = (std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -159,7 +164,7 @@ impl MarketHours {
         opening_date = opening_date
             .with_hour(opening_hours)
             .unwrap()
-            .with_minute(4)
+            .with_minute(5)
             .unwrap()
             .with_second(secs as u32)
             .unwrap();
