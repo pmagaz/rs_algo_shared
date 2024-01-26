@@ -553,9 +553,7 @@ pub fn resolve_active_orders(
                     _ => todo!(),
                 };
             }
-            false => {
-                log::info!("faaaaaalse");
-            }
+            false => {}
         }
     }
 
