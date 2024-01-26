@@ -1,5 +1,6 @@
 use std::env;
 
+use super::environment;
 use super::mode::{self, ExecutionMode};
 use super::tick::InstrumentTick;
 use super::trade::{Trade, TradeIn, TradeType};
@@ -552,7 +553,9 @@ pub fn resolve_active_orders(
                     _ => todo!(),
                 };
             }
-            false => (),
+            false => {
+                log::info!("faaaaaalse");
+            }
         }
     }
 
@@ -594,6 +597,7 @@ fn is_activated_order(
 ) -> bool {
     let activation_source = &env::var("ORDER_ACTIVATION_SOURCE").unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+    let env = environment::from_str(&env::var("ENV").unwrap());
 
     let candle = match execution_mode.is_back_test() {
         true => instrument.data().get(index).unwrap(),
@@ -681,7 +685,7 @@ fn is_activated_order(
                 );
             }
 
-            if execution_mode.is_bot() && is_stop {
+            if env.is_prod() && execution_mode.is_bot() && is_stop {
                 false
             } else {
                 cross_over
@@ -706,7 +710,7 @@ fn is_activated_order(
                 );
             }
 
-            if execution_mode.is_bot() && is_stop {
+            if env.is_prod() && execution_mode.is_bot() && is_stop {
                 false
             } else {
                 cross_below

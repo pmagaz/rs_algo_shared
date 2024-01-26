@@ -114,7 +114,7 @@ impl Indicator for Stoch {
         self.data_c.remove(index)
     }
 
-    fn duplicate_last(&mut self) {
+    fn init_indicator(&mut self) {
         if let Some(&a) = self.data_a.last() {
             self.data_a.push(a);
         }

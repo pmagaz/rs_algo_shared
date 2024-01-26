@@ -807,14 +807,14 @@ where
             *trades_out.last_mut().unwrap() = new_trade;
         }
         Some(last_trade) => {
-            log::error!(
-                "Can't find {} trade. Adding it...",
+            log::info!(
+                "Can't find {} tradeOut. Adding it...",
                 last_trade.get_index_in()
             );
             trades_out.push(new_trade);
         }
         None => {
-            log::info!("No last tradeOut to update. Addingit ...");
+            log::info!("No tradeOut to update. Adding it ...");
             trades_out.push(new_trade);
         }
     }

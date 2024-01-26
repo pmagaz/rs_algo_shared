@@ -359,7 +359,9 @@ impl Instrument {
                             .next(ohlc_indicators, delete_previous, &self.time_frame().clone())
                             .unwrap();
                     } else {
-                        self.indicators.duplicate_last().unwrap();
+                        self.indicators
+                            .init_indicators(&self.time_frame().clone())
+                            .unwrap();
                     }
                 }
 
@@ -482,14 +484,13 @@ impl Instrument {
             .unwrap();
 
         let process_indicators = env::var("INDICATORS").unwrap().parse::<bool>().unwrap();
+
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
 
             self.indicators
-                .next_close_delete(ohlc_indicators, &self.time_frame().clone())
+                .next_close_indicators(ohlc_indicators, &self.time_frame().clone())
                 .unwrap();
-
-            self.indicators.duplicate_last().unwrap();
         }
     }
 

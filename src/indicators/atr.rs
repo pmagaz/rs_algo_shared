@@ -102,7 +102,7 @@ impl Indicator for Atr {
         self.data_c.remove(index)
     }
 
-    fn duplicate_last(&mut self) {
+    fn init_indicator(&mut self) {
         // let a = self.data_a.last().unwrap();
         // self.data_a.push(*a);
         if let Some(&a) = self.data_a.last() {
