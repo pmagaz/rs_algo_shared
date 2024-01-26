@@ -360,7 +360,7 @@ impl Instrument {
                             .unwrap();
                     } else {
                         self.indicators
-                            .init_indicators(&self.time_frame().clone())
+                            .init_indicators(&self.time_frame().clone(), false)
                             .unwrap();
                     }
                 }
@@ -487,7 +487,6 @@ impl Instrument {
 
         if process_indicators {
             let ohlc_indicators = self.get_scale_ohlc_indicators(candle, logarithmic_scanner);
-
             self.indicators
                 .next_close_indicators(ohlc_indicators, &self.time_frame().clone())
                 .unwrap();

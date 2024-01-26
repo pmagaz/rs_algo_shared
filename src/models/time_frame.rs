@@ -356,6 +356,7 @@ fn get_htf_indexes<'a>(
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
 
     let base_date = &instrument.data.get(index).unwrap().date;
+
     match htf_instrument {
         HTFInstrument::HTFInstrument(htf_instrument) => {
             let upper_indexes: Vec<usize> = htf_instrument
