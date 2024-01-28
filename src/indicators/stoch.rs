@@ -98,7 +98,7 @@ impl Indicator for Stoch {
         self.ema_tmp.reset();
     }
 
-    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_ohlc(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 

@@ -67,7 +67,7 @@ impl Indicator for BollingerB {
         self.bb_tmp.next(value);
     }
 
-    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_ohlc(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 

@@ -64,7 +64,7 @@ impl Indicator for Atr {
     }
 
     //FIXME MONEKY PATCHING
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_ohlc(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
         let bar = Bar::new().high(OHLC.1).low(OHLC.2).close(OHLC.3);
         let a = self.atr.next(&bar);
         self.data_a.push(a);

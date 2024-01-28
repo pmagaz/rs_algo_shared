@@ -474,7 +474,7 @@ impl BrokerStream for Xtb {
 
         let slippage_pips = env::var("SLIPPAGE_PIPS").unwrap().parse::<f64>().unwrap();
 
-        let price_with_slippage = match trade_type.is_entry() {
+        let final_price = match trade_type.is_entry() {
             true => match trade_type.is_long() {
                 true => price + calc::to_pips(slippage_pips, &tick),
                 false => price - calc::to_pips(slippage_pips, &tick),
@@ -482,10 +482,10 @@ impl BrokerStream for Xtb {
             false => price,
         };
 
-        let final_price = match trade_type.is_stop() {
-            true => price,
-            false => price_with_slippage,
-        };
+        // let final_price = match trade_type.is_stop() {
+        //     true => price,
+        //     false => price_with_slippage,
+        // };
 
         let ask = format_symbol_price(final_price + tick.spread(), &symbol);
         let bid = format_symbol_price(final_price, &symbol);

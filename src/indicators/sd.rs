@@ -70,7 +70,7 @@ impl Indicator for StandardD {
         Ok(())
     }
 
-    fn next_OHLC(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
+    fn next_ohlc(&mut self, _OHLC: (f64, f64, f64, f64)) -> Result<()> {
         Ok(())
     }
 
