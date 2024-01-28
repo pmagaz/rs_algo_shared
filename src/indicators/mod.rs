@@ -28,7 +28,7 @@ pub trait Indicator {
         Self: Sized;
     fn next(&mut self, value: f64) -> Result<()>;
     fn next_tmp(&mut self, value: f64);
-    fn next_OHLC(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()>;
+    fn next_ohlc(&mut self, ohlc: (f64, f64, f64, f64)) -> Result<()>;
     fn next_update_last(&mut self, value: f64) -> Result<()>;
     fn next_update_last_tmp(&mut self, value: f64) -> Result<()>;
     fn reset_tmp(&mut self);
@@ -161,11 +161,11 @@ impl Indicators {
 
     pub fn next(
         &mut self,
-        OHLC: (f64, f64, f64, f64),
+        ohlc: (f64, f64, f64, f64),
         remove_first: bool,
         time_frame: &TimeFrameType,
     ) -> Result<()> {
-        let close = OHLC.3;
+        let close = ohlc.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
         let indicators_enabled = is_enabled()?;
@@ -245,10 +245,10 @@ impl Indicators {
 
     pub fn next_close_indicators(
         &mut self,
-        OHLC: (f64, f64, f64, f64),
+        ohlc: (f64, f64, f64, f64),
         _time_frame: &TimeFrameType,
     ) -> Result<()> {
-        let close = OHLC.3;
+        let close = ohlc.3;
         let indicators_enabled = is_enabled()?;
 
         if indicators_enabled.atr {
