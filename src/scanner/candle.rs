@@ -413,6 +413,17 @@ impl CandleBuilder {
             && ((open - low) / (0.001 + high - low) > 0.75)
     }
 
+    fn is_engulfing2(&self) -> bool {
+        //(O1 > C1) AND (C > O) AND (C >= O1) AND (C1 >= O) AND ((C – O) > (O1 – C1))
+        let (open, _high, _low, close) = &self.get_current_ohlc();
+        let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
+        (prev_open > prev_close)
+            && (close > open)
+            && (close >= prev_high)
+            && (open <= prev_low)
+            && ((close - open) > (prev_open - prev_close))
+    }
+
     fn is_engulfing(&self) -> bool {
         //(O1 > C1) AND (C > O) AND (C >= O1) AND (C1 >= O) AND ((C – O) > (O1 – C1))
         let (open, _high, _low, close) = &self.get_current_ohlc();
@@ -424,7 +435,7 @@ impl CandleBuilder {
             && ((close - open) > (prev_open - prev_close))
     }
 
-    fn is_bearish_engulfing(&self) -> bool {
+    fn is_bearish_engulfing2(&self) -> bool {
         //(C1 > O1) AND (O > C) AND (O >= C1) AND (O1 >= C) AND ((O – C) > (C1 – O1))
         let (open, _high, _low, close) = &self.get_current_ohlc();
         let (prev_open, prev_high, prev_low, prev_close) = &self.get_previous_ohlc(0);
@@ -433,6 +444,16 @@ impl CandleBuilder {
             && (close <= prev_low)
             && (open >= prev_high)
             && ((open - close) > (prev_close - prev_open))
+    }
+
+    fn is_bearish_engulfing(&self) -> bool {
+        let (open, _high, _low, close) = self.get_current_ohlc();
+        let (prev_open, _prev_high, _prev_low, prev_close) = self.get_previous_ohlc(0);
+        (prev_close > prev_open) // Previous candle is bullish
+        && (open > close) // Current candle is bearish
+        && (open > prev_close) // Current open is above previous close
+        && (close < prev_open) // Current close is below previous open
+        && ((open - close) > (prev_close - prev_open)) // Optional: current body is larger than previous body
     }
 
     fn is_harami(&self) -> bool {
