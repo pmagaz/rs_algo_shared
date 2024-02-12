@@ -72,6 +72,11 @@ pub fn from_pips(pips: f64, tick: &InstrumentTick) -> f64 {
     tick.pip_size() / pips
 }
 
+pub fn get_spread_pips(symbol: &str, tick: &InstrumentTick) -> f64 {
+    let factor = format_symbol_factor(symbol);
+    tick.spread() * factor
+}
+
 pub fn calculate_cum_profit(
     size: f64,
     price_in: f64,
@@ -386,8 +391,8 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
 
 pub fn format_symbol_factor(symbol: &str) -> f64 {
     let symbol_factor = match symbol.contains("JPY") {
-        true => 1000.,
-        false => 100000.,
+        true => 100.,
+        false => 10000.,
     };
     symbol_factor
 }
