@@ -300,7 +300,7 @@ impl Indicators {
         data: &Vec<Candle>,
     ) -> Result<()> {
         let len = data.len();
-        let num_warming_items = 40;
+        let num_warming_items = 25;
         let close = current_candle.close();
         let num_items = num_warming_items.min(len);
         let indicators_enabled = is_enabled()?;
