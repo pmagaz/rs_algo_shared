@@ -43,21 +43,10 @@ pub fn calculate_trade_profit(
         log::warn!("Zero Profit!");
     }
 
-    let symbol_factor = format_symbol_factor(&symbol);
+    let symbol_factor = format_symbol_factor(&symbol) * 10.;
 
     format_symbol_price(profit_without_leverage * symbol_factor, &symbol)
 }
-
-// pub fn calculate_trade_profit_per(
-//     total_profit: f64,
-//     size: f64,
-//     price_in: f64,
-//     equity: f64,
-//     _leverage: f64,
-// ) -> f64 {
-//     let effective_investment = size * price_in; // * leverage; // Leveraged investment
-//     (total_profit / effective_investment) * equity
-// }
 
 pub fn calculate_trade_profit_per(equity: f64, profit: f64, price_in: f64, symbol: &str) -> f64 {
     let profit_per = (profit / equity) * 100.0;
