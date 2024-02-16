@@ -43,14 +43,14 @@ pub fn calculate_trade_profit(
         log::warn!("Zero Profit!");
     }
 
-    let symbol_factor = format_symbol_factor(&symbol) * 10.;
+    let symbol_factor = format_symbol_factor(symbol) * 10.;
 
-    format_symbol_price(profit_without_leverage * symbol_factor, &symbol)
+    format_symbol_price(profit_without_leverage * symbol_factor, symbol)
 }
 
-pub fn calculate_trade_profit_per(equity: f64, profit: f64, price_in: f64, symbol: &str) -> f64 {
-    let profit_per = (profit / equity) * 100.0;
-    profit_per
+pub fn calculate_trade_profit_per(equity: f64, profit: f64, _price_in: f64, _symbol: &str) -> f64 {
+    
+    (profit / equity) * 100.0
 }
 
 pub fn to_pips(pips: f64, tick: &InstrumentTick) -> f64 {
@@ -379,11 +379,11 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
 }
 
 pub fn format_symbol_factor(symbol: &str) -> f64 {
-    let symbol_factor = match symbol.contains("JPY") {
+    
+    match symbol.contains("JPY") {
         true => 100.,
         false => 10000.,
-    };
-    symbol_factor
+    }
 }
 
 pub fn format_symbol_price(value: f64, symbol: &str) -> f64 {

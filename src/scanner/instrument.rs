@@ -467,7 +467,7 @@ impl Instrument {
 
         if formated_candle.is_closed() {
             self.close_last_candle();
-            self.close_indicators(&last_candle);
+            self.close_indicators(last_candle);
         } else {
             self.adapt_last_candle_tf(formated_candle.clone(), last_candle, time_frame);
             let updated_candle = &self.data.last().unwrap().clone();

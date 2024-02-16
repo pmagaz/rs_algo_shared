@@ -508,7 +508,7 @@ pub fn create_order(
         order_type: order_type.clone(),
         status: OrderStatus::Pending,
         origin_price: current_price,
-        target_price: target_price,
+        target_price,
         size: *order_size,
         created_at: to_dbtime(*current_date),
         updated_at: None,

@@ -412,8 +412,8 @@ pub fn resolve_trade_in(
         };
 
         let price_in = match trade_type.is_long() {
-            true => format_symbol_price(ask, &symbol),
-            false => format_symbol_price(price, &symbol),
+            true => format_symbol_price(ask, symbol),
+            false => format_symbol_price(price, symbol),
         };
 
         let index_in = match execution_mode.is_back_test() {
@@ -491,10 +491,10 @@ pub fn resolve_trade_out(
 
     let price_out = match order_engine.as_ref() {
         "broker" => match order {
-            Some(order) => format_symbol_price(order.target_price, &symbol),
-            None => format_symbol_price(close_trade_price, &symbol),
+            Some(order) => format_symbol_price(order.target_price, symbol),
+            None => format_symbol_price(close_trade_price, symbol),
         },
-        _ => format_symbol_price(close_trade_price, &symbol),
+        _ => format_symbol_price(close_trade_price, symbol),
     };
 
     let (price_in, price_out) = match execution_mode.is_back_test() || execution_mode.is_bot_test()
