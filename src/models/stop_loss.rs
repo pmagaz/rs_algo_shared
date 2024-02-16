@@ -1,7 +1,6 @@
 use super::order::{self, Order, OrderDirection, OrderType};
 use super::tick::InstrumentTick;
 
-use crate::helpers::calc::format_symbol_price;
 use crate::helpers::{calc, date::*};
 use crate::indicators::Indicator;
 use crate::scanner::instrument::Instrument;
@@ -57,7 +56,11 @@ pub fn create_stop_loss_order(
         false => 0.,
     };
 
-    let current_atr_value = instrument.indicators.atr.get_data_a().get(index).unwrap();
+    let current_atr_value = match &instrument.indicators.atr {
+        Some(atr) => *atr.get_data_a().get(index).unwrap(),
+        None => 0.,
+    };
+
     let target_price = match stop_loss_type {
         StopLossType::Atr(atr_stop_value) => match order_direction {
             OrderDirection::Up => (buy_price + spread_value) + (atr_stop_value * current_atr_value),

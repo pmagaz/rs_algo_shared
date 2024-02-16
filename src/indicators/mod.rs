@@ -50,113 +50,192 @@ pub trait Indicator {
     //fn remove_c(&mut self, value: usize) -> &f64;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct IndicatorsEnabled {
-    atr: bool,
-    rsi: bool,
-    macd: bool,
-    bb: bool,
-    bbw: bool,
-    ema_a: bool,
-    ema_b: bool,
-    ema_c: bool,
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// struct IndicatorsEnabled {
+//     atr: bool,
+//     rsi: bool,
+//     macd: bool,
+//     bb: bool,
+//     bbw: bool,
+//     ema_a: bool,
+//     ema_b: bool,
+//     ema_c: bool,
+// }
 
-//FIXME DOING IT AT INIT USING OPTION
-fn is_enabled() -> Result<IndicatorsEnabled> {
-    Ok(IndicatorsEnabled {
-        atr: env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap(),
-        rsi: env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap(),
-        macd: env::var("INDICATORS_MACD")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap(),
-        bb: env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap(),
-        bbw: env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap(),
-        ema_a: env::var("INDICATORS_EMA_A")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap(),
-        ema_b: env::var("INDICATORS_EMA_B")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap(),
-        ema_c: env::var("INDICATORS_EMA_C")
-            .unwrap()
-            .parse::<bool>()
-            .unwrap(),
-    })
-}
+// //FIXME DOING IT AT INIT USING OPTION
+// fn is_enabled() -> Result<IndicatorsEnabled> {
+//     Ok(IndicatorsEnabled {
+//         atr: env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap(),
+//         rsi: env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap(),
+//         macd: env::var("INDICATORS_MACD")
+//             .unwrap()
+//             .parse::<bool>()
+//             .unwrap(),
+//         bb: env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap(),
+//         bbw: env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap(),
+//         ema_a: env::var("INDICATORS_EMA_A")
+//             .unwrap()
+//             .parse::<bool>()
+//             .unwrap(),
+//         ema_b: env::var("INDICATORS_EMA_B")
+//             .unwrap()
+//             .parse::<bool>()
+//             .unwrap(),
+//         ema_c: env::var("INDICATORS_EMA_C")
+//             .unwrap()
+//             .parse::<bool>()
+//             .unwrap(),
+//     })
+// }
 
 //FIXME ARRAY OF TRAIT INDICATORS
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
-    pub macd: Macd,
+    pub macd: Option<Macd>,
     //pub stoch: Stoch,
-    pub atr: Atr,
+    pub atr: Option<Atr>,
     // //pub adx: Adx,
-    pub rsi: Rsi,
-    pub bb: BollingerB,
-    pub bbw: BollingerBW,
-    pub ema_a: Ema,
-    pub ema_b: Ema,
-    pub ema_c: Ema,
+    pub rsi: Option<Rsi>,
+    pub bb: Option<BollingerB>,
+    pub bbw: Option<BollingerBW>,
+    pub ema_a: Option<Ema>,
+    pub ema_b: Option<Ema>,
+    pub ema_c: Option<Ema>,
 }
 
 impl Indicators {
     pub fn new() -> Result<Self> {
-        let ema_a = &env::var("EMA_A").unwrap().parse::<usize>().unwrap();
-        let ema_b = &env::var("EMA_B").unwrap().parse::<usize>().unwrap();
-        let ema_c = &env::var("EMA_C").unwrap().parse::<usize>().unwrap();
+        let macd = env::var("INDICATORS_MACD")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| if enabled { Macd::new().ok() } else { None });
+
+        let rsi = env::var("INDICATORS_RSI")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| if enabled { Rsi::new().ok() } else { None });
+
+        // let stoch = env::var("INDICATORS_STOCH")
+        //     .ok()
+        //     .and_then(|v| v.parse::<bool>().ok())
+        //     .and_then(|enabled| if enabled { Stoch::new().ok() } else { None });
+
+        let atr = env::var("INDICATORS_ATR")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| if enabled { Atr::new().ok() } else { None });
+
+        // let adx = env::var("INDICATORS_ADX")
+        //     .ok()
+        //     .and_then(|v| v.parse::<bool>().ok())
+        //     .and_then(|enabled| if enabled { Adx::new().ok() } else { None });
+
+        let bb = env::var("INDICATORS_BB")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| {
+                if enabled {
+                    BollingerB::new().ok()
+                } else {
+                    None
+                }
+            });
+
+        let bbw = env::var("INDICATORS_BBW")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| {
+                if enabled {
+                    BollingerBW::new().ok()
+                } else {
+                    None
+                }
+            });
+
+        let ema_a = env::var("INDICATORS_EMA_A")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| {
+                if enabled {
+                    let ema_a = env::var("EMA_A").unwrap().parse::<usize>().unwrap();
+                    Some(Ema::new_ema(ema_a).unwrap())
+                } else {
+                    None
+                }
+            });
+
+        let ema_b = env::var("INDICATORS_EMA_B")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| {
+                if enabled {
+                    let ema_a = env::var("EMA_B").unwrap().parse::<usize>().unwrap();
+                    Some(Ema::new_ema(ema_a).unwrap())
+                } else {
+                    None
+                }
+            });
+
+        let ema_c = env::var("INDICATORS_EMA_C")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok())
+            .and_then(|enabled| {
+                if enabled {
+                    let ema_a = env::var("EMA_C").unwrap().parse::<usize>().unwrap();
+                    Some(Ema::new_ema(ema_a).unwrap())
+                } else {
+                    None
+                }
+            });
 
         Ok(Self {
-            macd: Macd::new().unwrap(),
-            rsi: Rsi::new().unwrap(),
-            //stoch: Stoch::new().unwrap(),
-            atr: Atr::new().unwrap(),
-            //adx: Adx::new().unwrap(),
-            bb: BollingerB::new().unwrap(),
-            bbw: BollingerBW::new().unwrap(),
-            ema_a: Ema::new_ema(*ema_a).unwrap(),
-            ema_b: Ema::new_ema(*ema_b).unwrap(),
-            ema_c: Ema::new_ema(*ema_c).unwrap(),
+            macd,
+            rsi,
+            //stoch,
+            atr,
+            //adx,
+            bb,
+            bbw,
+            ema_a,
+            ema_b,
+            ema_c,
         })
     }
 
-    pub fn atr(&self) -> &Atr {
-        &self.atr
+    pub fn atr(&self) -> Option<&Atr> {
+        self.atr.as_ref()
     }
 
     // pub fn adx(&self) -> &Adx {
     //     &self.adx
     // }
 
-    pub fn bb(&self) -> &BollingerB {
-        &self.bb
+    pub fn bb(&self) -> Option<&BollingerB> {
+        self.bb.as_ref()
     }
 
-    pub fn macd(&self) -> &Macd {
-        &self.macd
+    pub fn macd(&self) -> Option<&Macd> {
+        self.macd.as_ref()
     }
 
-    pub fn rsi(&self) -> &Rsi {
-        &self.rsi
+    pub fn rsi(&self) -> Option<&Rsi> {
+        self.rsi.as_ref()
     }
 
     // pub fn stoch(&self) -> &Stoch {
     //     &self.stoch
     // }
 
-    pub fn ema_a(&self) -> &Ema {
-        &self.ema_a
+    pub fn ema_a(&self) -> Option<&Ema> {
+        self.ema_a.as_ref()
     }
 
-    pub fn ema_b(&self) -> &Ema {
-        &self.ema_b
+    pub fn ema_b(&self) -> Option<&Ema> {
+        self.ema_b.as_ref()
     }
 
-    pub fn ema_c(&self) -> &Ema {
-        &self.ema_c
+    pub fn ema_c(&self) -> Option<&Ema> {
+        self.ema_c.as_ref()
     }
 
     pub fn next(
@@ -168,75 +247,81 @@ impl Indicators {
         let close = ohlc.3;
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-        let indicators_enabled = is_enabled()?;
 
-        if indicators_enabled.atr {
-            self.atr.next(close).unwrap();
-            if remove_first && self.atr.get_data_a().len() > max_bars {
-                self.atr.remove_a(0);
-            }
-        }
-
-        if indicators_enabled.macd {
-            self.macd.next(close).unwrap();
-            if remove_first && self.macd.get_data_a().len() > max_bars {
-                self.macd.remove_a(0);
-                self.macd.remove_b(0);
-            }
-        }
-
-        // if env::var("INDICATORS_STOCH")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap()
-        // {
-        //     self.stoch.next(close).unwrap();
+        // STOCH
+        // if let Some(stoch) = &mut self.stoch {
+        //     stoch.next(close).unwrap();
+        //     if remove_first && stoch.get_data_a().len() > max_bars {
+        //         stoch.remove_a(0);
+        //     }
         // }
 
-        if indicators_enabled.rsi {
-            self.rsi.next(close).unwrap();
-            if remove_first && self.rsi.get_data_a().len() > max_bars {
-                self.rsi.remove_a(0);
+        // ATR
+        if let Some(atr) = &mut self.atr {
+            atr.next(close).unwrap();
+            if remove_first && atr.get_data_a().len() > max_bars {
+                atr.remove_a(0);
             }
         }
 
-        if indicators_enabled.bb {
-            self.bb.next(close).unwrap();
-            if remove_first && self.bb.get_data_a().len() > max_bars {
-                self.bb.remove_a(0);
-                self.bb.remove_b(0);
-                self.bb.remove_c(0);
+        // MACD
+        if let Some(macd) = &mut self.macd {
+            macd.next(close).unwrap();
+            if remove_first && macd.get_data_a().len() > max_bars {
+                macd.remove_a(0);
+                macd.remove_b(0);
             }
         }
 
-        if indicators_enabled.bbw {
-            self.bbw.next(close).unwrap();
-            if remove_first && self.bbw.get_data_a().len() > max_bars {
-                self.bbw.remove_a(0);
-                self.bbw.remove_b(0);
-                self.bbw.remove_c(0);
+        // RSI
+        if let Some(rsi) = &mut self.rsi {
+            rsi.next(close).unwrap();
+            if remove_first && rsi.get_data_a().len() > max_bars {
+                rsi.remove_a(0);
             }
         }
 
-        if indicators_enabled.ema_a {
-            self.ema_a.next(close).unwrap();
-
-            if remove_first && !self.ema_a.get_data_a().len() > max_bars {
-                self.ema_a.remove_a(0);
+        // Bollinger Bands
+        if let Some(bb) = &mut self.bb {
+            bb.next(close).unwrap();
+            if remove_first && bb.get_data_a().len() > max_bars {
+                bb.remove_a(0);
+                bb.remove_b(0);
+                bb.remove_c(0);
             }
         }
 
-        if indicators_enabled.ema_b {
-            self.ema_b.next(close).unwrap();
-            if remove_first && self.ema_b.get_data_a().len() > max_bars {
-                self.ema_b.remove_a(0);
+        // Bollinger Bandwidth
+        if let Some(bbw) = &mut self.bbw {
+            bbw.next(close).unwrap();
+            if remove_first && bbw.get_data_a().len() > max_bars {
+                bbw.remove_a(0);
+                bbw.remove_b(0);
+                bbw.remove_c(0);
             }
         }
 
-        if indicators_enabled.ema_c {
-            self.ema_c.next(close).unwrap();
-            if remove_first && self.ema_c.get_data_a().len() > max_bars {
-                self.ema_c.remove_a(0);
+        // EMA A
+        if let Some(ema_a) = &mut self.ema_a {
+            ema_a.next(close).unwrap();
+            if remove_first && ema_a.get_data_a().len() > max_bars {
+                ema_a.remove_a(0);
+            }
+        }
+
+        // EMA B
+        if let Some(ema_b) = &mut self.ema_b {
+            ema_b.next(close).unwrap();
+            if remove_first && ema_b.get_data_a().len() > max_bars {
+                ema_b.remove_a(0);
+            }
+        }
+
+        // EMA C
+        if let Some(ema_c) = &mut self.ema_c {
+            ema_c.next(close).unwrap();
+            if remove_first && ema_c.get_data_a().len() > max_bars {
+                ema_c.remove_a(0);
             }
         }
 
@@ -249,46 +334,41 @@ impl Indicators {
         _time_frame: &TimeFrameType,
     ) -> Result<()> {
         let close = ohlc.3;
-        let indicators_enabled = is_enabled()?;
 
-        if indicators_enabled.atr {
-            self.atr.next_update_last(close).unwrap();
+        if let Some(atr) = &mut self.atr {
+            atr.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.macd {
-            self.macd.next_update_last(close).unwrap();
+        if let Some(macd) = &mut self.macd {
+            macd.next_update_last(close).unwrap();
         }
 
-        // if env::var("INDICATORS_STOCH")
-        //     .unwrap()
-        //     .parse::<bool>()
-        //     .unwrap()
-        // {
-        //     self.stoch.next_update_last(close).unwrap();
+        // if let Some(stoch) = &mut self.stoch {
+        //     stoch.next_update_last(close).unwrap();
         // }
 
-        if indicators_enabled.rsi {
-            self.rsi.next_update_last(close).unwrap();
+        if let Some(rsi) = &mut self.rsi {
+            rsi.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.bb {
-            self.bb.next_update_last(close).unwrap();
+        if let Some(bb) = &mut self.bb {
+            bb.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.bbw {
-            self.bbw.next_update_last(close).unwrap();
+        if let Some(bbw) = &mut self.bbw {
+            bbw.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.ema_a {
-            self.ema_a.next_update_last(close).unwrap();
+        if let Some(ema_a) = &mut self.ema_a {
+            ema_a.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.ema_b {
-            self.ema_b.next_update_last(close).unwrap();
+        if let Some(ema_b) = &mut self.ema_b {
+            ema_b.next_update_last(close).unwrap();
         }
 
-        if indicators_enabled.ema_c {
-            self.ema_c.next_update_last(close).unwrap();
+        if let Some(ema_c) = &mut self.ema_c {
+            ema_c.next_update_last(close).unwrap();
         }
 
         Ok(())
@@ -303,60 +383,61 @@ impl Indicators {
         let num_warming_items = 40; //13 3x
         let close = current_candle.close();
         let num_items = num_warming_items.min(len);
-        let indicators_enabled = is_enabled()?;
 
         //TAKE LATEST 50 ELEMENTS OF THE ARRAY FOR WARMING AND EXCLUDING THE LASTEST ONE
         for prev_candle in &data[len - num_items..len - 1] {
-            if indicators_enabled.atr {
-                self.atr.next_tmp(prev_candle.close());
+            if let Some(atr) = &mut self.atr {
+                atr.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.bb {
-                self.bb.next_tmp(prev_candle.close());
+            if let Some(bb) = &mut self.bb {
+                bb.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.bbw {
-                self.bbw.next_tmp(prev_candle.close());
+            if let Some(bbw) = &mut self.bbw {
+                bbw.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.ema_a {
-                self.ema_a.next_tmp(prev_candle.close());
+            if let Some(ema_a) = &mut self.ema_a {
+                ema_a.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.ema_b {
-                self.ema_b.next_tmp(prev_candle.close());
+            if let Some(ema_b) = &mut self.ema_b {
+                ema_b.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.ema_c {
-                self.ema_c.next_tmp(prev_candle.close());
+            if let Some(ema_c) = &mut self.ema_c {
+                ema_c.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.macd {
-                self.macd.next_tmp(prev_candle.close());
+            if let Some(macd) = &mut self.macd {
+                macd.next_tmp(prev_candle.close());
             }
-            if indicators_enabled.rsi {
-                self.rsi.next_tmp(prev_candle.close());
+            if let Some(rsi) = &mut self.rsi {
+                rsi.next_tmp(prev_candle.close());
             }
         }
 
         // UPDATING LAST VALUE & RESET
-        if indicators_enabled.atr {
-            self.atr.next_update_last_tmp(close).unwrap();
+
+        //DO THIS FOR ALL INDICATORS
+        if let Some(atr) = &mut self.atr {
+            atr.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.bb {
-            self.bb.next_update_last_tmp(close).unwrap();
+        if let Some(bb) = &mut self.bb {
+            bb.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.bbw {
-            self.bbw.next_update_last_tmp(close).unwrap();
+        if let Some(bbw) = &mut self.bbw {
+            bbw.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.ema_a {
-            self.ema_a.next_update_last_tmp(close).unwrap();
+        if let Some(ema_a) = &mut self.ema_a {
+            ema_a.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.ema_b {
-            self.ema_b.next_update_last_tmp(close).unwrap();
+        if let Some(ema_b) = &mut self.ema_b {
+            ema_b.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.ema_c {
-            self.ema_c.next_update_last_tmp(close).unwrap();
+        if let Some(ema_c) = &mut self.ema_c {
+            ema_c.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.macd {
-            self.macd.next_update_last_tmp(close).unwrap();
+        if let Some(macd) = &mut self.macd {
+            macd.next_update_last_tmp(close).unwrap();
         }
-        if indicators_enabled.rsi {
-            self.rsi.next_update_last_tmp(close).unwrap();
+        if let Some(rsi) = &mut self.rsi {
+            rsi.next_update_last_tmp(close).unwrap();
         }
 
         Ok(())
@@ -369,80 +450,67 @@ impl Indicators {
     ) -> Result<()> {
         let num_bars = env::var("NUM_BARS").unwrap().parse::<usize>().unwrap();
         let max_bars = num_bars / time_frame.clone().to_number() as usize;
-        let indicators_enabled = is_enabled()?;
-        //let atx = env::var("INDICATORS_ATX").unwrap().parse::<bool>().unwrap();
-        //let stoch= env::var("INDICATORS_STOCH").unwrap().parse::<bool>().unwrap();
 
-        if indicators_enabled.rsi && self.rsi.get_data_a().len() > max_bars && remove_first {
-            self.rsi.remove_a(0);
+        if let Some(rsi) = &mut self.rsi {
+            if rsi.get_data_a().len() > max_bars && remove_first {
+                rsi.remove_a(0);
+            }
+            rsi.init_indicator();
         }
 
-        if indicators_enabled.bb && self.bb.get_data_a().len() > max_bars && remove_first {
-            self.bb.remove_a(0);
-            self.bb.remove_b(0);
-            self.bb.remove_c(0);
+        if let Some(bb) = &mut self.bb {
+            if bb.get_data_a().len() > max_bars && remove_first {
+                bb.remove_a(0);
+                bb.remove_b(0);
+                bb.remove_c(0);
+            }
+            bb.init_indicator();
         }
 
-        if indicators_enabled.bbw && self.bbw.get_data_a().len() > max_bars && remove_first {
-            self.bbw.remove_a(0);
-            self.bbw.remove_b(0);
-            self.bbw.remove_c(0);
+        if let Some(bbw) = &mut self.bbw {
+            if bbw.get_data_a().len() > max_bars && remove_first {
+                bbw.remove_a(0);
+                bbw.remove_b(0);
+                bbw.remove_c(0);
+            }
+            bbw.init_indicator();
         }
 
-        if indicators_enabled.ema_a && self.ema_a.get_data_a().len() > max_bars && remove_first {
-            self.ema_a.remove_a(0);
+        if let Some(ema_a) = &mut self.ema_a {
+            if ema_a.get_data_a().len() > max_bars && remove_first {
+                ema_a.remove_a(0);
+            }
+            ema_a.init_indicator();
         }
 
-        if indicators_enabled.ema_b && self.ema_b.get_data_a().len() > max_bars && remove_first {
-            self.ema_b.remove_a(0);
+        if let Some(ema_b) = &mut self.ema_b {
+            if ema_b.get_data_a().len() > max_bars && remove_first {
+                ema_b.remove_a(0);
+            }
+            ema_b.init_indicator();
         }
 
-        if indicators_enabled.ema_c && self.ema_c.get_data_a().len() > max_bars && remove_first {
-            self.ema_c.remove_a(0);
+        if let Some(ema_c) = &mut self.ema_c {
+            if ema_c.get_data_a().len() > max_bars && remove_first {
+                ema_c.remove_a(0);
+            }
+            ema_c.init_indicator();
         }
 
-        if indicators_enabled.atr && self.atr.get_data_a().len() > max_bars && remove_first {
-            self.atr.remove_a(0);
+        if let Some(atr) = &mut self.atr {
+            if atr.get_data_a().len() > max_bars && remove_first {
+                atr.remove_a(0);
+            }
+            atr.init_indicator();
         }
 
-        if indicators_enabled.macd && self.macd.get_data_a().len() > max_bars && remove_first {
-            self.macd.remove_a(0);
-            self.macd.remove_b(0);
-            self.macd.remove_c(0);
-        }
-
-        //INIT
-
-        if indicators_enabled.rsi {
-            self.rsi.init_indicator();
-        }
-
-        if indicators_enabled.bb {
-            self.bb.init_indicator();
-        }
-
-        if indicators_enabled.bbw {
-            self.bbw.init_indicator();
-        }
-
-        if indicators_enabled.ema_a {
-            self.ema_a.init_indicator();
-        }
-
-        if indicators_enabled.ema_b {
-            self.ema_b.init_indicator();
-        }
-
-        if indicators_enabled.ema_c {
-            self.ema_c.init_indicator();
-        }
-
-        if indicators_enabled.atr {
-            self.atr.init_indicator();
-        }
-
-        if indicators_enabled.macd {
-            self.macd.init_indicator();
+        if let Some(macd) = &mut self.macd {
+            if macd.get_data_a().len() > max_bars && remove_first {
+                macd.remove_a(0);
+                macd.remove_b(0);
+                macd.remove_c(0);
+            }
+            macd.init_indicator();
         }
 
         Ok(())
