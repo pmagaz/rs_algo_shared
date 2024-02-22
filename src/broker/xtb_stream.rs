@@ -11,6 +11,7 @@ use crate::models::market::*;
 use crate::models::mode;
 use crate::models::order::*;
 use crate::models::stop_loss::StopLossType;
+use crate::models::swap::InstrumentSwap;
 use crate::models::tick::InstrumentTick;
 use crate::models::time_frame::*;
 use crate::models::trade::*;
@@ -115,6 +116,7 @@ pub trait BrokerStream {
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
     async fn is_market_available(&mut self, symbol: &str) -> bool;
     async fn get_instrument_tick(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentTick>>;
+    async fn get_instrument_swap(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentSwap>>;
     async fn get_instrument_tick_test(
         &mut self,
         symbol: &str,
@@ -273,6 +275,30 @@ impl BrokerStream for Xtb {
 
                 ResponseBody {
                     response: ResponseType::GetInstrumentTick,
+                    payload: Some(tick),
+                }
+            }
+            _ => panic!(),
+        };
+
+        Ok(res)
+    }
+
+    async fn get_instrument_swap(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentSwap>> {
+        let tick_command = Command {
+            command: "getSymbol".to_owned(),
+            arguments: SymbolArg {
+                symbol: symbol.to_owned(),
+            },
+        };
+        self.send(&tick_command).await.unwrap();
+        let msg = self.socket.read().await.unwrap();
+        let res = match msg {
+            Message::Text(txt) => {
+                let tick = self.parse_swap_data(symbol.to_owned(), txt).unwrap();
+
+                ResponseBody {
+                    response: ResponseType::GetInstrumentSwap,
                     payload: Some(tick),
                 }
             }
@@ -474,21 +500,21 @@ impl BrokerStream for Xtb {
 
         let slippage_pips = env::var("SLIPPAGE_PIPS").unwrap().parse::<f64>().unwrap();
 
-        // let price_with_slippage = match trade_type.is_long() == trade_type.is_entry() {
-        //     true => price + calc::to_pips(slippage_pips, &tick),
-        //     false => price - calc::to_pips(slippage_pips, &tick),
-        // };
-
-        let price_with_slippage = match trade_type.is_long() {
-            true => match trade_type.is_entry() {
-                true => price + calc::to_pips(slippage_pips, &tick),
-                false => price - calc::to_pips(slippage_pips, &tick),
-            },
-            false => match trade_type.is_entry() {
-                true => price - calc::to_pips(slippage_pips, &tick),
-                false => price + calc::to_pips(slippage_pips, &tick),
-            },
+        let price_with_slippage = match trade_type.is_long() == trade_type.is_entry() {
+            true => price + calc::to_pips(slippage_pips, &tick),
+            false => price - calc::to_pips(slippage_pips, &tick),
         };
+
+        // let price_with_slippage = match trade_type.is_long() {
+        //     true => match trade_type.is_entry() {
+        //         true => price + calc::to_pips(slippage_pips, &tick),
+        //         false => price - calc::to_pips(slippage_pips, &tick),
+        //     },
+        //     false => match trade_type.is_entry() {
+        //         true => price - calc::to_pips(slippage_pips, &tick),
+        //         false => price + calc::to_pips(slippage_pips, &tick),
+        //     },
+        // };
 
         let final_price = match trade_type.is_stop() {
             true => price,
@@ -1677,23 +1703,6 @@ impl Xtb {
         Ok(())
     }
 
-    async fn send_str(&mut self, command: &str) -> Result<()> {
-        self.socket.send(&command).await?;
-
-        Ok(())
-    }
-
-    // async fn send_and_read<T>(&mut self, command: &T) -> Result<()>
-    // where
-    //     for<'de> T: Serialize + Deserialize<'de> + Debug,
-    // {
-    //     self.socket
-    //         .send_and_read(&serde_json::to_string(&command).unwrap())
-    //         .await?;
-
-    //     Ok(())
-    // }
-
     async fn send_stream<T>(&mut self, command: &T) -> Result<()>
     where
         for<'de> T: Serialize + Deserialize<'de> + Debug,
@@ -1809,6 +1818,32 @@ impl Xtb {
             .unwrap();
 
         Ok(tick)
+    }
+
+    pub fn parse_swap_data(&mut self, symbol: String, txt: String) -> Result<InstrumentSwap> {
+        let data = self.parse_message(&txt).unwrap();
+        let return_data = data
+            .get("returnData")
+            .ok_or_else(|| RsAlgoErrorKind::ParseError)
+            .unwrap();
+
+        let enabled = return_data["swapEnable"].as_bool().unwrap();
+        let swap_long = return_data["swapLong"].as_f64().unwrap();
+        let swap_short = return_data["swapShort"].as_f64().unwrap();
+        let swap_weekend = return_data["swap_rollover3days"].as_f64().unwrap();
+
+        let instrument_swap = InstrumentSwap::new()
+            .symbol(symbol)
+            .enabled(enabled)
+            .swap_long(swap_long)
+            .swap_short(swap_short)
+            .swap_weekend(swap_weekend)
+            .build()
+            .unwrap();
+
+        println!("{:?}", instrument_swap);
+
+        Ok(instrument_swap)
     }
 
     pub fn get_order_id_executed(&mut self, txt: &str) -> Result<(bool, u64)> {

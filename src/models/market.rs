@@ -122,6 +122,23 @@ impl MarketHours {
         open
     }
 
+    pub fn is_week_close(&self) -> bool {
+        let current_date = Local::now();
+        let current_hours = current_date.hour();
+        let week_day = date::get_week_day(current_date);
+        let mut open = false;
+
+        for key in &self.data {
+            if key.day == week_day && week_day == 5 {
+                open = current_hours >= key.from && current_hours < key.to;
+                break;
+            } else {
+                open = false;
+            }
+        }
+        open
+    }
+
     pub fn current_session(&self, date: DateTime<Local>) -> Option<MarketSessions> {
         let current_hour = date.hour();
 

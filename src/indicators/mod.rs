@@ -50,45 +50,6 @@ pub trait Indicator {
     //fn remove_c(&mut self, value: usize) -> &f64;
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// struct IndicatorsEnabled {
-//     atr: bool,
-//     rsi: bool,
-//     macd: bool,
-//     bb: bool,
-//     bbw: bool,
-//     ema_a: bool,
-//     ema_b: bool,
-//     ema_c: bool,
-// }
-
-// //FIXME DOING IT AT INIT USING OPTION
-// fn is_enabled() -> Result<IndicatorsEnabled> {
-//     Ok(IndicatorsEnabled {
-//         atr: env::var("INDICATORS_ATR").unwrap().parse::<bool>().unwrap(),
-//         rsi: env::var("INDICATORS_RSI").unwrap().parse::<bool>().unwrap(),
-//         macd: env::var("INDICATORS_MACD")
-//             .unwrap()
-//             .parse::<bool>()
-//             .unwrap(),
-//         bb: env::var("INDICATORS_BB").unwrap().parse::<bool>().unwrap(),
-//         bbw: env::var("INDICATORS_BBW").unwrap().parse::<bool>().unwrap(),
-//         ema_a: env::var("INDICATORS_EMA_A")
-//             .unwrap()
-//             .parse::<bool>()
-//             .unwrap(),
-//         ema_b: env::var("INDICATORS_EMA_B")
-//             .unwrap()
-//             .parse::<bool>()
-//             .unwrap(),
-//         ema_c: env::var("INDICATORS_EMA_C")
-//             .unwrap()
-//             .parse::<bool>()
-//             .unwrap(),
-//     })
-// }
-
-//FIXME ARRAY OF TRAIT INDICATORS
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Indicators {
     pub macd: Option<Macd>,

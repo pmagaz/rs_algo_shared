@@ -42,6 +42,7 @@ pub enum ResponseType {
     Reconnect,
     GetInstrumentData,
     GetInstrumentTick,
+    GetInstrumentSwap,
     GetMarketHours,
     GetActivePositions,
     IsMarketOpen,

@@ -10,6 +10,7 @@ pub mod order;
 pub mod status;
 pub mod stop_loss;
 pub mod strategy;
+pub mod swap;
 pub mod tick;
 pub mod time_frame;
 pub mod trade;
