@@ -341,7 +341,7 @@ impl Indicators {
         data: &Vec<Candle>,
     ) -> Result<()> {
         let len = data.len();
-        let num_warming_items = 40; //13 3x
+        let num_warming_items = 60; //20 x3
         let close = current_candle.close();
         let num_items = num_warming_items.min(len);
 
