@@ -49,7 +49,6 @@ pub fn calculate_trade_profit(
 }
 
 pub fn calculate_trade_profit_per(equity: f64, profit: f64, _price_in: f64, _symbol: &str) -> f64 {
-    
     (profit / equity) * 100.0
 }
 
@@ -379,11 +378,16 @@ pub fn calculate_percentile(data: &[f64], percentile: f64) -> f64 {
 }
 
 pub fn format_symbol_factor(symbol: &str) -> f64 {
-    
     match symbol.contains("JPY") {
         true => 100.,
         false => 10000.,
     }
+}
+
+pub fn number_pips(symbol: &str) -> f64 {
+    let decimals = format_symbol_factor(symbol);
+    let pips = 1.0 / decimals;
+    pips
 }
 
 pub fn format_symbol_price(value: f64, symbol: &str) -> f64 {

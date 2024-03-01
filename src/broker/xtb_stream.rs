@@ -1517,6 +1517,7 @@ impl BrokerStream for Xtb {
                     let low = data["low"].as_f64().unwrap();
                     let timestamp = data["timestamp"].as_i64().unwrap();
                     let spread = data["spreadRaw"].as_f64().unwrap();
+                    let pip_size = number_pips(&symbol);
 
                     let tick = InstrumentTick::new()
                         .symbol(symbol)
@@ -1525,6 +1526,7 @@ impl BrokerStream for Xtb {
                         .high(high)
                         .low(low)
                         .spread(spread)
+                        .pip_size(pip_size)
                         .time(timestamp)
                         .build()
                         .unwrap();
@@ -1801,9 +1803,8 @@ impl Xtb {
         let bid = return_data["bid"].as_f64().unwrap();
         let high = return_data["high"].as_f64().unwrap();
         let low = return_data["low"].as_f64().unwrap();
-        //OJO
-        let pip_size = return_data["tickSize"].as_f64().unwrap();
         let spread = return_data["spreadRaw"].as_f64().unwrap();
+        let pip_size = number_pips(&symbol);
 
         let tick = InstrumentTick::new()
             .symbol(symbol)
