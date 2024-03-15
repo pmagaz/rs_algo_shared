@@ -9,7 +9,6 @@ use crate::helpers::uuid;
 use crate::helpers::{calc, date};
 use crate::scanner::candle::Candle;
 use crate::scanner::instrument::*;
-use futures_util::Future;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
