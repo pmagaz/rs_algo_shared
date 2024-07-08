@@ -274,14 +274,13 @@ pub fn total_profit_per(trades_out: &[TradeOut]) -> f64 {
 }
 
 pub fn total_profit_factor(gross_profits: f64, gross_losses: f64) -> f64 {
-    const EPSILON: f64 = 1e-25; // Adjust as needed
-
-    if gross_losses.abs() < EPSILON {
+    if gross_losses == 0.0 {
         0.0
     } else {
         (gross_profits / gross_losses).abs()
     }
 }
+
 // pub fn total_profit_factor(gross_profits: f64, gross_loses: f64) -> f64 {
 //     if gross_loses == 0.0 {
 //         if gross_profits > 0.0 {
