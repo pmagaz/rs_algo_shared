@@ -727,12 +727,13 @@ pub fn calculate_trade_stats(
     trade_out: &TradeOut,
     data: &Vec<Candle>,
 ) -> TradeOut {
-    log::info!("Calculating Trade stats");
     let symbol = &env::var("SYMBOL").unwrap();
     let leverage = env::var("LEVERAGE").unwrap().parse::<f64>().unwrap();
     let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     //let equity = env::var("EQUITY").unwrap().parse::<f64>().unwrap();
     let execution_mode = mode::from_str(&env::var("EXECUTION_MODE").unwrap());
+
+    log::info!("Calculating Trade stats in {:?} mode", &execution_mode);
 
     let trade_type = &trade_in.trade_type;
     let price_in = trade_in.price_in;
@@ -743,6 +744,8 @@ pub fn calculate_trade_stats(
         true => trade_out.profit,
         false => calculate_trade_profit(size, price_in, price_out, leverage, trade_type, symbol),
     };
+
+    log::info!("Trade profit: {:?}", profit);
 
     let profit_per = calculate_trade_profit_per(equity, profit, price_in, symbol);
     let run_up = calculate_trade_runup(data, price_in, trade_type);
