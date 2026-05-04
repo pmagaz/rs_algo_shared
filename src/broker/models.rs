@@ -147,7 +147,8 @@ pub struct TransactionDetails {
     pub profit: f64,
 }
 
-// Legacy message type used by the old basic Broker trait
+// Legacy types used by the old basic XTB Broker trait
+#[cfg(feature = "xtb")]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MessageType {
     Login,
@@ -156,7 +157,7 @@ pub enum MessageType {
     Other,
 }
 
-// Legacy response wrapper used by the old basic Broker trait
+#[cfg(feature = "xtb")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response<R> {
     pub msg_type: MessageType,

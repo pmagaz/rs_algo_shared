@@ -18,6 +18,7 @@ use futures_util::StreamExt;
 use serde::Deserialize;
 use serde_json::Value;
 use std::env;
+use std::time::Duration;
 use tokio::sync::mpsc;
 
 #[derive(Debug)]
@@ -25,6 +26,9 @@ pub struct Darwinex {
     ws: Option<WebSocketStream>,
     http: reqwest::Client,
     access_token: String,
+    refresh_token: String,
+    consumer_key: String,
+    consumer_secret: String,
     symbol: String,
     account_id: String,
     api_base: String,
@@ -35,6 +39,25 @@ pub struct Darwinex {
 #[derive(Debug, Deserialize)]
 struct TokenResponse {
     access_token: String,
+    refresh_token: String,
+    expires_in: u64,
+}
+
+fn base64_encode(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let table = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(table[((n >> 18) & 63) as usize] as char);
+        out.push(table[((n >> 12) & 63) as usize] as char);
+        out.push(if chunk.len() > 1 { table[((n >> 6) & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { table[(n & 63) as usize] as char } else { '=' });
+    }
+    out
 }
 
 #[async_trait::async_trait]
@@ -48,10 +71,23 @@ impl BrokerStream for Darwinex {
             .unwrap_or_else(|_| "wss://api.darwinex.com/quotewebsocket/1.0.0".to_string());
         let account_id = env::var("DARWINEX_ACCOUNT_ID").unwrap_or_default();
 
+        let consumer_key = env::var("DARWINEX_CONSUMER_KEY").unwrap_or_default();
+        let consumer_secret = env::var("DARWINEX_CONSUMER_SECRET").unwrap_or_default();
+        let refresh_token = env::var("DARWINEX_REFRESH_TOKEN").unwrap_or_default();
+
+        let http = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(15))
+            .timeout(Duration::from_secs(30))
+            .build()
+            .expect("Failed to build reqwest client");
+
         Self {
             ws: None,
-            http: reqwest::Client::new(),
+            http,
             access_token: String::new(),
+            refresh_token,
+            consumer_key,
+            consumer_secret,
             symbol: String::new(),
             account_id,
             api_base,
@@ -60,32 +96,48 @@ impl BrokerStream for Darwinex {
         }
     }
 
-    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self> {
-        // Step 1: OAuth2 password grant → Bearer token
-        let params = [
-            ("grant_type", "password"),
-            ("username", username),
-            ("password", password),
-            ("scope", "openid"),
-        ];
+    async fn login(&mut self, _username: &str, _password: &str) -> Result<&mut Self> {
+        // Darwinex uses OAuth2 refresh token grant (not password grant).
+        // Consumer key/secret and refresh token come from env vars set at startup.
+        // Initial tokens must be obtained manually from https://www.darwinex.com/data/darwin-api
+        log::info!("Darwinex: refreshing OAuth token via {}", self.token_url);
+
+        let refresh_token = self.refresh_token.clone();
+        let basic = base64_encode(&format!("{}:{}", self.consumer_key, self.consumer_secret));
 
         let resp = self
             .http
             .post(&self.token_url)
-            .form(&params)
+            .header("Authorization", format!("Basic {}", basic))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .form(&[
+                ("grant_type", "refresh_token"),
+                ("refresh_token", &refresh_token),
+            ])
             .send()
             .await
-            .map_err(|_| RsAlgoErrorKind::ConnectionError)?;
+            .map_err(|e| {
+                log::error!("Darwinex: token request failed: {}", e);
+                RsAlgoErrorKind::ConnectionError
+            })?;
 
-        let token_data: TokenResponse = resp
-            .json()
-            .await
-            .map_err(|_| RsAlgoErrorKind::ParseError)?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            log::error!("Darwinex: token endpoint returned {}: {}", status, body);
+            return Err(RsAlgoError::from(RsAlgoErrorKind::ConnectionError).into());
+        }
 
-        self.access_token = token_data.access_token;
-        log::info!("Darwinex: OAuth token acquired");
+        let token_data: TokenResponse = resp.json().await.map_err(|e| {
+            log::error!("Darwinex: failed to parse token response: {}", e);
+            RsAlgoErrorKind::ParseError
+        })?;
 
-        // Step 2: Connect WebSocket with Bearer token in Authorization header
+        self.access_token = token_data.access_token.clone();
+        self.refresh_token = token_data.refresh_token.clone();
+        log::info!("Darwinex: OAuth token acquired (expires_in={}s)", token_data.expires_in);
+
+        // Connect WebSocket with Bearer token in Authorization header
         self.ws = Some(
             WebSocketStream::connect_with_auth(&self.ws_url, &self.access_token).await,
         );
