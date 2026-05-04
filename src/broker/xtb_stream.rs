@@ -1,4 +1,5 @@
 use crate::broker::models::*;
+use crate::broker::xtb_models::*;
 use crate::error::{Result, RsAlgoError, RsAlgoErrorKind};
 use crate::helpers::calc::*;
 use crate::helpers::date::{self, parse_time_seconds, DateTime, Local, Timelike};

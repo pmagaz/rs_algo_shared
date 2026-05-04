@@ -1,4 +1,5 @@
 pub mod models;
+pub mod xtb_models;
 pub mod xtb;
 pub mod xtb_stream;
 

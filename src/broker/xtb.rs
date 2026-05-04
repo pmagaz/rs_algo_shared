@@ -1,4 +1,5 @@
-use super::*;
+use super::models::*;
+use crate::broker::xtb_models::*;
 use crate::error::Result;
 use crate::ws::ws_client::WebSocket;
 
