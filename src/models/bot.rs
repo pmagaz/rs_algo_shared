@@ -82,4 +82,7 @@ impl BotData {
     pub fn strategy_type(&self) -> &StrategyType {
         &self.strategy_type
     }
+    pub fn time_frame(&self) -> &TimeFrameType {
+        &self.time_frame
+    }
 }

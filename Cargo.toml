@@ -11,7 +11,8 @@ path = "src/lib.rs"
 [features]
 default = []
 chart = ["plotters"]
-broker = ["tungstenite", "tokio-tungstenite", "futures-util", "tokio"]
+darwinex = ["tokio-tungstenite", "futures-util", "tokio"]
+xtb = ["tungstenite", "tokio-tungstenite", "futures-util", "tokio"]
 websocket = ["tungstenite", "tokio", "futures-util"]
 
 [dependencies]
