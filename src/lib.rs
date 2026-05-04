@@ -1,4 +1,4 @@
-#[cfg(feature = "broker")]
+#[cfg(any(feature = "darwinex", feature = "xtb"))]
 pub mod broker;
 
 pub mod scanner;
