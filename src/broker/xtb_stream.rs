@@ -22,129 +22,14 @@ use crate::ws::message::{
 use crate::ws::ws_client::WebSocket;
 use crate::ws::ws_stream_client::WebSocket as WebSocketClientStream;
 
-use futures_util::{stream::SplitStream, Future};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
 use std::time::Duration;
-use tokio::net::TcpStream;
+use tokio::sync::mpsc;
 use tokio::time::sleep;
-use tokio_tungstenite::MaybeTlsStream;
-use tokio_tungstenite::WebSocketStream;
-
-#[async_trait::async_trait]
-pub trait BrokerStream {
-    async fn new() -> Self;
-    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self>
-    where
-        Self: Sized;
-    async fn get_symbols(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    async fn read(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    fn get_session_id(&mut self) -> &String;
-    async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
-    where
-        F: Send + FnMut(Message) -> T,
-        T: Future<Output = Result<()>> + Send + 'static;
-    async fn get_instrument_data(
-        &mut self,
-        symbol: &str,
-        period: usize,
-        start: i64,
-    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    async fn get_historic_data(
-        &mut self,
-        symbol: &str,
-        period: usize,
-        start: i64,
-        end: i64,
-    ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>>;
-    async fn open_trade(
-        &mut self,
-        trade_in: TradeData<TradeIn>,
-        orders: Option<Vec<Order>>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn open_trade_real(
-        &mut self,
-        trade_in: TradeData<TradeIn>,
-        orders: Option<Vec<Order>>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn open_trade_test(
-        &mut self,
-        trade_in: TradeData<TradeIn>,
-        orders: Option<Vec<Order>>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn get_transaction_status(&mut self, order_id: u64)
-        -> Result<TransactionStatusnResponse>;
-    async fn close_trade(
-        &mut self,
-        trade_out: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn close_trade_real(
-        &mut self,
-        trade_out: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn close_trade_test(
-        &mut self,
-        trade_out: TradeData<TradeOut>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn open_order(
-        &mut self,
-        trade: TradeData<TradeIn>,
-        order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn open_order_test(
-        &mut self,
-        trade: TradeData<TradeIn>,
-        order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeResponse<TradeIn>>>;
-    async fn close_order(
-        &mut self,
-        trade: TradeData<TradeOut>,
-        order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn close_order_test(
-        &mut self,
-        trade: TradeData<TradeOut>,
-        order: TradeData<Order>,
-    ) -> Result<ResponseBody<TradeResponse<TradeOut>>>;
-    async fn get_active_positions(
-        &mut self,
-        symbol: &str,
-        strategy_name: &str,
-    ) -> Result<ResponseBody<PositionResult>>;
-    async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>>;
-    async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>>;
-    async fn is_market_available(&mut self, symbol: &str) -> bool;
-    async fn get_instrument_tick(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentTick>>;
-    async fn get_instrument_swap(&mut self, symbol: &str) -> Result<ResponseBody<InstrumentSwap>>;
-    async fn get_instrument_tick_test(
-        &mut self,
-        symbol: &str,
-        price: f64,
-        trade_type: &TradeType,
-    ) -> Result<ResponseBody<InstrumentTick>>;
-    async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)>;
-    async fn get_transaction_details(
-        &mut self,
-        symbol: &str,
-        strategy_name: &str,
-        id: Option<usize>,
-    ) -> Option<TransactionDetails>;
-    async fn get_transactions_history(
-        &mut self,
-        symbol: &str,
-        strategy_name: &str,
-        id: Option<usize>,
-    ) -> Option<TransactionDetails>;
-    async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
-    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()>;
-    async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()>;
-    async fn subscribe_trades(&mut self, symbol: &str) -> Result<()>;
-    async fn parse_stream_data(msg: Message, symbol: &str, strategy_name: &str) -> Option<String>;
-    async fn keepalive_ping(&mut self) -> Result<String>;
-    async fn disconnect(&mut self) -> Result<()>;
-}
 
 #[derive(Debug)]
 pub struct Xtb {
@@ -157,7 +42,7 @@ pub struct Xtb {
 }
 
 #[async_trait::async_trait]
-impl BrokerStream for Xtb {
+impl crate::broker::broker_trait::BrokerStream for Xtb {
     async fn new() -> Self {
         let mut socket;
         let stream;
@@ -186,10 +71,6 @@ impl BrokerStream for Xtb {
         }
     }
 
-    fn get_session_id(&mut self) -> &String {
-        &self.streamSessionId
-    }
-
     async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self> {
         self.send(&Command {
             command: String::from("login"),
@@ -204,20 +85,6 @@ impl BrokerStream for Xtb {
         let res = self.get_response().await?;
 
         Ok(self)
-    }
-
-    async fn get_stream(&mut self) -> &mut SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>> {
-        &mut self.stream.read
-    }
-
-    async fn read(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
-        let msg = self.socket.read().await.unwrap();
-        let res = match msg {
-            Message::Text(txt) => txt,
-            _ => panic!(),
-        };
-        let response = self.handle_response::<VEC_DOHLC>(&res).await.unwrap();
-        Ok(response)
     }
 
     async fn get_symbols(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
@@ -1672,19 +1539,13 @@ impl BrokerStream for Xtb {
         msg
     }
 
-    async fn keepalive_ping(&mut self) -> Result<String> {
+    async fn keepalive_ping(&mut self) -> Result<()> {
         let ping_command = Ping {
             command: "ping".to_owned(),
         };
-
         self.send(&ping_command).await.unwrap();
-        let msg = self.socket.read().await.unwrap();
-        let res = match msg {
-            Message::Text(txt) => txt,
-            _ => panic!(),
-        };
-
-        Ok(res)
+        let _ = self.socket.read().await;
+        Ok(())
     }
 
     async fn disconnect(&mut self) -> Result<()> {
