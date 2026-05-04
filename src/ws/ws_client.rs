@@ -22,7 +22,7 @@ impl WebSocket {
     }
 
     pub async fn send(&mut self, msg: &str) -> Result<()> {
-        match self.socket.write_message(Message::text(msg)) {
+        match self.socket.send(Message::text(msg)) {
             Ok(_) => Ok(()),
             Err(err) => {
                 log::error!("Error sending message: {}", err);
@@ -41,19 +41,15 @@ impl WebSocket {
     }
 
     pub async fn ping(&mut self, msg: &[u8]) {
-        self.socket
-            .write_message(Message::Ping(msg.to_vec()))
-            .unwrap();
+        self.socket.send(Message::Ping(msg.to_vec())).unwrap();
     }
 
     pub async fn pong(&mut self, msg: &[u8]) {
-        self.socket
-            .write_message(Message::Pong(msg.to_vec()))
-            .unwrap();
+        self.socket.send(Message::Pong(msg.to_vec())).unwrap();
     }
 
     pub async fn read(&mut self) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
-        match self.socket.read_message() {
+        match self.socket.read() {
             Ok(msg) => Ok(msg),
             Err(err) => {
                 log::error!("Error reading msg: {}", err);
@@ -67,16 +63,14 @@ impl WebSocket {
         msg: &str,
     ) -> std::result::Result<tungstenite::Message, tungstenite::Error> {
         self.socket
-            .write_message(Message::text(msg))
+            .send(Message::text(msg))
             .map_err(|err| {
                 log::error!("Error sending message: {}", err);
-                RsAlgoError {
-                    err: RsAlgoErrorKind::SendingAfter,
-                }
+                err
             })
             .unwrap();
 
-        match self.socket.read_message() {
+        match self.socket.read() {
             Ok(msg) => Ok(msg),
             Err(err) => {
                 log::error!("Error reading msg: {}", err);

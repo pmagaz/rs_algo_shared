@@ -2,11 +2,10 @@ use crate::error::Result;
 
 use futures_util::{
     stream::{SplitSink, SplitStream},
-    Future, SinkExt, StreamExt,
+    SinkExt, StreamExt,
 };
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
-use std::env;
 use tokio::net::TcpStream;
 use tungstenite::Message;
 
@@ -18,11 +17,8 @@ pub struct WebSocket {
 
 impl WebSocket {
     pub async fn connect(url: &str) -> Self {
-        let (socket, response) = connect_async(url).await.expect("Can't connect");
-
-        log::info!("Connected to the stream server");
-        //log::info!("[STREAM] Response HTTP code: {}", response.status());
-
+        let (socket, _response) = connect_async(url).await.expect("Can't connect");
+        log::info!("Connected to stream server: {}", url);
         let (write, read) = socket.split();
         Self { write, read }
     }
