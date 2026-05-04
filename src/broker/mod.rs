@@ -1,6 +1,7 @@
 pub mod broker_trait;
 pub mod darwinex;
 pub mod models;
+pub mod oanda;
 #[cfg(feature = "xtb")]
 pub mod xtb_models;
 #[cfg(feature = "xtb")]
@@ -10,6 +11,7 @@ pub mod xtb_stream;
 
 pub use broker_trait::BrokerStream;
 pub use darwinex::Darwinex;
+pub use oanda::Oanda;
 pub use crate::ws::message::Message;
 pub use models::*;
 
@@ -24,8 +26,9 @@ use crate::models::trade::*;
 use crate::ws::message::{InstrumentData, ResponseBody, TradeData, TradeResponse};
 use tokio::sync::mpsc::UnboundedReceiver;
 
-/// Runtime broker selector — reads the `BROKER` env var (default: `darwinex`).
+/// Runtime broker selector — reads the `BROKER` env var (default: `oanda`).
 pub enum AnyBroker {
+    Oanda(oanda::Oanda),
     Darwinex(darwinex::Darwinex),
     #[cfg(feature = "xtb")]
     Xtb(xtb_stream::Xtb),
@@ -33,9 +36,10 @@ pub enum AnyBroker {
 
 pub async fn create_broker() -> AnyBroker {
     match std::env::var("BROKER").as_deref() {
+        Ok("darwinex") => AnyBroker::Darwinex(darwinex::Darwinex::new().await),
         #[cfg(feature = "xtb")]
         Ok("xtb") => AnyBroker::Xtb(xtb_stream::Xtb::new().await),
-        _ => AnyBroker::Darwinex(darwinex::Darwinex::new().await),
+        _ => AnyBroker::Oanda(oanda::Oanda::new().await),
     }
 }
 
@@ -45,7 +49,7 @@ impl BS for AnyBroker {
     where
         Self: Sized,
     {
-        AnyBroker::Darwinex(darwinex::Darwinex::new().await)
+        AnyBroker::Oanda(oanda::Oanda::new().await)
     }
 
     async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self>
@@ -53,6 +57,7 @@ impl BS for AnyBroker {
         Self: Sized,
     {
         match self {
+            AnyBroker::Oanda(b) => { b.login(username, password).await?; }
             AnyBroker::Darwinex(b) => { b.login(username, password).await?; }
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => { b.login(username, password).await?; }
@@ -62,6 +67,7 @@ impl BS for AnyBroker {
 
     async fn disconnect(&mut self) -> Result<()> {
         match self {
+            AnyBroker::Oanda(b) => b.disconnect().await,
             AnyBroker::Darwinex(b) => b.disconnect().await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.disconnect().await,
@@ -70,6 +76,7 @@ impl BS for AnyBroker {
 
     async fn keepalive_ping(&mut self) -> Result<()> {
         match self {
+            AnyBroker::Oanda(b) => b.keepalive_ping().await,
             AnyBroker::Darwinex(b) => b.keepalive_ping().await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.keepalive_ping().await,
@@ -83,6 +90,7 @@ impl BS for AnyBroker {
         start: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_instrument_data(symbol, period, start).await,
             AnyBroker::Darwinex(b) => b.get_instrument_data(symbol, period, start).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_instrument_data(symbol, period, start).await,
@@ -97,6 +105,7 @@ impl BS for AnyBroker {
         end: i64,
     ) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_historic_data(symbol, period, start, end).await,
             AnyBroker::Darwinex(b) => b.get_historic_data(symbol, period, start, end).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_historic_data(symbol, period, start, end).await,
@@ -108,6 +117,7 @@ impl BS for AnyBroker {
         symbol: &str,
     ) -> Result<ResponseBody<InstrumentTick>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_instrument_tick(symbol).await,
             AnyBroker::Darwinex(b) => b.get_instrument_tick(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_instrument_tick(symbol).await,
@@ -119,6 +129,7 @@ impl BS for AnyBroker {
         symbol: &str,
     ) -> Result<ResponseBody<InstrumentSwap>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_instrument_swap(symbol).await,
             AnyBroker::Darwinex(b) => b.get_instrument_swap(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_instrument_swap(symbol).await,
@@ -127,6 +138,7 @@ impl BS for AnyBroker {
 
     async fn get_ask_bid(&mut self, symbol: &str) -> Result<(f64, f64)> {
         match self {
+            AnyBroker::Oanda(b) => b.get_ask_bid(symbol).await,
             AnyBroker::Darwinex(b) => b.get_ask_bid(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_ask_bid(symbol).await,
@@ -135,6 +147,7 @@ impl BS for AnyBroker {
 
     async fn get_symbols(&mut self) -> Result<ResponseBody<InstrumentData<VEC_DOHLC>>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_symbols().await,
             AnyBroker::Darwinex(b) => b.get_symbols().await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_symbols().await,
@@ -143,6 +156,7 @@ impl BS for AnyBroker {
 
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_market_hours(symbol).await,
             AnyBroker::Darwinex(b) => b.get_market_hours(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_market_hours(symbol).await,
@@ -151,6 +165,7 @@ impl BS for AnyBroker {
 
     async fn is_market_open(&mut self, symbol: &str) -> Result<ResponseBody<bool>> {
         match self {
+            AnyBroker::Oanda(b) => b.is_market_open(symbol).await,
             AnyBroker::Darwinex(b) => b.is_market_open(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.is_market_open(symbol).await,
@@ -159,6 +174,7 @@ impl BS for AnyBroker {
 
     async fn is_market_available(&mut self, symbol: &str) -> bool {
         match self {
+            AnyBroker::Oanda(b) => b.is_market_available(symbol).await,
             AnyBroker::Darwinex(b) => b.is_market_available(symbol).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.is_market_available(symbol).await,
@@ -171,6 +187,7 @@ impl BS for AnyBroker {
         orders: Option<Vec<Order>>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         match self {
+            AnyBroker::Oanda(b) => b.open_trade(trade, orders).await,
             AnyBroker::Darwinex(b) => b.open_trade(trade, orders).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.open_trade(trade, orders).await,
@@ -182,6 +199,7 @@ impl BS for AnyBroker {
         trade: TradeData<TradeOut>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         match self {
+            AnyBroker::Oanda(b) => b.close_trade(trade).await,
             AnyBroker::Darwinex(b) => b.close_trade(trade).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.close_trade(trade).await,
@@ -194,6 +212,7 @@ impl BS for AnyBroker {
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeIn>>> {
         match self {
+            AnyBroker::Oanda(b) => b.open_order(trade, order).await,
             AnyBroker::Darwinex(b) => b.open_order(trade, order).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.open_order(trade, order).await,
@@ -206,6 +225,7 @@ impl BS for AnyBroker {
         order: TradeData<Order>,
     ) -> Result<ResponseBody<TradeResponse<TradeOut>>> {
         match self {
+            AnyBroker::Oanda(b) => b.close_order(trade, order).await,
             AnyBroker::Darwinex(b) => b.close_order(trade, order).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.close_order(trade, order).await,
@@ -218,6 +238,7 @@ impl BS for AnyBroker {
         strategy_name: &str,
     ) -> Result<ResponseBody<PositionResult>> {
         match self {
+            AnyBroker::Oanda(b) => b.get_active_positions(symbol, strategy_name).await,
             AnyBroker::Darwinex(b) => b.get_active_positions(symbol, strategy_name).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_active_positions(symbol, strategy_name).await,
@@ -231,6 +252,7 @@ impl BS for AnyBroker {
         id: Option<usize>,
     ) -> Option<TransactionDetails> {
         match self {
+            AnyBroker::Oanda(b) => b.get_transaction_details(symbol, strategy_name, id).await,
             AnyBroker::Darwinex(b) => b.get_transaction_details(symbol, strategy_name, id).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_transaction_details(symbol, strategy_name, id).await,
@@ -244,6 +266,7 @@ impl BS for AnyBroker {
         id: Option<usize>,
     ) -> Option<TransactionDetails> {
         match self {
+            AnyBroker::Oanda(b) => b.get_transactions_history(symbol, strategy_name, id).await,
             AnyBroker::Darwinex(b) => b.get_transactions_history(symbol, strategy_name, id).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.get_transactions_history(symbol, strategy_name, id).await,
@@ -256,6 +279,7 @@ impl BS for AnyBroker {
         strategy_name: &str,
     ) -> Result<UnboundedReceiver<String>> {
         match self {
+            AnyBroker::Oanda(b) => b.subscribe_stream(symbol, strategy_name).await,
             AnyBroker::Darwinex(b) => b.subscribe_stream(symbol, strategy_name).await,
             #[cfg(feature = "xtb")]
             AnyBroker::Xtb(b) => b.subscribe_stream(symbol, strategy_name).await,
