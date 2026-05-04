@@ -96,23 +96,24 @@ impl BrokerStream for Darwinex {
         }
     }
 
-    async fn login(&mut self, _username: &str, _password: &str) -> Result<&mut Self> {
-        // Darwinex uses OAuth2 refresh token grant (not password grant).
-        // Consumer key/secret and refresh token come from env vars set at startup.
-        // Initial tokens must be obtained manually from https://www.darwinex.com/data/darwin-api
-        log::info!("Darwinex: refreshing OAuth token via {}", self.token_url);
+    async fn login(&mut self, username: &str, password: &str) -> Result<&mut Self> {
+        // Darwinex OAuth2 password grant:
+        //   POST /token
+        //   Authorization: Basic base64(consumer_key:consumer_secret)
+        //   Body: grant_type=password&username=...&password=...&scope=openid
+        log::info!("Darwinex: requesting OAuth token from {}", self.token_url);
 
-        let refresh_token = self.refresh_token.clone();
         let basic = base64_encode(&format!("{}:{}", self.consumer_key, self.consumer_secret));
 
         let resp = self
             .http
             .post(&self.token_url)
             .header("Authorization", format!("Basic {}", basic))
-            .header("Content-Type", "application/x-www-form-urlencoded")
             .form(&[
-                ("grant_type", "refresh_token"),
-                ("refresh_token", &refresh_token),
+                ("grant_type", "password"),
+                ("username", username),
+                ("password", password),
+                ("scope", "openid"),
             ])
             .send()
             .await
