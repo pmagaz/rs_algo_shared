@@ -1291,12 +1291,15 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
         Ok(res)
     }
 
-    async fn subscribe_stream(&mut self, symbol: &str) -> Result<()> {
+    async fn subscribe_stream(
+        &mut self,
+        symbol: &str,
+        strategy_name: &str,
+    ) -> Result<mpsc::UnboundedReceiver<String>> {
         let command_alive = CommandStreaming {
             command: "getKeepAlive".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
         };
-
         self.send_stream(&command_alive).await.unwrap();
 
         let command = CommandGetCandles {
@@ -1304,19 +1307,61 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
             streamSessionId: self.streamSessionId.clone(),
             symbol: symbol.to_owned(),
         };
-
         self.send_stream(&command).await.unwrap();
+
+        self.subscribe_tick_prices(symbol).await.unwrap();
+        self.subscribe_trades(symbol).await.unwrap();
+
+        let mut stream_read = self.stream.take_read();
+        let symbol = symbol.to_owned();
+        let strategy_name = strategy_name.to_owned();
+
+        let (tx, rx) = mpsc::unbounded_channel();
+
+        tokio::spawn(async move {
+            while let Some(msg_result) = stream_read.next().await {
+                match msg_result {
+                    Ok(msg) => {
+                        if let Some(parsed) =
+                            Xtb::parse_stream_data(msg, &symbol, &strategy_name).await
+                        {
+                            if tx.send(parsed).is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Stream read error: {}", e);
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+
+    async fn keepalive_ping(&mut self) -> Result<()> {
+        let ping_command = Ping {
+            command: "ping".to_owned(),
+        };
+        self.send(&ping_command).await.unwrap();
+        let _ = self.socket.read().await;
         Ok(())
     }
 
+    async fn disconnect(&mut self) -> Result<()> {
+        log::info!("Disconnecting from broker");
+        self.socket.disconnect().await.unwrap();
+        self.stream.disconnect().await.unwrap();
+        Ok(())
+    }
+}
+
+impl Xtb {
     async fn subscribe_tick_prices(&mut self, symbol: &str) -> Result<()> {
         let is_prod = environment::from_str(&env::var("ENV").unwrap()).is_prod();
-
-        let arrival_time = match is_prod {
-            true => 1,
-            false => 1, //1000,
-        };
-
+        let arrival_time = if is_prod { 1 } else { 1 };
         self.symbol = symbol.to_owned();
         let command = CommandTickStreamParams {
             command: "getTickPrices".to_owned(),
@@ -1325,39 +1370,28 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
             minArrivalTime: arrival_time,
             maxLevel: 0,
         };
-
         self.send_stream(&command).await.unwrap();
-
         Ok(())
     }
 
-    async fn subscribe_trades(&mut self, symbol: &str) -> Result<()> {
+    async fn subscribe_trades(&mut self, _symbol: &str) -> Result<()> {
         let command = CommandTradeStatusParams {
             command: "getTrades".to_owned(),
             streamSessionId: self.streamSessionId.clone(),
         };
-
         self.send_stream(&command).await.unwrap();
-
         Ok(())
-    }
-
-    async fn listen<F, T>(&mut self, symbol: &str, session_id: String, mut callback: F)
-    where
-        F: Send + FnMut(Message) -> T,
-        T: Future<Output = Result<()>> + Send + 'static,
-    {
     }
 
     async fn parse_stream_data(msg: Message, symbol: &str, strategy_name: &str) -> Option<String> {
         let txt = match msg {
             Message::Text(txt) => txt,
-            _ => "".to_owned(),
+            _ => return None,
         };
 
-        let obj: Value = serde_json::from_str(&txt).unwrap();
+        let obj: Value = serde_json::from_str(&txt).ok()?;
 
-        let msg = match &obj {
+        match &obj {
             Value::Object(obj) => {
                 let command = &obj["command"];
                 let data = &obj["data"];
@@ -1368,15 +1402,12 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                     let low = data["low"].as_f64().unwrap();
                     let close = data["close"].as_f64().unwrap();
                     let size = data["vol"].as_f64().unwrap() * 1000.;
-
                     let ohlc = (date, open, high, low, close, size);
-
                     let msg: ResponseBody<(DateTime<Local>, f64, f64, f64, f64, f64)> =
                         ResponseBody {
                             response: ResponseType::SubscribeStream,
                             payload: Some(ohlc),
                         };
-
                     Some(serde_json::to_string(&msg).unwrap())
                 } else if command == "tickPrices" {
                     let symbol = data["symbol"].as_str().unwrap().to_owned();
@@ -1387,7 +1418,6 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                     let timestamp = data["timestamp"].as_i64().unwrap();
                     let spread = data["spreadRaw"].as_f64().unwrap();
                     let pip_size = number_pips(&symbol);
-
                     let tick = InstrumentTick::new()
                         .symbol(symbol)
                         .ask(ask)
@@ -1399,7 +1429,6 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                         .time(timestamp)
                         .build()
                         .unwrap();
-
                     let msg: ResponseBody<InstrumentTick> = ResponseBody {
                         response: ResponseType::SubscribeTickPrices,
                         payload: Some(tick),
@@ -1408,22 +1437,13 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                 } else if command == "trade" {
                     match data["closed"].as_bool() {
                         Some(is_closed) => {
-                            // let cmd = TransactionCommand::from_value(
-                            //     data["cmd"].as_u64().unwrap() as i64
-                            // )
-                            // .unwrap();
-
                             let comment = data["comment"].as_str().unwrap_or_default();
                             let is_stop = comment == "[S/L]";
-
-                            //FILTER ONLY STOPS FOR NOW
                             if is_closed && is_stop {
                                 let stream_symbol = data["symbol"].as_str().unwrap();
                                 let comments = data["customComment"].as_str().unwrap();
                                 let trans_comments: TransactionComments =
-                                    serde_json::from_str(&comments).unwrap();
-
-                                // TAKING ONLY THE OWN SYMBOL & STRATEGY COMBINATION
+                                    serde_json::from_str(comments).unwrap();
                                 if symbol == stream_symbol
                                     && strategy_name == trans_comments.strategy_name
                                 {
@@ -1431,61 +1451,42 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                                     let size = data["volume"].as_f64().unwrap();
                                     let price_in = data["open_price"].as_f64().unwrap();
                                     let price_out = data["close_price"].as_f64().unwrap();
-
                                     let index_in = trans_comments.index_in;
                                     let spread_in = trans_comments.spread;
                                     let strategy_name = trans_comments.strategy_name;
-
                                     let gross_profit = data["profit"].as_f64().unwrap_or(0.0);
                                     let swap = data["storage"].as_f64().unwrap_or(0.0);
                                     let commission = data["commission"].as_f64().unwrap_or(0.0);
-
                                     let profit = gross_profit + swap + commission;
-
-                                    log::info!("PROFIT DATA Gross Profit: {} Swap: {} Comission: {} Net Profit: {}", gross_profit, swap, commission, profit);
-
+                                    log::info!(
+                                        "PROFIT DATA Gross Profit: {} Swap: {} Commission: {} Net Profit: {}",
+                                        gross_profit, swap, commission, profit
+                                    );
                                     let spread_out = 0.;
                                     let close_time = Local::now();
                                     let date_in = to_dbtime(parse_time_seconds(
                                         data["open_time"].as_i64().unwrap() / 1000,
                                     ));
-
                                     let date_out = to_dbtime(close_time);
                                     let index_out = uuid::generate_ts_id(close_time);
-
-                                    let trade_type = match is_stop {
-                                        true => match trans_comments.trade_type.is_long() {
-                                            true => TradeType::StopLossLong,
-                                            false => TradeType::StopLossShort,
-                                        },
-                                        false => match trans_comments.trade_type.is_long() {
-                                            true => TradeType::MarketOutLong,
-                                            false => TradeType::MarketOutShort,
-                                        },
+                                    let trade_type = match trans_comments.trade_type.is_long() {
+                                        true => TradeType::StopLossLong,
+                                        false => TradeType::StopLossShort,
                                     };
-
                                     let bid = match trade_type.is_long() {
                                         true => price_out,
                                         false => price_out + spread_out,
                                     };
-
                                     let profit_per = 0.;
                                     let run_up = 0.;
                                     let run_up_per = 0.;
                                     let draw_down = 0.;
                                     let draw_down_per = 0.;
                                     let status = TradeStatus::Fulfilled;
-
                                     log::info!(
-                                    "Real StopLoss {}_{} {:?} trade {}. Closing price: {} Profit: {}",
-                                    &symbol,
-                                    &strategy_name,
-                                    &trade_type,
-                                    &id,
-                                    &price_out,
-                                    &profit,
-                                );
-
+                                        "Real StopLoss {}_{} {:?} trade {}. Closing price: {} Profit: {}",
+                                        &symbol, &strategy_name, &trade_type, &id, &price_out, &profit,
+                                    );
                                     let trade_out = TradeOut {
                                         id,
                                         index_in,
@@ -1509,7 +1510,6 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                                         draw_down,
                                         draw_down_per,
                                     };
-
                                     let msg = ResponseBody {
                                         response: ResponseType::TradeOutFulfilled,
                                         payload: Some(TradeResponse {
@@ -1518,7 +1518,6 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                                             data: trade_out,
                                         }),
                                     };
-
                                     Some(serde_json::to_string(&msg).unwrap())
                                 } else {
                                     None
@@ -1534,29 +1533,9 @@ impl crate::broker::broker_trait::BrokerStream for Xtb {
                 }
             }
             _ => None,
-        };
-
-        msg
+        }
     }
 
-    async fn keepalive_ping(&mut self) -> Result<()> {
-        let ping_command = Ping {
-            command: "ping".to_owned(),
-        };
-        self.send(&ping_command).await.unwrap();
-        let _ = self.socket.read().await;
-        Ok(())
-    }
-
-    async fn disconnect(&mut self) -> Result<()> {
-        log::info!("Disconnecting from broker");
-        self.socket.disconnect().await.unwrap();
-        self.stream.disconnect().await.unwrap();
-        Ok(())
-    }
-}
-
-impl Xtb {
     async fn send<T>(&mut self, command: &T) -> Result<()>
     where
         for<'de> T: Serialize + Deserialize<'de> + Debug,
