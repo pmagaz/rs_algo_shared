@@ -13,8 +13,10 @@ default = []
 chart = ["plotters"]
 oanda = ["futures-util", "tokio"]
 darwinex = ["tokio-tungstenite", "futures-util", "tokio"]
+ibkr = ["tokio-tungstenite", "tokio-tungstenite/native-tls", "native-tls", "futures-util", "tokio"]
 xtb = ["tungstenite", "tokio-tungstenite", "futures-util", "tokio"]
 websocket = ["tungstenite", "tokio", "futures-util"]
+tracing = ["dep:tracing", "dep:tracing-subscriber", "dep:tracing-loki", "dep:tracing-log", "dep:url", "tokio"]
 
 [dependencies]
 async-trait = "0.1.83"
@@ -29,9 +31,29 @@ bson = { version = "2.13", features = ["chrono-0_4"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
 chrono = { version = "0.4.40", features = ["serde"] }
 round = "0.1.2"
-env_logger = "0.11"
 log = "0.4"
 regex = "1.11"
+
+[dependencies.tracing]
+optional = true
+version = "0.1.41"
+
+[dependencies.tracing-subscriber]
+optional = true
+version = "0.3.19"
+features = ["env-filter", "fmt"]
+
+[dependencies.tracing-loki]
+optional = true
+version = "0.2.6"
+
+[dependencies.tracing-log]
+optional = true
+version = "0.2"
+
+[dependencies.url]
+optional = true
+version = "2"
 
 [dependencies.plotters]
 optional = true
@@ -44,6 +66,10 @@ optional = true
 version = "0.3.31"
 default-features = false
 features = ["std"]
+
+[dependencies.native-tls]
+optional = true
+version = "0.2"
 
 [dependencies.tungstenite]
 optional = true

@@ -1,6 +1,9 @@
 #[cfg(any(feature = "darwinex", feature = "xtb"))]
 pub mod broker;
 
+#[cfg(feature = "tracing")]
+pub mod trace;
+
 pub mod scanner;
 
 pub mod patterns;
