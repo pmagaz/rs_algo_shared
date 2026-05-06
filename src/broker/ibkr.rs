@@ -56,21 +56,35 @@ impl BrokerStream for Ibkr {
     }
 
     async fn login(&mut self, _username: &str, _password: &str) -> Result<&mut Self> {
-        log::info!("IBKR: initialising brokerage session at {}", self.gateway_url);
+        tracing::info!("IBKR: initialising brokerage session at {}", self.gateway_url);
 
-        // Init brokerage session — required before trading can begin
-        let init_url = format!(
-            "{}/v1/api/iserver/auth/ssodh/init?compete=true&publish=true",
-            self.gateway_url
-        );
-        let _ = self.post_empty(&init_url).await;
-
+        // ibeam sidecar manages auth; poll until it completes login (up to 120s)
         let status_url = format!("{}/v1/api/iserver/auth/status", self.gateway_url);
-        let status = self.post_empty_json(&status_url).await?;
-        let authenticated = status["authenticated"].as_bool().unwrap_or(false);
+        let mut authenticated = false;
+        for attempt in 1u32..=12 {
+            match self.post_empty_json(&status_url).await {
+                Ok(status) if status["authenticated"].as_bool().unwrap_or(false) => {
+                    authenticated = true;
+                    break;
+                }
+                Ok(_) => {
+                    tracing::warn!(
+                        "IBKR: gateway not authenticated yet (attempt {}/12), retrying in 10s",
+                        attempt
+                    );
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        "IBKR: gateway unreachable (attempt {}/12), retrying in 10s",
+                        attempt
+                    );
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
 
         if !authenticated {
-            log::error!("IBKR: not authenticated — start Gateway and log in via browser first");
+            tracing::error!("IBKR: failed to authenticate after 120s — check ibeam sidecar");
             return Err(RsAlgoError::from(RsAlgoErrorKind::ConnectionError).into());
         }
 
@@ -82,14 +96,14 @@ impl BrokerStream for Ibkr {
             }
         }
 
-        log::info!("IBKR: authenticated, account={}", self.account_id);
+        tracing::info!("IBKR: authenticated, account={}", self.account_id);
         Ok(self)
     }
 
     async fn disconnect(&mut self) -> Result<()> {
         let url = format!("{}/v1/api/logout", self.gateway_url);
         let _ = self.post_empty(&url).await;
-        log::info!("IBKR: session ended");
+        tracing::info!("IBKR: session ended");
         Ok(())
     }
 
@@ -274,7 +288,7 @@ impl BrokerStream for Ibkr {
         });
 
         let accepted = self.place_order(&order).await.unwrap_or(false);
-        log::info!(
+        tracing::info!(
             "IBKR: open_trade {} {} size={} accepted={}",
             side, trade.symbol, trade.data.size, accepted
         );
@@ -309,7 +323,7 @@ impl BrokerStream for Ibkr {
         });
 
         let accepted = self.place_order(&order).await.unwrap_or(false);
-        log::info!(
+        tracing::info!(
             "IBKR: close_trade {} {} size={} accepted={}",
             side, trade.symbol, trade.data.size, accepted
         );
@@ -471,7 +485,7 @@ impl BrokerStream for Ibkr {
         let accept_invalid = self.accept_invalid_cert;
         let symbol_owned = symbol.to_owned();
 
-        log::info!("IBKR: subscribing stream for {} (conid={})", symbol, conid);
+        tracing::info!("IBKR: subscribing stream for {} (conid={})", symbol, conid);
 
         let (tx, rx) = mpsc::unbounded_channel();
 
@@ -479,7 +493,7 @@ impl BrokerStream for Ibkr {
             let ws = match connect_ibkr_ws(&ws_url, accept_invalid).await {
                 Ok(ws) => ws,
                 Err(e) => {
-                    log::error!("IBKR: WS connect failed for {}: {}", symbol_owned, e);
+                    tracing::error!("IBKR: WS connect failed for {}: {}", symbol_owned, e);
                     return;
                 }
             };
@@ -516,7 +530,7 @@ impl BrokerStream for Ibkr {
                                 }
                             }
                             Some(Err(e)) => {
-                                log::error!("IBKR: WS error for {}: {}", symbol_owned, e);
+                                tracing::error!("IBKR: WS error for {}: {}", symbol_owned, e);
                                 break;
                             }
                             None => break,
@@ -532,11 +546,11 @@ impl BrokerStream for Ibkr {
                         if write.send(WsMessage::Text(sub_msg.clone())).await.is_err() {
                             break;
                         }
-                        log::debug!("IBKR: resubscribed smd for {}", symbol_owned);
+                        tracing::debug!("IBKR: resubscribed smd for {}", symbol_owned);
                     }
                 }
             }
-            log::error!("IBKR: WS stream ended for {}", symbol_owned);
+            tracing::error!("IBKR: WS stream ended for {}", symbol_owned);
         });
 
         Ok(rx)
@@ -546,34 +560,34 @@ impl BrokerStream for Ibkr {
 impl Ibkr {
     async fn fetch_json(&self, url: &str) -> Result<Value> {
         let resp = self.http.get(url).send().await.map_err(|e| {
-            log::error!("IBKR: GET {} failed: {}", url, e);
+            tracing::error!("IBKR: GET {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
         if !resp.status().is_success() {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            log::error!("IBKR: GET {} returned {}: {}", url, status, body);
+            tracing::error!("IBKR: GET {} returned {}: {}", url, status, body);
             return Err(RsAlgoError::from(RsAlgoErrorKind::RequestError).into());
         }
         resp.json::<Value>().await.map_err(|e| {
-            log::error!("IBKR: failed to parse JSON from {}: {}", url, e);
+            tracing::error!("IBKR: failed to parse JSON from {}: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
 
     async fn post_json(&self, url: &str, body: &Value) -> Result<Value> {
         let resp = self.http.post(url).json(body).send().await.map_err(|e| {
-            log::error!("IBKR: POST {} failed: {}", url, e);
+            tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
         if !resp.status().is_success() {
             let status = resp.status();
             let body_text = resp.text().await.unwrap_or_default();
-            log::error!("IBKR: POST {} returned {}: {}", url, status, body_text);
+            tracing::error!("IBKR: POST {} returned {}: {}", url, status, body_text);
             return Err(RsAlgoError::from(RsAlgoErrorKind::RequestError).into());
         }
         resp.json::<Value>().await.map_err(|e| {
-            log::error!("IBKR: failed to parse JSON: {}", e);
+            tracing::error!("IBKR: failed to parse JSON: {}", e);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
@@ -589,11 +603,11 @@ impl Ibkr {
 
     async fn post_empty_json(&self, url: &str) -> Result<Value> {
         let resp = self.http.post(url).send().await.map_err(|e| {
-            log::error!("IBKR: POST {} failed: {}", url, e);
+            tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
         resp.json::<Value>().await.map_err(|e| {
-            log::error!("IBKR: failed to parse JSON: {}", e);
+            tracing::error!("IBKR: failed to parse JSON: {}", e);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
@@ -620,7 +634,7 @@ impl Ibkr {
             .ok_or_else(|| RsAlgoError::from(RsAlgoErrorKind::ParseError))?;
 
         self.conid_cache.insert(symbol.to_string(), conid);
-        log::debug!("IBKR: resolved conid {} = {}", symbol, conid);
+        tracing::debug!("IBKR: resolved conid {} = {}", symbol, conid);
         Ok(conid)
     }
 
