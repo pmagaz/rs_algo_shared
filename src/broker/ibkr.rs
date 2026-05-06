@@ -62,22 +62,31 @@ impl BrokerStream for Ibkr {
         let status_url = format!("{}/v1/api/iserver/auth/status", self.gateway_url);
         let mut authenticated = false;
         for attempt in 1u32..=12 {
-            match self.post_empty_json(&status_url).await {
-                Ok(status) if status["authenticated"].as_bool().unwrap_or(false) => {
-                    authenticated = true;
-                    break;
+            match self.http.post(&status_url).send().await {
+                Err(e) => {
+                    tracing::warn!("IBKR: gateway not reachable (attempt {}/12): {}", attempt, e);
                 }
-                Ok(_) => {
-                    tracing::warn!(
-                        "IBKR: gateway not authenticated yet (attempt {}/12), retrying in 10s",
-                        attempt
-                    );
-                }
-                Err(_) => {
-                    tracing::warn!(
-                        "IBKR: gateway unreachable (attempt {}/12), retrying in 10s",
-                        attempt
-                    );
+                Ok(resp) => {
+                    let status = resp.status();
+                    let body = resp.text().await.unwrap_or_default();
+                    match serde_json::from_str::<Value>(&body) {
+                        Ok(json) if json["authenticated"].as_bool().unwrap_or(false) => {
+                            authenticated = true;
+                            break;
+                        }
+                        Ok(_) => {
+                            tracing::warn!(
+                                "IBKR: not authenticated yet (attempt {}/12) — {}: {}",
+                                attempt, status, body
+                            );
+                        }
+                        Err(_) => {
+                            tracing::warn!(
+                                "IBKR: unexpected gateway response (attempt {}/12) — {}: {}",
+                                attempt, status, body
+                            );
+                        }
+                    }
                 }
             }
             tokio::time::sleep(Duration::from_secs(10)).await;
