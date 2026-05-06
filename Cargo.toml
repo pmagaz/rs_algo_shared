@@ -16,7 +16,7 @@ darwinex = ["tokio-tungstenite", "futures-util", "tokio"]
 ibkr = ["tokio-tungstenite", "tokio-tungstenite/native-tls", "native-tls", "futures-util", "tokio"]
 xtb = ["tungstenite", "tokio-tungstenite", "futures-util", "tokio"]
 websocket = ["tungstenite", "tokio", "futures-util"]
-tracing = ["dep:tracing", "dep:tracing-subscriber", "dep:tracing-loki", "dep:tracing-log", "dep:url", "tokio"]
+tracing = ["dep:tracing", "dep:tracing-subscriber", "dep:tracing-loki", "dep:url", "tokio"]
 
 [dependencies]
 async-trait = "0.1.83"
@@ -46,10 +46,6 @@ features = ["env-filter", "fmt"]
 [dependencies.tracing-loki]
 optional = true
 version = "0.2.6"
-
-[dependencies.tracing-log]
-optional = true
-version = "0.2"
 
 [dependencies.url]
 optional = true

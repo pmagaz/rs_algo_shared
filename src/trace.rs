@@ -7,8 +7,6 @@ pub fn initialize() -> Result<(), Box<dyn std::error::Error>> {
     let is_dev = environment == "development";
     let filter_str = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
 
-    tracing_log::LogTracer::init().ok();
-
     if is_dev {
         let fmt_layer = tracing_subscriber::fmt::layer()
             .with_target(false)
