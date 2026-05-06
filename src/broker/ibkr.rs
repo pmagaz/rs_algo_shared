@@ -563,14 +563,14 @@ impl Ibkr {
             tracing::error!("IBKR: GET {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        if !status.is_success() {
             tracing::error!("IBKR: GET {} returned {}: {}", url, status, body);
             return Err(RsAlgoError::from(RsAlgoErrorKind::RequestError).into());
         }
-        resp.json::<Value>().await.map_err(|e| {
-            tracing::error!("IBKR: failed to parse JSON from {}: {}", url, e);
+        serde_json::from_str(&body).map_err(|e| {
+            tracing::error!("IBKR: GET {} parse error: {} — body: {}", url, e, body);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
@@ -580,14 +580,14 @@ impl Ibkr {
             tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
-        if !resp.status().is_success() {
-            let status = resp.status();
-            let body_text = resp.text().await.unwrap_or_default();
+        let status = resp.status();
+        let body_text = resp.text().await.unwrap_or_default();
+        if !status.is_success() {
             tracing::error!("IBKR: POST {} returned {}: {}", url, status, body_text);
             return Err(RsAlgoError::from(RsAlgoErrorKind::RequestError).into());
         }
-        resp.json::<Value>().await.map_err(|e| {
-            tracing::error!("IBKR: failed to parse JSON: {}", e);
+        serde_json::from_str(&body_text).map_err(|e| {
+            tracing::error!("IBKR: POST {} parse error: {} — body: {}", url, e, body_text);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
@@ -606,8 +606,14 @@ impl Ibkr {
             tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
-        resp.json::<Value>().await.map_err(|e| {
-            tracing::error!("IBKR: failed to parse JSON: {}", e);
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        if !status.is_success() {
+            tracing::error!("IBKR: POST {} returned {}: {}", url, status, body);
+            return Err(RsAlgoError::from(RsAlgoErrorKind::RequestError).into());
+        }
+        serde_json::from_str(&body).map_err(|e| {
+            tracing::error!("IBKR: POST {} parse error: {} — body: {}", url, e, body);
             RsAlgoError::from(RsAlgoErrorKind::ParseError).into()
         })
     }
