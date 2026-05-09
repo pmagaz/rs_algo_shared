@@ -160,7 +160,10 @@ impl MarketHours {
         let current_date = Local::now();
         let weekday = date::get_week_day(current_date);
 
-        let sunday = &self.data.last().unwrap();
+        let sunday = match self.data.last() {
+            Some(d) => d,
+            None => return current_date + Duration::seconds(60),
+        };
 
         let opening_hours = sunday.from;
         let diff_days = 7 - weekday as i64;

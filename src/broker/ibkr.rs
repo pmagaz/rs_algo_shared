@@ -58,51 +58,42 @@ impl BrokerStream for Ibkr {
     async fn login(&mut self, _username: &str, _password: &str) -> Result<&mut Self> {
         tracing::info!("IBKR: initialising brokerage session at {}", self.gateway_url);
 
-        // ibeam sidecar manages auth; poll until it completes login (up to 120s)
-        let status_url = format!("{}/v1/api/iserver/auth/status", self.gateway_url);
+        // Poll ibeam's health endpoint (port 5001, plain HTTP, accessible from anywhere)
+        // instead of the gateway's auth/status which requires localhost inside the container.
+        let health_url = env::var("IBKR_HEALTH_URL")
+            .unwrap_or_else(|_| ibeam_health_url(&self.gateway_url));
+        let health_client = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
+        let ready_url = format!("{}/readyz", health_url);
         let mut authenticated = false;
-        for attempt in 1u32..=12 {
-            match self.http.post(&status_url).send().await {
+        for attempt in 1u32..=3 {
+            match health_client.get(&ready_url).send().await {
                 Err(e) => {
-                    tracing::warn!("IBKR: gateway not reachable (attempt {}/12): {}", attempt, e);
+                    tracing::warn!("IBKR: ibeam not reachable (attempt {}/3): {}", attempt, e);
+                }
+                Ok(resp) if resp.status().is_success() => {
+                    tracing::info!("IBKR: ibeam ready");
+                    authenticated = true;
+                    break;
                 }
                 Ok(resp) => {
-                    let status = resp.status();
-                    let body = resp.text().await.unwrap_or_default();
-                    match serde_json::from_str::<Value>(&body) {
-                        Ok(json) if json["authenticated"].as_bool().unwrap_or(false) => {
-                            authenticated = true;
-                            break;
-                        }
-                        Ok(_) => {
-                            tracing::warn!(
-                                "IBKR: not authenticated yet (attempt {}/12) — {}: {}",
-                                attempt, status, body
-                            );
-                        }
-                        Err(_) => {
-                            tracing::warn!(
-                                "IBKR: unexpected gateway response (attempt {}/12) — {}: {}",
-                                attempt, status, body
-                            );
-                        }
-                    }
+                    tracing::warn!(
+                        "IBKR: ibeam not ready (attempt {}/3) — {}",
+                        attempt,
+                        resp.status()
+                    );
                 }
             }
             tokio::time::sleep(Duration::from_secs(10)).await;
         }
 
         if !authenticated {
-            tracing::error!("IBKR: failed to authenticate after 120s — check ibeam sidecar");
+            tracing::error!("IBKR: failed to authenticate after 30s — check ibeam sidecar");
             return Err(RsAlgoError::from(RsAlgoErrorKind::ConnectionError).into());
-        }
-
-        if self.account_id.is_empty() {
-            let accounts_url = format!("{}/v1/api/iserver/accounts", self.gateway_url);
-            let accounts = self.fetch_json(&accounts_url).await?;
-            if let Some(id) = accounts["accounts"][0].as_str() {
-                self.account_id = id.to_string();
-            }
         }
 
         tracing::info!("IBKR: authenticated, account={}", self.account_id);
@@ -257,10 +248,19 @@ impl BrokerStream for Ibkr {
 
     // ── Market status ─────────────────────────────────────────────────────
 
-    async fn get_market_hours(&mut self, _symbol: &str) -> Result<ResponseBody<MarketHours>> {
+    async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
+        // Forex trades 24/5: Mon–Fri all day, plus Sunday from 22:00 UTC
+        let data = vec![
+            MarketHour { day: 1, from: 0, to: 23 },
+            MarketHour { day: 2, from: 0, to: 23 },
+            MarketHour { day: 3, from: 0, to: 23 },
+            MarketHour { day: 4, from: 0, to: 23 },
+            MarketHour { day: 5, from: 0, to: 22 },
+            MarketHour { day: 7, from: 22, to: 23 },
+        ];
         Ok(ResponseBody {
             response: ResponseType::GetMarketHours,
-            payload: Some(MarketHours::default()),
+            payload: Some(MarketHours::new(symbol.to_string(), data)),
         })
     }
 
@@ -679,6 +679,16 @@ impl Ibkr {
 
         Ok(false)
     }
+}
+
+// ── Helpers ── (internal) ─────────────────────────────────────────────────────
+
+fn ibeam_health_url(gateway_url: &str) -> String {
+    let host = gateway_url
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    let host = host.rfind(':').map(|i| &host[..i]).unwrap_or(host);
+    format!("http://{}:5001", host)
 }
 
 // ── WebSocket connector ───────────────────────────────────────────────────────
