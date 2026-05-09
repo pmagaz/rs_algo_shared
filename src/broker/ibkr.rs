@@ -25,6 +25,7 @@ pub struct Ibkr {
     http: reqwest::Client,
     account_id: String,
     gateway_url: String,
+    host_header: String,
     accept_invalid_cert: bool,
     conid_cache: HashMap<String, i64>,
 }
@@ -39,6 +40,16 @@ impl BrokerStream for Ibkr {
             .map(|v| v == "true" || v == "1")
             .unwrap_or(true);
 
+        // Strip port from gateway_url so the Host header matches what the gateway expects,
+        // even when requests go through the proxy on a different port (e.g. 5100 → 5000).
+        let host_header = gateway_url
+            .trim_start_matches("https://")
+            .trim_start_matches("http://")
+            .split(':')
+            .next()
+            .unwrap_or("localhost")
+            .to_string();
+
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(15))
             .timeout(Duration::from_secs(30))
@@ -50,6 +61,7 @@ impl BrokerStream for Ibkr {
             http,
             account_id,
             gateway_url,
+            host_header,
             accept_invalid_cert,
             conid_cache: HashMap::new(),
         }
@@ -70,10 +82,16 @@ impl BrokerStream for Ibkr {
 
         let ready_url = format!("{}/readyz", health_url);
         let mut authenticated = false;
-        for attempt in 1u32..=3 {
+        const MAX_ATTEMPTS: u32 = 12;
+        for attempt in 1u32..=MAX_ATTEMPTS {
             match health_client.get(&ready_url).send().await {
                 Err(e) => {
-                    tracing::warn!("IBKR: ibeam not reachable (attempt {}/3): {}", attempt, e);
+                    tracing::warn!(
+                        "IBKR: ibeam not reachable (attempt {}/{}) : {}",
+                        attempt,
+                        MAX_ATTEMPTS,
+                        e
+                    );
                 }
                 Ok(resp) if resp.status().is_success() => {
                     tracing::info!("IBKR: ibeam ready");
@@ -82,8 +100,9 @@ impl BrokerStream for Ibkr {
                 }
                 Ok(resp) => {
                     tracing::warn!(
-                        "IBKR: ibeam not ready (attempt {}/3) — {}",
+                        "IBKR: ibeam not ready (attempt {}/{}) — {}",
                         attempt,
+                        MAX_ATTEMPTS,
                         resp.status()
                     );
                 }
@@ -92,8 +111,28 @@ impl BrokerStream for Ibkr {
         }
 
         if !authenticated {
-            tracing::error!("IBKR: failed to authenticate after 30s — check ibeam sidecar");
+            tracing::error!(
+                "IBKR: failed to authenticate after {}s — check ibeam sidecar",
+                MAX_ATTEMPTS * 10
+            );
             return Err(RsAlgoError::from(RsAlgoErrorKind::ConnectionError).into());
+        }
+
+        // Prime the brokerage session — ibeam's browser login gives an SSO session;
+        // GET /iserver/accounts is the lightweight call that activates trading/market-data access.
+        let accounts_url = format!("{}/v1/api/iserver/accounts", self.gateway_url);
+        match self.http.get(&accounts_url).header("Host", &self.host_header).send().await {
+            Ok(resp) if resp.status().is_success() => {
+                tracing::info!("IBKR: brokerage session ready");
+            }
+            Ok(resp) => {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                tracing::warn!("IBKR: iserver/accounts returned {} — {}", status, body);
+            }
+            Err(e) => {
+                tracing::warn!("IBKR: iserver/accounts failed: {}", e);
+            }
         }
 
         tracing::info!("IBKR: authenticated, account={}", self.account_id);
@@ -249,18 +288,10 @@ impl BrokerStream for Ibkr {
     // ── Market status ─────────────────────────────────────────────────────
 
     async fn get_market_hours(&mut self, symbol: &str) -> Result<ResponseBody<MarketHours>> {
-        // Forex trades 24/5: Mon–Fri all day, plus Sunday from 22:00 UTC
-        let data = vec![
-            MarketHour { day: 1, from: 0, to: 23 },
-            MarketHour { day: 2, from: 0, to: 23 },
-            MarketHour { day: 3, from: 0, to: 23 },
-            MarketHour { day: 4, from: 0, to: 23 },
-            MarketHour { day: 5, from: 0, to: 22 },
-            MarketHour { day: 7, from: 22, to: 23 },
-        ];
+        let market = Market::from_str(&env::var("MARKET").unwrap_or_default());
         Ok(ResponseBody {
             response: ResponseType::GetMarketHours,
-            payload: Some(MarketHours::new(symbol.to_string(), data)),
+            payload: Some(MarketHours::for_market(&market, symbol)),
         })
     }
 
@@ -568,7 +599,7 @@ impl BrokerStream for Ibkr {
 
 impl Ibkr {
     async fn fetch_json(&self, url: &str) -> Result<Value> {
-        let resp = self.http.get(url).send().await.map_err(|e| {
+        let resp = self.http.get(url).header("Host", &self.host_header).send().await.map_err(|e| {
             tracing::error!("IBKR: GET {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
@@ -585,7 +616,7 @@ impl Ibkr {
     }
 
     async fn post_json(&self, url: &str, body: &Value) -> Result<Value> {
-        let resp = self.http.post(url).json(body).send().await.map_err(|e| {
+        let resp = self.http.post(url).header("Host", &self.host_header).json(body).send().await.map_err(|e| {
             tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;
@@ -604,6 +635,7 @@ impl Ibkr {
     async fn post_empty(&self, url: &str) -> Result<()> {
         self.http
             .post(url)
+            .header("Host", &self.host_header)
             .send()
             .await
             .map_err(|_| RsAlgoError::from(RsAlgoErrorKind::RequestError))?;
@@ -611,7 +643,7 @@ impl Ibkr {
     }
 
     async fn post_empty_json(&self, url: &str) -> Result<Value> {
-        let resp = self.http.post(url).send().await.map_err(|e| {
+        let resp = self.http.post(url).header("Host", &self.host_header).send().await.map_err(|e| {
             tracing::error!("IBKR: POST {} failed: {}", url, e);
             RsAlgoError::from(RsAlgoErrorKind::RequestError)
         })?;

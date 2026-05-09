@@ -12,6 +12,17 @@ pub enum Market {
     Default,
 }
 
+impl Market {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Forex" => Market::Forex,
+            "Crypto" => Market::Crypto,
+            "Stock" => Market::Stock,
+            _ => Market::Default,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MarketSessions {
     NewYork,
@@ -66,6 +77,29 @@ impl MarketHours {
             retry_after: 0,
             session_hours,
         }
+    }
+
+    /// Build market hours for the given market type.
+    /// Brokers call this instead of hardcoding schedules.
+    pub fn for_market(market: &Market, symbol: &str) -> Self {
+        let data = match market {
+            Market::Forex => vec![
+                MarketHour { day: 1, from: 0, to: 23 },
+                MarketHour { day: 2, from: 0, to: 23 },
+                MarketHour { day: 3, from: 0, to: 23 },
+                MarketHour { day: 4, from: 0, to: 23 },
+                MarketHour { day: 5, from: 0, to: 22 },
+                MarketHour { day: 7, from: 22, to: 23 },
+            ],
+            _ => vec![
+                MarketHour { day: 1, from: 9, to: 17 },
+                MarketHour { day: 2, from: 9, to: 17 },
+                MarketHour { day: 3, from: 9, to: 17 },
+                MarketHour { day: 4, from: 9, to: 17 },
+                MarketHour { day: 5, from: 9, to: 17 },
+            ],
+        };
+        Self::new(symbol.to_string(), data)
     }
 
     pub fn symbol(&self) -> String {
