@@ -33,6 +33,7 @@ chrono = { version = "0.4.40", features = ["serde"] }
 round = "0.1.2"
 log = "0.4"
 regex = "1.11"
+fin-primitives = { version = "4.0.1", default-features = false, features = ["ta-compat"] }
 
 [dependencies.tracing]
 optional = true

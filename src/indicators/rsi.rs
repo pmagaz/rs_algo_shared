@@ -1,15 +1,15 @@
 use super::Indicator;
 use crate::error::Result;
 
+use fin_primitives::ta_compat::indicators::RelativeStrengthIndex;
+use fin_primitives::ta_compat::{Next, Reset};
 use serde::{Deserialize, Serialize};
-use ta::indicators::RelativeStrengthIndex;
-use ta::{Next, Reset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rsi {
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     rsi: RelativeStrengthIndex,
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     rsi_tmp: RelativeStrengthIndex,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
@@ -52,7 +52,7 @@ impl Indicator for Rsi {
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
-        let a = self.rsi.next(value);
+        let a = warm(self.rsi.next(value));
         self.data_a.push(a);
         Ok(())
     }
@@ -66,7 +66,7 @@ impl Indicator for Rsi {
     }
 
     fn next_update_last(&mut self, value: f64) -> Result<()> {
-        let a = self.rsi.next(value);
+        let a = warm(self.rsi.next(value));
         let _last_index = self.data_a.len() - 1;
         let last = self.data_a.last_mut().unwrap();
         *last = a;
@@ -74,7 +74,7 @@ impl Indicator for Rsi {
     }
 
     fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
-        let a = self.rsi_tmp.next(value);
+        let a = warm(self.rsi_tmp.next(value));
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         self.reset_tmp();
@@ -102,5 +102,27 @@ impl Indicator for Rsi {
         if let Some(&a) = self.data_a.last() {
             self.data_a.push(a);
         }
+    }
+}
+
+// Wilder RSI is undefined until `period + 1` closes; report neutral 50 until then.
+fn warm(a: f64) -> f64 {
+    if a.is_nan() { 50. } else { a }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn live_rsi_on_steady_fx_uptrend_is_overbought() {
+        // The live-bar path: 39 warm-up closes, then the current one. EURUSD up 10 pips a bar.
+        let mut rsi = Rsi::new().unwrap();
+        rsi.next(1.08).unwrap();
+        for i in 0..39 {
+            rsi.next_tmp(1.08 + i as f64 * 0.001);
+        }
+        rsi.next_update_last_tmp(1.08 + 39. * 0.001).unwrap();
+        assert!(*rsi.get_current_a() > 99.0, "rsi = {}", rsi.get_current_a());
     }
 }
