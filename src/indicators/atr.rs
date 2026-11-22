@@ -1,16 +1,15 @@
 use super::Indicator;
-use crate::error::Result;
+use crate::error::{Result, RsAlgoErrorKind};
 
+use fin_primitives::ta_compat::indicators::AverageTrueRange;
+use fin_primitives::ta_compat::{DataItem, Next, Reset};
 use serde::{Deserialize, Serialize};
-use ta::indicators::AverageTrueRange;
-use ta::test_helper::Bar;
-use ta::{Next, Reset};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Atr {
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     atr: AverageTrueRange,
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     atr_tmp: AverageTrueRange,
     data_a: Vec<f64>,
     data_b: Vec<f64>,
@@ -54,7 +53,7 @@ impl Indicator for Atr {
     }
 
     fn next(&mut self, value: f64) -> Result<()> {
-        let a = self.atr.next(value);
+        let a = warm(self.atr.next(value));
         self.data_a.push(a);
         Ok(())
     }
@@ -65,21 +64,28 @@ impl Indicator for Atr {
 
     //FIXME MONEKY PATCHING
     fn next_ohlc(&mut self, OHLC: (f64, f64, f64, f64)) -> Result<()> {
-        let bar = Bar::new().high(OHLC.1).low(OHLC.2).close(OHLC.3);
-        let a = self.atr.next(&bar);
+        let bar = DataItem::builder()
+            .open(OHLC.0)
+            .high(OHLC.1)
+            .low(OHLC.2)
+            .close(OHLC.3)
+            .volume(0.)
+            .build()
+            .map_err(|_| RsAlgoErrorKind::InvalidCandle)?;
+        let a = warm(self.atr.next(&bar));
         self.data_a.push(a);
         Ok(())
     }
 
     fn next_update_last(&mut self, value: f64) -> Result<()> {
-        let a = self.atr.next(value);
+        let a = warm(self.atr.next(value));
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         Ok(())
     }
 
     fn next_update_last_tmp(&mut self, value: f64) -> Result<()> {
-        let a = self.atr_tmp.next(value);
+        let a = warm(self.atr_tmp.next(value));
         let last = self.data_a.last_mut().unwrap();
         *last = a;
         self.reset_tmp();
@@ -109,4 +115,9 @@ impl Indicator for Atr {
             self.data_a.push(a);
         }
     }
+}
+
+// Wilder ATR is undefined until `period + 1` bars; report 0 until then.
+fn warm(a: f64) -> f64 {
+    if a.is_nan() { 0. } else { a }
 }
